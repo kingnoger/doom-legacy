@@ -33,6 +33,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_input.h"
+#include "g_decorate.h"
 #include "p_enemy.h" // #defines
 
 #include "p_spec.h"
@@ -1161,19 +1162,20 @@ DActor::DActor()
 
 
 // trick constructor
+/*
 DActor::DActor(mobjtype_t t)
   : Actor()
 {
   type = t;
 }
-
+*/
 
 // normal constructor
-DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
+DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
   : Actor(nx, ny, nz)
 {
-  type = t;
-  info = &mobjinfo[t];
+  info = ai;
+  type = ai->GetMobjType();
 
   mass = info->mass;
   radius = info->radius;
@@ -1195,13 +1197,10 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
   state = info->spawnstate;
   tics = state->tics;
 
-#ifdef TEST_MD3
-#warning TESTing MD3 models!
-  if (t == MT_TROOP)
-    pres = new modelpres_t("models/players/imp/");
+  if (!info->modelname.empty())
+    pres = new modelpres_t(info->modelname.c_str());
   else
-#endif
-  pres = new spritepres_t(info, 0);
+    pres = new spritepres_t(info);
 }
 
 
@@ -1562,7 +1561,7 @@ void DActor::ExplodeMissile()
 
   vel.Set(0, 0, 0);
 
-  SetState(mobjinfo[type].deathstate);
+  SetState(info->deathstate);
 
   if (game.mode < gm_heretic)
     {

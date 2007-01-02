@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -49,9 +47,9 @@ extern bool devparm;
 
 
 /// commonly used routines - moved here for include convenience
-void  I_Error(char *error, ...);
-void  CONS_Printf(char *fmt, ...);
-char *va(char *format, ...);
+void  I_Error(const char *error, ...);
+void  CONS_Printf(const char *fmt, ...);
+char *va(const char *format, ...);
 char *Z_StrDup(const char *in);
 int   I_GetKey();
 

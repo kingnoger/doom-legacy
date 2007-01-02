@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -26,6 +26,8 @@
 #include "g_map.h"
 #include "g_game.h"
 #include "g_player.h"
+#include "g_decorate.h"
+
 #include "p_enemy.h"
 #include "p_maputl.h"
 

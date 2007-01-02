@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -32,6 +32,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_input.h"
+#include "g_decorate.h"
 
 #include "p_camera.h"
 
@@ -123,7 +124,7 @@ bool PlayerPawn::Morph(mobjtype_t form)
   DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
-  const mobjinfo_t *i = &mobjinfo[form];
+  const ActorInfo *i = aid[form];
 
   //MT_PIGPLAYER, MT_CHICPLAYER
   morphTics = MORPHTICS;
@@ -153,7 +154,7 @@ bool PlayerPawn::UndoMorph()
   fixed_t r = radius;
   fixed_t h = height;
 
-  const mobjinfo_t *i = &mobjinfo[pinfo->mt];
+  const ActorInfo *i = aid[pinfo->mt];
 
   radius = i->radius;
   height = i->height;

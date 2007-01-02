@@ -28,6 +28,7 @@
 #include "g_map.h"
 #include "g_pawn.h"
 #include "g_player.h"
+#include "g_decorate.h"
 
 #include "p_enemy.h"
 #include "p_maputl.h"

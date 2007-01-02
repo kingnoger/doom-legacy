@@ -274,6 +274,8 @@ bool MD3_t::Load(const string& filename)
       // load the shaders (skins)
       // TODO how are these used?
       meshes[i].shaders = reinterpret_cast<MD3_mesh_shader*>(meshbase + meshes[i].header.ofsShaders);
+      for (int ttt=0; ttt<meshes[i].header.numShaders; ttt++)
+	printf("mesh %d, shader '%s'.\n", ttt, meshes[i].shaders[ttt].name);
 
       // triangles
       meshes[i].triangles = reinterpret_cast<MD3_mesh_triangle*>(meshbase + meshes[i].header.ofsTriangles);
@@ -589,10 +591,14 @@ modelpres_t::modelpres_t(const char *name, int col, const char *skin)
   color = col;
   mdl = models.Get(name);
 
-  SetAnim(Idle);
-
-  st[2].nextframe = 0;
+  st[0].seq = -1;
+  st[0].nextframe = 0;
+  st[1].seq = -1;
+  st[1].nextframe = 0;
   st[2].seq = MD3_animstate::MD3_animseq_e(0);
+  st[2].nextframe = 0;
+
+  SetAnim(Idle);
 
   for (int i=0; i<3; i++)
     {
@@ -600,6 +606,7 @@ modelpres_t::modelpres_t(const char *name, int col, const char *skin)
       st[i].interp = 0.0f;
     }
 
+  flags = 0;
   lastupdate = 0;
 }
 
@@ -613,11 +620,6 @@ modelpres_t::~modelpres_t()
 // set a new animation sequence for the player
 void modelpres_t::SetAnim(animseq_e seq)
 {
-  /*
-  if (animseq == seq)
-    return; // do not interrupt the animation
-  */
-
   animseq = seq;
 
   // map Legacy animation sequence to Q3 sequences
@@ -631,7 +633,6 @@ void modelpres_t::SetAnim(animseq_e seq)
       break;
 
     case Run:
-      //torso_seq = MD3_animstate::TORSO_STAND2;
       leg_seq = MD3_animstate::LEGS_WALK;
       break;
 
@@ -660,7 +661,7 @@ void modelpres_t::SetAnim(animseq_e seq)
       break;
 
     case Raise:
-      torso_seq = MD3_animstate::TORSO_STAND2;
+      torso_seq = MD3_animstate::TORSO_STAND;
       leg_seq = MD3_animstate::LEGS_IDLECR;
       break;
     }

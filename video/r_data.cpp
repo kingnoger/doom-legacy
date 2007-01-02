@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1054,7 +1054,7 @@ bool texturecache_t::BuildLumpTexture(int lump, bool h_start, cachesource_t &sou
 
 
 
-bool Read_NTEXTURE(const char *lumpname);
+bool Read_NTEXTURE(int lump);
 
 /// Initializes the texture cache, fills the cachesource_t containers with Texture objects.
 /// Follows the JDS texture standard.
@@ -1333,8 +1333,8 @@ int texturecache_t::ReadTextures()
 	}
     }
 
-  Read_NTEXTURE("NTEXTURE");
-  Read_NTEXTURE("NSPRITES");
+  Read_NTEXTURE(fc.FindNumForName("NTEXTURE"));
+  Read_NTEXTURE(fc.FindNumForName("NSPRITES"));
 
   return num_textures;
 }

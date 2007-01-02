@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@
 #include "vect.h"
 #include "g_think.h"  // We need the Thinker stuff.
 #include "g_damage.h" // and damage types
-#include "info.h"     // stuff for DActor
+#include "info.h"     // mobjtype_t
 
 using namespace TNL;
 
@@ -375,7 +375,7 @@ public:
 /// \ingroup g_thing
 /*!
   An Actor with the standard Doom/Heretic AI. Also known as THING or mobj_t.
-  Uses the A_* action functions and the state table in info_*.cpp.
+  Uses the A_* action functions and the state table in ai_*.cpp.
 
   The sprite and frame elements of state_t (together with angle) determine which patch_t
   is used to draw the sprite if it is visible.
@@ -385,8 +385,9 @@ class DActor : public Actor
   TNL_DECLARE_CLASS(DActor);
   DECLARE_CLASS(DActor);
 public:
-  mobjtype_t        type; ///< what kind of thing is it?
-  const mobjinfo_t *info; ///< basic properties    
+  /// What kind of thing is it?
+  const class ActorInfo *info;
+  mobjtype_t type;
 
   // state machine variables
   const state_t *state;   ///< current state
@@ -403,10 +404,10 @@ public:
 
 
 public:
-  /// create a nonfunctional special DActor (LavaInflictor etc...)
-  DActor(mobjtype_t t);
-  /// create a new DActor of mobjtype t
-  DActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
+  /// create a nonfunctional special DActor
+  //DActor(mobjtype_t t);
+  /// create a new DActor
+  DActor(fixed_t nx, fixed_t ny, fixed_t nz, const class ActorInfo *ai);
 
   virtual void Think();
 

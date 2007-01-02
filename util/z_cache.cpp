@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 //---------------------------------------------------------------------
 
 /// \file
-/// \brief Abstract cache system with reference counting
+/// \brief Abstract cache system with reference counting.
 
 #include "doomdef.h"
 #include "z_cache.h"
@@ -64,7 +64,7 @@ bool cacheitem_t::Release()
 /// Lists contents.
 void cachesource_t::Inventory()
 {
-  for (c_iter_t s = c_map.begin(); s != c_map.end(); s++)
+  for (dict_iter_t s = dict_map.begin(); s != dict_map.end(); s++)
     {
       cacheitem_t *p = s->second;
       CONS_Printf("- %s, rc = %d, use = %d\n", p->name, p->refcount, p->usefulness);
@@ -77,14 +77,14 @@ void cachesource_t::Inventory()
 int cachesource_t::Cleanup()
 {
   int k = 0;
-  for (c_iter_t s = c_map.begin(); s != c_map.end(); )
+  for (dict_iter_t s = dict_map.begin(); s != dict_map.end(); )
     {
       cacheitem_t *p = s->second;
-      c_iter_t t = s++; // first copy s to t, then increment s
+      dict_iter_t t = s++; // first copy s to t, then increment s
 
       if (p->refcount == 0)
 	{
-	  c_map.erase(t); // erase it from the hash_map
+	  dict_map.erase(t); // erase it from the hash_map
 	  // Once an iterator is erased, it becomes invalid
 	  // and cannot be incremented! Therefore we have both s and t.
 	  delete p; // delete the cacheitem itself
@@ -94,15 +94,6 @@ int cachesource_t::Cleanup()
   return k;
 }
 
-
-/// Erases all cacheitems.
-void cachesource_t::Clear()
-{
-  for (c_iter_t t = c_map.begin(); t != c_map.end(); t++)
-    delete t->second;
-
-  c_map.clear();
-}
 
 //=================================================================================
 

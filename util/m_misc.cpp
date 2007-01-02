@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -451,7 +451,7 @@ void M_ScreenShot()
 
 
 // Variable arguments handler for printing (sort of inline sprintf)
-char *va(char *format, ...)
+char *va(const char *format, ...)
 {
   va_list ap;
   static char temp[1024];

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,18 +18,13 @@
 //---------------------------------------------------------------------
 
 /// \file
-/// \brief Abstract cache class with reference counting
+/// \brief Abstract cache class with reference counting.
 
 #ifndef z_cache_h
 #define z_cache_h 1
 
-#if (__GNUC__ != 2)
-# include <ext/hash_map>
-#else
-# include <hash_map>
-#endif
 #include <string.h>
-#include "functors.h"
+#include "dictionary.h"
 #include "z_zone.h"
 
 
@@ -69,62 +64,14 @@ public:
 ///
 /// This is an extra layer of abstraction for complex caches with multiple data sources
 /// which can have different priorities depending on the query. See texturecache_t.
-class cachesource_t
+class cachesource_t : public HashDictionary<cacheitem_t>
 {
-protected:
-  // annoying namespace declarations, because hash_map is an extension...
-#if (__GNUC__ != 2)
-  typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, __gnu_cxx::hash<const char *>, equal_cstring> c_map_t;
-  //typedef __gnu_cxx::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
-#else
-  typedef hash_map<const char*, cacheitem_t*, hash<const char *>, equal_cstring> c_map_t;
-  //typedef std::hash_map<const char*, cacheitem_t*, hash_cstring8, equal_cstring8> c_map_t;
-#endif
-
-  typedef c_map_t::iterator c_iter_t;
-  c_map_t c_map; ///< hash_map from data item names to cacheitem_t's
-
 public:
-  /// The safe way of inserting stuff into the hash_map.
-  /// The main point is that 'name' is stored within the cacheitem structure itself.
-  inline void Insert(cacheitem_t *p)
-  {
-    c_map.insert(c_map_t::value_type(p->name, p));
-  };
-
-  /// Since hash_map is a unique associative container we need this, cannot just Insert new stuff with same key.
-  inline int Replace(cacheitem_t *p)
-  {
-    int n = c_map.erase(p->name); // erase the old instance by key
-    c_map.insert(c_map_t::value_type(p->name, p));
-    return n;
-  }
-
-  /// Tries to find the named item from this datasource.
-  inline cacheitem_t *Find(const char *name)
-  {
-    c_iter_t s = c_map.find(name);
-
-    if (s == c_map.end())
-      {
-	// cache miss
-	return NULL;
-      }
-    else
-      {
-	// cache hit
-	return s->second;
-      }
-  };
-
   /// Prints current contents
   void Inventory();
 
   /// Removes unused data items
   int  Cleanup();
-
-  /// Removes all data items
-  void Clear();
 };
 
 

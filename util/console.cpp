@@ -1130,7 +1130,7 @@ void Console::Drawer()
 //
 //  Console print! Wahooo! Lots o fun!
 //
-void CONS_Printf(char *fmt, ...)
+void CONS_Printf(const char *fmt, ...)
 {
   va_list     argptr;
   char        txt[512];
@@ -1173,7 +1173,7 @@ void CONS_Printf(char *fmt, ...)
 
 //  Print an error message, and wait for ENTER key to continue.
 //  To make sure the user has seen the message
-void CONS_Error(char *msg)
+void CONS_Error(const char *msg)
 {
   CONS_Printf("\2%s",msg);   // write error msg in different colour
   CONS_Printf("Press ENTER to continue\n");

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -25,6 +25,7 @@
 #include "g_player.h"
 #include "g_game.h"
 #include "g_map.h"
+#include "g_decorate.h"
 
 #include "command.h"
 #include "cvars.h"
@@ -200,7 +201,7 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
     }
 
   pinfo = &pawndata[type];
-  const mobjinfo_t *info = &mobjinfo[pinfo->mt];
+  const ActorInfo *info = aid[pinfo->mt];
 
   mass   = info->mass;
   radius = info->radius;
@@ -217,7 +218,10 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   attacker = NULL;
 
   color = 0;
-  pres = new spritepres_t(info, 0);
+  if (!info->modelname.empty())
+    pres = new modelpres_t(info->modelname.c_str());
+  else
+    pres = new spritepres_t(info, 0);
 }
 
 

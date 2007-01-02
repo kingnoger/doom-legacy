@@ -68,11 +68,6 @@ MapInfo::MapInfo()
   partime = 0;
   gravity = 1.0f;
 
-  // mapthing doomednum offsets
-  doom_offs[0] = doom_offs[1] = 0;
-  heretic_offs[0] = heretic_offs[1] = 0;
-  hexen_offs[0] = hexen_offs[1] = 0;
-
   warptrans = warpnext = nextlevel = secretlevel = -1;
   //nextmaplump[0] = secretmaplump[0] = '\0';
 
@@ -351,10 +346,6 @@ static parsercmd_t MapInfo_commands[]=
     {P_ITEM_STR,    "defaultweapons",&info_weapons},
   */
   {P_ITEM_IGNORE, "consolecmd", 0}, // TODO at least for now
-
-  {P_ITEM_INT_INT, "doom_thingoffset", MI_offset(doom_offs), MI_offset(doom_offs) + sizeof(int)},
-  {P_ITEM_INT_INT, "heretic_thingoffset", MI_offset(heretic_offs), MI_offset(heretic_offs) + sizeof(int)},
-  {P_ITEM_INT_INT, "hexen_thingoffset", MI_offset(hexen_offs), MI_offset(hexen_offs) + sizeof(int)},
   {P_ITEM_IGNORE, NULL, 0} // terminator
 };
 
@@ -414,22 +405,6 @@ char *MapInfo::Read(int lump)
 	    }
 	}
     }
-
-  if (doom_offs[1] == 0 && heretic_offs[1] == 0 && hexen_offs[1] == 0)
-    // none was given, original behavior
-    if (game.mode == gm_hexen)
-      hexen_offs[0] = 0, hexen_offs[1] = 65535;
-    else if (game.mode == gm_heretic)
-      heretic_offs[0] = 0, heretic_offs[1] = 65535;
-    else
-      doom_offs[0] = 0, doom_offs[1] = 65535;
-
-  /*
-  CONS_Printf("doom offsets: %d, %d\n", doom_offs[0], doom_offs[1]);
-  CONS_Printf("heretic offsets: %d, %d\n", heretic_offs[0], heretic_offs[1]);
-  CONS_Printf("hexen offsets: %d, %d\n", hexen_offs[0], hexen_offs[1]);
-  */
-
 
   // FS script data
   return (scriptblock.size() > 0) ? Z_Strdup(scriptblock.c_str(), PU_LEVEL, NULL) : NULL;

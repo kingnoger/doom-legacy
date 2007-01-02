@@ -616,9 +616,6 @@ void D_DoomMain()
   // Initialize the joystick subsystem.
   I_JoystickInit();
 
-  // adapt tables to legacy needs
-  P_PatchInfoTables();
-
   // generate a couple of lookup tables
   GenerateTables();
 
@@ -643,6 +640,10 @@ void D_DoomMain()
     default:
       DoomPatchEngine();
     }
+
+  // Convert mobjinfo table to DECORATE class dictionary.
+  // NOTE: After this mobjinfo is not used at all! Hence DEHACKED patches etc. must be applied before this.
+  ConvertMobjInfo();
 
   // all consvars are now registered
   //------------------------------------- CONFIG.CFG

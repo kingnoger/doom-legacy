@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by Doom Legacy Team
+// Copyright (C) 2002-2007 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -93,12 +93,6 @@ public:
   int   scripts; ///< how many FS scripts in the map?
   int   partime; ///< in seconds
   float gravity; ///< temporary, could be part of ZoneInfo or sector_t?
-
-
-  // thing number mappings (experimental)
-  int doom_offs[2];
-  int heretic_offs[2];
-  int hexen_offs[2];
 
   // less essential stuff (can be replaced with scripting or other more efficient means)
   string musiclump;

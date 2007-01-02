@@ -129,6 +129,7 @@ export engine_objects = \
 	$(objdir)/g_think.o \
 	$(objdir)/g_actor.o \
 	$(objdir)/g_pawn.o \
+	$(objdir)/g_decorate.o \
 	$(objdir)/p_tick.o \
 	$(objdir)/p_setup.o \
 	$(objdir)/p_saveg.o \
@@ -260,10 +261,11 @@ export sdl_objects = \
 	$(objdir)/searchp.o
 
 export grammar_objects = \
-	$(objdir)/ntexture.o \
-	$(objdir)/ntexture.tab.o \
-	$(objdir)/ntexture.yy.o
-
+	$(objdir)/ntexture.parser.o \
+	$(objdir)/ntexture.lexer.o \
+	$(objdir)/decorate.parser.o \
+	$(objdir)/decorate.lexer.o \
+	$(objdir)/parser_driver.o
 
 
 objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \

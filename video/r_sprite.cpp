@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,6 +24,7 @@
 #include "doomdef.h"
 
 #include "g_actor.h"
+#include "g_decorate.h"
 
 #include "r_data.h"
 #include "r_sprite.h"
@@ -662,17 +663,11 @@ void presentation_t::operator delete(void *mem)
 }
 
 
-spritepres_t::spritepres_t()
-{
-}
-
-
 void spritepres_t::Pack(BitStream *s)
 {
-  s->writeInt(info - mobjinfo, 16); // "mobjtype", defines the spritepres
-
-  PackAnim(s);
+  s->writeInt(info->GetMobjType(), 16); // ActorInfo defines the spritepres
   s->writeInt(color, 8);
+  PackAnim(s);
   // flags and lastupdate need not be sent
 }
 
@@ -680,15 +675,11 @@ void spritepres_t::Pack(BitStream *s)
 spritepres_t::spritepres_t(BitStream *s)
 {
   int temp = s->readInt(16);
-  if (temp < NUMMOBJTYPES)
-    info = &mobjinfo[temp];
-  else
-    info = NULL;
+  info = aid[mobjtype_t(temp)];
+  color = s->readInt(8);
 
   spr = NULL;
-
   UnpackAnim(s);
-  color = s->readInt(8);
 }
 
 
@@ -706,8 +697,7 @@ void spritepres_t::UnpackAnim(BitStream *s)
 }
 
 
-
-spritepres_t::spritepres_t(const mobjinfo_t *inf, int col)
+spritepres_t::spritepres_t(const ActorInfo *inf, int col)
 {
   info = inf;
   spr = NULL;

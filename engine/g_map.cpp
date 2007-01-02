@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -27,6 +27,7 @@
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "g_decorate.h"
 
 #include "command.h"
 #include "cvars.h"
@@ -266,7 +267,7 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 /// adds a DActor to a Map
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
-  DActor *p = new DActor(nx, ny, nz, t);
+  DActor *p = new DActor(nx, ny, nz, aid[t]);
   AddThinker(p);
 
   //p->TestLocation(nx, ny); // TODO sets tmfloorz, tmceilingz. Wrong, since for missiles owner is not yet set => collides
@@ -391,14 +392,15 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 // The fields of the mapthing are already in host byte order.
 DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
 {
-  int t = mt->type;
+  mobjtype_t t = mobjtype_t(mt->type);
+  ActorInfo *ai = aid[t];
 
   // don't spawn keycards in deathmatch
-  if (cv_deathmatch.value && mobjinfo[t].flags & MF_NOTDMATCH)
+  if (cv_deathmatch.value && ai->flags & MF_NOTDMATCH)
     return NULL;
 
   // don't spawn any monsters if -nomonsters
-  if (cv_nomonsters.value && (mobjinfo[t].flags & MF_MONSTER))
+  if (cv_nomonsters.value && (ai->flags & MF_MONSTER))
     return NULL;
 
   // spawn it
@@ -406,9 +408,9 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
   fixed_t ny = mt->y;
   fixed_t nz;
 
-  if (mobjinfo[t].flags & MF_SPAWNCEILING)
+  if (ai->flags & MF_SPAWNCEILING)
     nz = ONCEILINGZ;
-  else if (mobjinfo[t].flags & MF_SPAWNFLOAT)
+  else if (ai->flags & MF_SPAWNFLOAT)
     nz = FLOATRANDZ;
   else
     {
@@ -416,7 +418,7 @@ DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
       nz = ONFLOORZ;
     }
 
-  DActor *p = SpawnDActor(nx, ny, nz, mobjtype_t(t));
+  DActor *p = SpawnDActor(nx, ny, nz, t);
   if (nz == ONFLOORZ)
     p->pos.z += mt->z;
   else if (nz == ONCEILINGZ)

@@ -37,6 +37,7 @@
 #include "g_map.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "g_decorate.h"
 
 #include "p_maputl.h"
 #include "p_spec.h"
@@ -87,30 +88,11 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
 {
   // monster killer
 
-  char *str = NULL;
-  switch (type)
-    {
-    case MT_BARREL:    str = text[TXT_DEATHMSG_BARREL]; break;
-    case MT_POSSESSED: str = text[TXT_DEATHMSG_POSSESSED]; break;
-    case MT_SHOTGUY:   str = text[TXT_DEATHMSG_SHOTGUY];   break;
-    case MT_VILE:      str = text[TXT_DEATHMSG_VILE];      break;
-    case MT_FATSO:     str = text[TXT_DEATHMSG_FATSO];     break;
-    case MT_CHAINGUY:  str = text[TXT_DEATHMSG_CHAINGUY];  break;
-    case MT_TROOP:     str = text[TXT_DEATHMSG_TROOP];     break;
-    case MT_SERGEANT:  str = text[TXT_DEATHMSG_SERGEANT];  break;
-    case MT_SHADOWS:   str = text[TXT_DEATHMSG_SHADOWS];   break;
-    case MT_HEAD:      str = text[TXT_DEATHMSG_HEAD];      break;
-    case MT_BRUISER:   str = text[TXT_DEATHMSG_BRUISER];   break;
-    case MT_UNDEAD:    str = text[TXT_DEATHMSG_UNDEAD];    break;
-    case MT_KNIGHT:    str = text[TXT_DEATHMSG_KNIGHT];    break;
-    case MT_SKULL:     str = text[TXT_DEATHMSG_SKULL];     break;
-    case MT_SPIDER:    str = text[TXT_DEATHMSG_SPIDER];    break;
-    case MT_BABY:      str = text[TXT_DEATHMSG_BABY];      break;
-    case MT_CYBORG:    str = text[TXT_DEATHMSG_CYBORG];    break;
-    case MT_PAIN:      str = text[TXT_DEATHMSG_PAIN];      break;
-    case MT_WOLFSS:    str = text[TXT_DEATHMSG_WOLFSS];    break;
-    default:           str = text[TXT_DEATHMSG_DEAD];      break;
-    }
+  const char *str = NULL;
+  if (!info->obituary.empty())
+    str = info->obituary.c_str();
+  else
+    str = text[TXT_DEATHMSG_DEAD];
 
   victim->player->SetMessage(va(str, victim->player->name.c_str()));
 }

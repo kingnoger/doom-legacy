@@ -27,6 +27,7 @@
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_map.h"
+#include "g_decorate.h"
 
 #include "p_enemy.h"
 #include "p_maputl.h"

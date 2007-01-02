@@ -28,7 +28,7 @@
 
 #include "m_fixed.h"
 
-void P_PatchInfoTables();
+void ConvertMobjInfo();
 
 
 /// \brief Sprite enumeration, for combining weapon and THING states with sprite names.
@@ -6530,7 +6530,8 @@ struct mobjinfo_t
   state_t *crashstate;   ///< Used when a flying thing has died and crashed on the ground.
   state_t *raisestate;   ///< Used when thing is being raised from dead.
 
-  touchfunc_t touchf;      ///< If MF_TOUCHFUNC is set, this function is to be called when touching another Actor.
+  touchfunc_t touchf;    ///< If MF_TOUCHFUNC is set, this function is to be called when touching another Actor.
+  const char *classname; ///< TEST, DECORATE class name.
 };
 
 

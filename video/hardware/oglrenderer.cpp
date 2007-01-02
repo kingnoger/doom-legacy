@@ -616,6 +616,9 @@ void OGLRenderer::Render3DView(PlayerInfo *player)
 
       vec_t<fixed_t> target = trace.Point(trace.frac);
 
+      //if (!(player->mp->maptic & 0xF))
+      //  CONS_Printf("targ: %f, %f, %f, dist %f\n", target.x.Float(), target.y.Float(), target.z.Float(), trace.frac);
+
       GLdouble model[16];
       GLdouble proj[16];
       GLint vp[4];
@@ -665,6 +668,97 @@ void OGLRenderer::DrawCrosshairs(Texture *t)
 }
 
 
+
+// Checks BSP node/subtree bounding box.
+// Returns true if some part of the bbox might be visible.
+bool OGLRenderer::BBoxIntersectsFrustum(const bbox_t& bbox)
+{
+  /*
+  //   | 0 | 1 | 2
+  // --+---+---+---
+  // 0 | 0 | 1 | 2
+  // 1 | 4 | 5 | 6
+  // 2 | 8 | 9 | A
+  const bbox_e checkcoord[11][4] =
+  {
+    {BOXRIGHT,BOXTOP,BOXLEFT,BOXBOTTOM},
+    {BOXRIGHT,BOXTOP,BOXLEFT,BOXTOP},
+    {BOXRIGHT,BOXBOTTOM,BOXLEFT,BOXTOP},
+    {0},       // UNUSED
+    {BOXLEFT,BOXTOP,BOXLEFT,BOXBOTTOM},
+    {0},       // UNUSED
+    {BOXRIGHT,BOXBOTTOM,BOXRIGHT,BOXTOP},
+    {0},       // UNUSED
+    {BOXLEFT,BOXTOP,BOXRIGHT,BOXBOTTOM},
+    {BOXLEFT,BOXBOTTOM,BOXRIGHT,BOXBOTTOM},
+    {BOXLEFT,BOXBOTTOM,BOXRIGHT,BOXTOP}
+  };
+
+  int boxpos;
+
+  // Find the corners of the box that define the edges from current viewpoint.
+  if (x <= bbox[BOXLEFT])
+    boxpos = 0;
+  else if (x < bbox[BOXRIGHT])
+    boxpos = 1;
+  else
+    boxpos = 2;
+
+  if (y >= bbox[BOXTOP])
+    boxpos |= 0;
+  else if (y > bbox[BOXBOTTOM])
+    boxpos |= 1<<2;
+  else
+    boxpos |= 2<<2;
+
+  if (boxpos == 5)
+    return true;
+
+  fixed_t x1 = bbox[checkcoord[boxpos][0]];
+  fixed_t y1 = bbox[checkcoord[boxpos][1]];
+  fixed_t x2 = bbox[checkcoord[boxpos][2]];
+  fixed_t y2 = bbox[checkcoord[boxpos][3]];
+
+#error frustum cull
+    // check clip list for an open space
+    angle1 = R_PointToAngle (x1, y1) - viewangle;
+    angle2 = R_PointToAngle (x2, y2) - viewangle;
+
+    span = angle1 - angle2;
+
+    // Sitting on a line?
+    if (span >= ANG180)
+        return true;
+
+
+    tspan = angle1 + clipangle;
+
+    if (tspan > 2*clipangle)
+    {
+        tspan -= 2*clipangle;
+
+        // Totally off the left edge?
+        if (tspan >= span)
+            return false;
+
+        angle1 = clipangle;
+    }
+    tspan = clipangle - angle2;
+    if (tspan > 2*clipangle)
+    {
+        tspan -= 2*clipangle;
+
+        // Totally off the left edge?
+        if (tspan >= span)
+            return false;
+
+        angle2 = -clipangle;
+    }
+
+  */
+  return true;
+}
+
 /// Walk through the BSP tree and render the level in back-to-front
 /// order. Assumes that the OpenGL state is properly set elsewhere.
 void OGLRenderer::RenderBSPNode(int nodenum)
@@ -686,10 +780,8 @@ void OGLRenderer::RenderBSPNode(int nodenum)
 
   // OpenGL requires back-to-front drawing for translucency effects to
   // work properly. Thus we first check the back.
-
-#warning TODO frustum culling
-  // if (R_CheckBBox(node->bbox[side^1]))
-  RenderBSPNode(node->children[side^1]);
+  if (BBoxIntersectsFrustum(node->bbox[side^1])) // sort of frustum culling
+    RenderBSPNode(node->children[side^1]);
 
   // Now we draw the front side.
   RenderBSPNode(node->children[side]);

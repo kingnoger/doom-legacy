@@ -1,5 +1,5 @@
 # Auxiliary Makefile for Doom Legacy grammars
-# Ville Bergholm 2005-2006
+# Ville Bergholm 2005-2007
 
 i = ../include
 
@@ -15,21 +15,30 @@ all	: $(grammar_objects)
 depend	:
 	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > grammars.dep
 
-ntexture.tab.h	: ntexture.y $(i)/ntexture.h
-	bison -d $<
+lemon	: lemon.c
+	gcc $< -o $@
 
-ntexture.tab.c	: ntexture.y $(i)/ntexture.h
-	bison -d $<
+# lexer rules
 
-ntexture.yy.c	: ntexture.flex $(i)/ntexture.h ntexture.tab.h
-	flex $<
-
-$(objdir)/ntexture.o: ntexture.cpp $(i)/ntexture.h $(i)/w_wad.h ntexture.tab.h
+$(objdir)/%.lexer.o: %.lexer.c parser_driver.h %.parser.h
 	$(CC) -c $(CFLAGS) $< -o $@
 
-# implied rules
+ntexture.lexer.c: ntexture.lexer.flex
+	flex -PNTEXTURE_ $<
 
-$(objdir)/%.o	: %.c
+decorate.lexer.c: decorate.lexer.flex
+	flex -PDECORATE_ $<
+
+
+# rule for parsers and token definition headers
+
+$(objdir)/%.parser.o: %.parser.c parser_driver.h %.parser.h
+	$(CC) -c $(CFLAGS) $< -o $@
+
+%.parser.c %.parser.h: %.parser.y lemon
+	./lemon $<
+
+$(objdir)/%.o: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 include grammars.dep

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,6 +39,7 @@
 #include "g_map.h"
 #include "g_mapinfo.h"
 #include "g_level.h"
+#include "g_decorate.h"
 
 #include "p_setup.h"
 #include "p_spec.h"
@@ -342,7 +343,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
     }
 
 
-  int i, n, ednum;
+  int i, ednum;
   for (i=0 ; i<nummapthings ; i++, t++)
     {
       if (hexen_format)
@@ -414,41 +415,25 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
 	  continue;
 	}
 
-      // cameras etc.
-      for (n = MT_LEGACY_S; n <= MT_LEGACY_S_END; n++)
-        if (ednum == mobjinfo[n].doomednum)
-	  {
-	    t->type = mobjtype_t(n);
-	    break;
-	  }
-
-      if (t->type)
-	continue; // was found
+      // find which type to spawn
+      ActorInfo *ai = aid.FindDoomEdNum(ednum);
+      if (ai && ai->spawn_always)
+	{
+	  // cameras etc.
+	  t->type = ai->GetMobjType();
+	  continue; // was found
+	}
 
       //======== then game-specific things not affected by spawning flags ========
 
-      int orig_ednum = ednum;
-      int low = 0;
-      int high = 0;
-
-      // find which type to spawn
-      // this is because the ednum ranges normally overlap in different games
-      if (ednum >= info->doom_offs[0] && ednum <= info->doom_offs[1])
+      if (game.mode <= gm_doom2) // Doom
         {
-          ednum -= info->doom_offs[0];
-          low = MT_DOOM;
-          high = MT_DOOM_END;
-
           // DoomII braintarget list
           if (ednum == EN_DOOM_BRAINTARGET)
             braintargets.push_back(t);
         }
-      else if (ednum >= info->heretic_offs[0] && ednum <= info->heretic_offs[1])
+      else if (game.mode == gm_heretic) // Heretic
         {
-          ednum -= info->heretic_offs[0];
-          low = MT_HERETIC;
-          high = MT_HERETIC_END;
-
           // Ambient sound sequences
           if (ednum >= EN_HERETIC_AMBIENTSND1 && ednum <= EN_HERETIC_AMBIENTSND10)
             {
@@ -470,12 +455,8 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
               continue;
             }
         }
-      else if (ednum >= info->hexen_offs[0] && ednum <= info->hexen_offs[1])
+      else // Hexen
         {
-          ednum -= info->hexen_offs[0];
-          low = MT_HEXEN;
-          high = MT_HEXEN_END;
-
           // The polyobject system is pretty stupid, since the mapthings are not always in
           // any particular order. Polyobjects have to be picked apart
           // from other things  => polyspawn vector
@@ -523,27 +504,15 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
 	  continue;
 	}
 
-      for (n = MT_LEGACY; n <= MT_LEGACY_END; n++)
-        if (orig_ednum == mobjinfo[n].doomednum)
-	  {
-	    t->type = mobjtype_t(n);
-	    break;
-	  }
-
-      if (t->type)
-	continue; // was found
-
       //======== finally game-specific things affected by spawning flags ========
 
-      for (n = low; n <= high; n++)
-        if (ednum == mobjinfo[n].doomednum)
-	  {
-	    t->type = mobjtype_t(n);
-	    break;
-	  }
-
-      if (!t->type)
-	CONS_Printf("\2Map::LoadThings: Unknown type %d at (%d, %d)\n", orig_ednum, t->x, t->y);
+      if (ai)
+	{
+	  t->type = ai->GetMobjType();
+	  continue; // was found
+	}
+      else
+	CONS_Printf("\2Map::LoadThings: Unknown DoomEdNum %d at (%d, %d)\n", ednum, t->x, t->y);
     }
 
   Z_Free(data);

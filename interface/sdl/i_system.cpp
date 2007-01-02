@@ -621,7 +621,7 @@ void I_Quit()
 
 
 
-void I_Error(char *error, ...)
+void I_Error(const char *error, ...)
 {
   static bool recursive = false;
 

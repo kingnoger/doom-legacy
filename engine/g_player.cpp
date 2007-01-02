@@ -30,6 +30,7 @@
 #include "g_mapinfo.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "g_decorate.h"
 #include "b_bot.h"
 
 #include "a_functions.h"
@@ -652,6 +653,9 @@ void PlayerInfo::LoadPawn()
   pawn->player = this;
 
   // and a new presentation
-  const mobjinfo_t *info = &mobjinfo[pawn->pinfo->mt];
-  pawn->pres = new spritepres_t(info, 0);
+  const ActorInfo *info = aid[pawn->pinfo->mt];
+  if (!info->modelname.empty())
+    pawn->pres = new modelpres_t(info->modelname.c_str());
+  else
+    pawn->pres = new spritepres_t(info, 0);
 }

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright(C) 2000 Simon Howard
-// Copyright(C) 2001-2006 Doom Legacy Team
+// Copyright(C) 2001-2007 Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_map.h"
+#include "g_decorate.h"
 
 #include "d_main.h"
 #include "g_game.h"

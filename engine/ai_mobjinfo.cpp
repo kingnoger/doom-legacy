@@ -177,7 +177,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_bgsit1, 0, sfx_popain, sfx_bgdth1, sfx_bgact,
     &states[S_TROO_STND], &states[S_TROO_RUN1], &states[S_TROO_ATK1], &states[S_TROO_ATK1], &states[S_TROO_PAIN],
     &states[S_TROO_DIE1], &states[S_TROO_XDIE1], NULL, &states[S_TROO_RAISE1],
-    NULL
+    NULL,
+    "DoomImp"
   },
 
   // MT_SERGEANT
@@ -6183,7 +6184,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, SFX_SPIRIT_DIE, sfx_None,
     &states[S_HOLY_FX1], NULL, NULL, NULL, NULL,
     &states[S_HOLY_FX_X1], NULL, NULL, NULL,
-    MT_HOLY_FX_touchfunc
+    MT_HOLY_FX_touchfunc,
+    "HolySpirit"
   },
 
   // MT_HOLY_TAIL
@@ -6282,7 +6284,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_LIGHTNING_CEILING1], NULL, NULL, NULL, NULL,
     &states[S_LIGHTNING_C_X1], NULL, NULL, NULL,
-    MT_LIGHTNING_touchfunc
+    MT_LIGHTNING_touchfunc,
+    "LightningCeiling"
   },
 
   // MT_LIGHTNING_FLOOR
@@ -6293,7 +6296,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_LIGHTNING_FLOOR1], NULL, NULL, NULL, NULL,
     &states[S_LIGHTNING_F_X1], NULL, NULL, NULL,
-    MT_LIGHTNING_touchfunc
+    MT_LIGHTNING_touchfunc,
+    "LightningFloor"
   },
 
   // MT_LIGHTNING_ZAP
@@ -6304,7 +6308,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_LIGHTNING_ZAP1], NULL, NULL, NULL, NULL,
     &states[S_LIGHTNING_ZAP_X8], NULL, NULL, NULL,
-    MT_LIGHTNING_ZAP_touchfunc
+    MT_LIGHTNING_ZAP_touchfunc,
+    "LightningZap"
   },
 
   // MT_MSTAFF_FX
@@ -6326,7 +6331,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, SFX_MAGE_STAFF_EXPLODE, sfx_None,
     &states[S_MSTAFF_FX2_1], NULL, NULL, NULL, NULL,
     &states[S_MSTAFF_FX2_X1], NULL, NULL, NULL,
-    MT_MSTAFF_FX2_touchfunc
+    MT_MSTAFF_FX2_touchfunc,
+    "MageStaffFX2"
   },
 
   // MT_FW_SWORD1

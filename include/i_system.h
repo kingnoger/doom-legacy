@@ -42,9 +42,6 @@ void I_Sleep(unsigned int ms);
 /// quits the game
 void I_Quit();
 
-/// quits the game and prints an error message
-void I_Error (char *error, ...);
-
 /// writes a message to stdout
 void I_OutputMsg(char *error, ...);
 

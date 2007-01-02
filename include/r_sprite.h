@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -150,19 +150,18 @@ public:
 /// \brief Sprite presentation
 ///
 /// Sprites can be animated in two ways, either using SetAnim or SetFrame.
-/// Both use the states table. A sprite presentation is defined by a mobjinfo_t struct.
+/// Both use the states table. A sprite presentation is defined by an ActorInfo.
 class spritepres_t : public presentation_t
 {
 protected:
   sprite_t *spr;
-  const struct mobjinfo_t *info; ///< this is used to know which sequence corresponds to which state
+  const class ActorInfo *info; ///< this is used to know which sequence corresponds to which state
   const state_t *state; ///< animation frames are tied to the states table
 
 public:
-  spritepres_t(); ///< simple constructor for netcode
-  spritepres_t(const mobjinfo_t *inf, int col = 0); ///< normal constructor
+  spritepres_t() {}; ///< simple constructor for unserialization
+  spritepres_t(const ActorInfo *inf, int col = 0); ///< normal constructor
   spritepres_t(class TNL::BitStream *s);
-
   virtual ~spritepres_t();
 
   virtual void SetFrame(const state_t *st); // Only used by DActors with sprites
@@ -256,6 +255,7 @@ class modelpres_t : public presentation_t
   MD3_animstate st[3];   ///< animation states for legs, torso, head
 
 public:
+  modelpres_t() {}; ///< simple constructor for unserialization
   modelpres_t(const char *mname, int col = 0, const char *skin = "default");
   virtual ~modelpres_t();
 

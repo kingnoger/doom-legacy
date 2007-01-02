@@ -117,7 +117,7 @@ public:
   void Drawer();
 
   /// wrapper
-  friend void CONS_Printf(char *fmt, ...);
+  friend void CONS_Printf(const char *fmt, ...);
 };
 
 

@@ -50,6 +50,7 @@
 #include "g_player.h"
 #include "g_pawn.h"
 #include "g_input.h"
+#include "g_decorate.h"
 
 #include "sounds.h"
 #include "i_system.h"
@@ -1863,7 +1864,8 @@ void Menu::DrawSetupPlayer()
   if (!multi_pres)
     {
       // if the presentation does not exist (or needed to be changed), create it anew
-      multi_pres = new spritepres_t(&mobjinfo[pawndata[p.ptype].mt], cv_menu_playercolor.value);
+      multi_pres = new spritepres_t(aid[pawndata[p.ptype].mt]);
+      multi_pres->color = cv_menu_playercolor.value;
       multi_pres->SetAnim(presentation_t::Run);
     }
 

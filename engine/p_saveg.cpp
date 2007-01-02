@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -37,6 +37,8 @@
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
+#include "g_decorate.h"
+
 #include "n_interface.h"
 
 #include "p_spec.h"
@@ -45,6 +47,7 @@
 #include "p_acs.h"
 #include "r_data.h"
 #include "r_sprite.h"
+#include "hardware/md3.h"
 #include "t_vari.h"
 #include "t_script.h"
 #include "t_parse.h"
@@ -338,7 +341,7 @@ int presentation_t::Serialize(presentation_t *p, LArchive &a)
 {
   // much simpler than the Thinker serialization.
   int temp;
-  //CONS_Printf("serializing a presentation\n");
+
   if (p)
     p->Marshal(a); // handles the type id as well.
   else
@@ -351,21 +354,19 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
   presentation_t *p;
   int temp;
   a << temp; // read the type id
-  //CONS_Printf("unserializing a presentation, %d\n", temp);
+
   switch (temp)
     {
     case PID_NONE:
       return NULL;
 
     case PID_SPRITE:
-      p = new spritepres_t(NULL, 0);
+      p = new spritepres_t();
       break;
 
-      /*
-      case PID_MODEL:
-	p = new modelpres_t(NULL);
-	break;
-      */
+    case PID_MODEL:
+      p = new modelpres_t();
+      break;
 
     default:
       I_Error("Unknown presentation id %d!\n", temp);
@@ -373,7 +374,6 @@ presentation_t *presentation_t::Unserialize(LArchive &a)
     }
 
   p->Marshal(a);
-
   return p;
 }
 
@@ -383,12 +383,13 @@ int spritepres_t::Marshal(LArchive &a)
   if (a.IsStoring())
     {
       a << (temp = PID_SPRITE); // type id
-      ST_PTR(info, mobjinfo);
+      a << (temp = info->GetMobjType());
       ST_PTR(state, states);
     }
   else
     {
-      RE_PTR(info, mobjinfo);
+      a << temp;
+      info = aid[mobjtype_t(temp)];
       state_t *st;
       RE_PTR(st, states);
       SetFrame(st);
@@ -398,21 +399,29 @@ int spritepres_t::Marshal(LArchive &a)
   return 0;
 }
 
+
 int modelpres_t::Marshal(LArchive &a)
 {
   int temp;
   if (a.IsStoring())
     {
       a << (temp = PID_MODEL); // type id
-      // TODO store the model name
+      a.Write(reinterpret_cast<const byte*>(mdl->GetName()), 64);
+      // TODO animseq. necessary?
     }
   else
     {
-      // and restore it: mdl = models.Get("xxx");
+      char str[64];
+      a.Read(reinterpret_cast<byte*>(str), 64);
+      mdl = models.Get(str);
+      lastupdate = 0;
+      animseq = animseq_e(0);
     }
 
-  a << color << temp;
-  animseq = animseq_e(temp);
+  for (int k=0; k<3; k++)
+    a << st[k].seq << st[k].frame << st[k].nextframe << st[k].interp;
+
+  a << color << flags;
   return 0;
 }
 
@@ -632,7 +641,7 @@ int DActor::Marshal(LArchive &a)
       else
 	type = mobjtype_t(spawnpoint->type); // Map::LoadThings() should set it to the correct value
 
-      info = &mobjinfo[type];
+      info = aid[type];
       {
 	// use info for init, correct later
 	mass         = info->mass;
@@ -710,8 +719,11 @@ int DActor::Marshal(LArchive &a)
       if (!(diff & MD_Z))
 	pos.z = floorz;
 
-      // TODO simplified presentation loading for DActors for now (only sprites)
-      pres = new spritepres_t(info, 0);
+      if (!info->modelname.empty())
+	pres = new modelpres_t(info->modelname.c_str());
+      else
+	pres = new spritepres_t(info, 0);
+  
       pres->SetFrame(state);
     }
 
