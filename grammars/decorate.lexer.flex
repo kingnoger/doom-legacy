@@ -66,6 +66,7 @@ WHITESP [ \t\v\r\f]
 actor        { return ACTOR; }
 mass         { return MASS; }
 obituary     { return OBITUARY; }
+model        { return MODEL; }
 
 
 %{

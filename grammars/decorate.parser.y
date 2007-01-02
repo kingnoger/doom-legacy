@@ -114,8 +114,9 @@ actor_properties ::= . // empty
 actor_properties ::= actor_properties actor_property.
 
 
-actor_property ::= OBITUARY str(A). { d.t->obituary = A; }
-actor_property ::= MASS num(A). { d.t->mass = A; }
+actor_property ::= OBITUARY str(A).   { d.t->obituary = A; }
+actor_property ::= MASS num(A).       { d.t->mass = A; }
+actor_property ::= MODEL str(A).      { d.t->modelname = A; }
 
 
 // string
