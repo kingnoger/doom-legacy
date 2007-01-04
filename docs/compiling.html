@@ -14,11 +14,9 @@
 <!-- $Id$ -->
 <body>
 
-<h1>How to compile Doom Legacy</h1>
+<h1>How to compile Doom Legacy 2.0 (SDL version)</h1>
 
-<h2>Compiling the SDL version</h2>
-
-<p>In order to compile Doom Legacy SDL you'll need to have several
+<p>In order to compile Doom Legacy 2.0 SDL you'll need to have several
 libraries installed on your system.<br />
 Make sure you install the "developer" packages of the
 libraries, which include both the runtime libraries (DLLs) and
@@ -44,10 +42,10 @@ You might also find the following programs useful:
 </p>
 
 <ul>
-<li>GCC 4.0, the Gnu Compiler Collection which, among other things, is
+<li>GCC 4, the Gnu Compiler Collection which, among other things, is
 a C/C++ compiler.<br />
 Linux systems most likely already have it installed.<br />
-Windows users should install <a href="http://www.mingw.org/">MinGW 3.0</a>, a
+Windows users should install <a href="http://www.mingw.org/">MinGW</a>, a
 GCC port, and <a href="http://www.mingw.org/msys.shtml">MSYS</a>, a
 collection of POSIX utilities for Win32.</li>
 
@@ -78,19 +76,6 @@ Say 'make wad' to generate an updated legacy.wad, which can be found
 in the directory wad/.</li>
 <li>Say 'make docs' to generate the Doxygen documentation.</li>
 </ol>
-
-<hr />
-<h2>Miscellaneous hints</h2>
-
-SDL 1.2.5 Windows binary version installation:
-
-<ul>
-<li>Decompress the file i386-mingw32msvc.tar.gz to a temporary
- directory</li>
-<li>Copy the 'include' and 'lib' directories to your MinGW directory</li>
-<li>Copy the file 'SDL.dll' (runtime library) to your windows/SYSTEM
-directory.</li>
-</ul>
 
 </body>
 </html>
