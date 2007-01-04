@@ -32,7 +32,7 @@ the stuff required during compilation (header files and import libraries).</p>
  <td>A free compression library.</td></tr>
 <tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td> <td>1.2.5</td>
  <td>The official PNG reference library.</td></tr>
-<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>1.5.0</td>
+<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>HEAD revision</td>
  <td>A free game networking library based on the Torque Network Library.<br />
  The OpenTNL distribution contains <b>libtomcrypt</b>, which provides strong encryption.</td></tr>
 </table>
@@ -58,23 +58,36 @@ Finally, download the Doom Legacy
 <a href="http://sourceforge.net/projects/doomlegacy/">source</a>.
 You can either get the source package or, for the latest code
 snapshot, checkout the <b>legacy/trunk/</b> directory from the Subversion
-repository.
+repository. From now on, your local copy of this directory will be referred as the <b>Trunk</b>.
 </p>
 
+<h3>Compiling OpenTNL</h3>
+
+<p>
+Unfortunately, this step is more complicated than it should be.
+</p>
+<ol>
+<li>Download latest OpenTNL source from the CVS.</li>
+<li>Apply the <b>Trunk/libtnl_patch.diff</b> patch to the OpenTNL source.</li>
+<li>Follow the OpenTNL compilation instructions.</li>
+<li>Move the libraries <b>libtnl.a</b> and <b>libtomcrypt.a</b> you
+just built somewhere the linker can find them, e.g. the
+Trunk.</li>
+</ol>
 
 <h3>Compilation and linking</h3>
 
 <ol>
-<li>Open a shell window. Go to the legacy/trunk/ directory.</li>
-<li>Say 'make depend' to create the dependency files.</li>
-<li>Say 'make OPT=1' or just 'make' to build the executable.<br />
+<li>Open a shell window. Go to the Trunk.</li>
+<li>Say '<b>make depend</b>' to create the dependency files.</li>
+<li>Say '<b>make OPT=1</b>' or just 'make' to build the executable.<br />
  Omitting the 'OPT=1' parameter adds debugging symbols to the
  executable.</li>
-<li>Copy the file legacy.wad from Doom Legacy version 1.40 (or later) to your
-legacy/trunk/ directory.<br />
-Say 'make wad' to generate an updated legacy.wad, which can be found
-in the directory wad/.</li>
-<li>Say 'make docs' to generate the Doxygen documentation.</li>
+<li>Copy the file <b>legacy.wad</b> from Doom Legacy version 1.40 (or later) to Trunk.<br/>
+Say '<b>make wad</b>' to generate an updated legacy.wad, which can be found
+in the directory <b>Trunk/wad/</b>. Copy it to the same directory as
+the Legacy executable.</li>
+<li>Say '<b>make docs</b>' to generate the Doxygen documentation.</li>
 </ol>
 
 </body>
