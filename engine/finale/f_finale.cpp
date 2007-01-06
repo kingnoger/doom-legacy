@@ -558,10 +558,8 @@ void F_DoomDrawer(int dummy)
   switch (gameepisode)
     {
     case 1:
-      if (game.mode == gm_doom1s)
-        tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info
-      else
-        tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
+      //tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info for shareware
+      tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
       break;
     case 2:
       tc.GetPtr("VICTORY2")->Draw(0,0, V_SCALE); // deimos over hell

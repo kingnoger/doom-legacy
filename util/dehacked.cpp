@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1039,7 +1039,9 @@ void dehacked_t::Read_Text(int len1, int len2)
 	  }
     }
 
+
   // music table
+  extern char* MusicNames[NUMMUSIC];
   for (i=1; i<NUMMUSIC; i++)
     if (MusicNames[i] && !strncmp(MusicNames[i], s, len1))
       {

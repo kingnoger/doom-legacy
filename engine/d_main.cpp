@@ -259,7 +259,7 @@ static gamemode_t D_GetDoomType(const char *wadname)
   if (sbuf.st_size<12408292)
     return gm_doom1;
   else
-    return gm_udoom;      // Ultimate
+    return gm_doom1;      // Ultimate
 }
 
 
@@ -312,11 +312,11 @@ static void D_IdentifyVersion()
       else if (!strcasecmp(doom2wad, s))
 	game.mode = gm_doom2;
       else if (!strcasecmp(doomuwad, s))
-	game.mode = gm_udoom;
+	game.mode = gm_doom1;
       else if (!strcasecmp(doomwad, s))
 	game.mode = D_GetDoomType(s);
       else if (!strcasecmp(doom1wad, s))
-	game.mode = gm_doom1s;
+	game.mode = gm_doom1;
       else
 	game.mode = gm_doom2;
     }
@@ -331,7 +331,7 @@ static void D_IdentifyVersion()
 	}
       else if (fc.Access(doomuwad))
 	{
-	  game.mode = gm_udoom;
+	  game.mode = gm_doom1;
 	  D_AddFile(doomuwad);
 	}
       else if (fc.Access(doomwad))
@@ -341,7 +341,7 @@ static void D_IdentifyVersion()
 	}
       else if (fc.Access(doom1wad))
 	{
-	  game.mode = gm_doom1s;
+	  game.mode = gm_doom1;
 	  D_AddFile(doom1wad);
 	}
       else if (fc.Access(plutoniawad))

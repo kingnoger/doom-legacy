@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Main interface for sound and music
+/// \brief Main interface for sound and music.
 ///
 /// Originally created by the sound utility written by Dave Taylor.
 /// Simple sound interface using sound/music IDs (wrappers).
@@ -55,11 +55,8 @@ int  S_Read_SNDINFO(int lump);
 int  S_Read_SNDSEQ(int lump);
 void S_PrecacheSounds();
 int  S_GetSoundID(const char *tag);
+const char *S_GetSoundTag(int sfx_id);
 
-
-
-// the complete set of music
-extern char* MusicNames[];
 
 
 // Identifiers for all music in game.

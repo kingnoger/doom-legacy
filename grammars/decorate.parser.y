@@ -22,7 +22,7 @@
 
 
 %name DECORATE_Parse
-%extra_argument {decorate_driver& d}
+%extra_argument {decorate_driver *d}
 
 %parse_accept {
   fprintf(stderr, "Parsing complete!\n");
@@ -44,6 +44,7 @@
 %include {
 #include "g_decorate.h"
 #include "parser_driver.h"
+#include "sounds.h"
 }
 
 //============================================================================
@@ -56,44 +57,44 @@ definitions ::= definitions actor. // left recursion
 
 actor ::= actor_init construction doomednum L_BRACE actor_properties R_BRACE.
   {
-    d.t = NULL; // done updating it
+    d->t = NULL; // done updating it
   }
 actor ::= SEMICOLON. // HACK
 
 
 // initialize temp variables
-actor_init ::= ACTOR. { d.t = NULL; }
+actor_init ::= ACTOR. { d->t = NULL; }
 
 
 // after this we must have a valid ActorInfo pointer
 construction ::= str(A).
   {
-    d.t = aid.Find(A); // see if it already exists
-    if (!d.t)
+    d->t = aid.Find(A); // see if it already exists
+    if (!d->t)
     {
-      d.t = new ActorInfo(A);
-      aid.Insert(d.t);
+      d->t = new ActorInfo(A);
+      aid.Insert(d->t);
     }
   }
 construction ::= str(A) COLON str(P). // inheritance
   {
-    d.t = aid.Find(A); // see if it already exists
-    if (!d.t)
+    d->t = aid.Find(A); // see if it already exists
+    if (!d->t)
     {
       ActorInfo *parent = aid.Find(P);
       if (!parent)
 	{
 	  CONS_Printf("DECORATE error: parent class '%s' is unknown.\n", P);
-	  d.t = new ActorInfo(A);
+	  d->t = new ActorInfo(A);
 	}
       else
 	{
 	  // copy of parent
-	  d.t = new ActorInfo(*parent);
-	  d.t->SetName(A);
+	  d->t = new ActorInfo(*parent);
+	  d->t->SetName(A);
 	}
 
-      aid.Insert(d.t);
+      aid.Insert(d->t);
     }
     else
     {
@@ -105,8 +106,8 @@ construction ::= str(A) COLON str(P). // inheritance
 doomednum ::= . // empty
 doomednum ::= int(A).
   {
-    d.t->doomednum = A;
-    aid.InsertDoomEd(d.t, true);
+    d->t->doomednum = A;
+    aid.InsertDoomEd(d->t, true);
   }
 
 
@@ -115,9 +116,37 @@ actor_properties ::= . // empty
 actor_properties ::= actor_properties actor_property.
 
 
-actor_property ::= OBITUARY str(A).   { d.t->obituary = A; }
-actor_property ::= MASS num(A).       { d.t->mass = A; }
-actor_property ::= MODEL str(A).      { d.t->modelname = A; }
+actor_property ::= OBITUARY str(A). { d->t->obituary = A; }
+actor_property ::= MODEL str(A).    { d->t->modelname = A; }
+
+actor_property ::= HEALTH int(A).       { d->t->spawnhealth = A; }
+actor_property ::= REACTIONTIME int(A). { d->t->reactiontime = A; }
+actor_property ::= PAINCHANCE int(A).   { d->t->painchance = A; }
+actor_property ::= SPEED num(A).        { d->t->speed = A; }
+actor_property ::= DAMAGE int(A).       { d->t->damage = A; }
+
+actor_property ::= RADIUS num(A). { d->t->radius = A; }
+actor_property ::= HEIGHT num(A). { d->t->height = A; }
+actor_property ::= MASS num(A).   { d->t->mass = A; }
+
+actor_property ::= SEESOUND str(A).    { d->t->seesound = S_GetSoundID(A); }
+actor_property ::= ATTACKSOUND str(A). { d->t->attacksound = S_GetSoundID(A); }
+actor_property ::= PAINSOUND str(A).   { d->t->painsound = S_GetSoundID(A); }
+actor_property ::= DEATHSOUND str(A).  { d->t->deathsound = S_GetSoundID(A); }
+actor_property ::= ACTIVESOUND str(A). { d->t->activesound = S_GetSoundID(A); }
+
+// flags
+actor_property ::= PLUS  str(A).
+actor_property ::= MINUS str(A).
+
+// state definition structure
+actor_property ::= STATES L_BRACE state_defs R_BRACE.
+
+state_defs ::= . // empty
+state_defs ::= state_defs state_def.
+
+state_def ::= str(L) COLON. // label
+state_def ::= str(S) str(F) int(T) str(A). // sequence of states
 
 
 // string

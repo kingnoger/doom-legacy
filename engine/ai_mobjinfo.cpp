@@ -4,7 +4,7 @@
 // $Id: $
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -56,7 +56,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_plpain, sfx_pldeth, sfx_None,
     &states[S_PLAY], &states[S_PLAY_RUN1], &states[S_PLAY_ATK1], &states[S_PLAY_ATK2], &states[S_PLAY_PAIN],
     &states[S_PLAY_DIE1], &states[S_PLAY_XDIE1], NULL, NULL,
-    NULL
+    NULL,
+    "DoomPlayer"
   },
 
   // MT_POSSESSED
@@ -67,7 +68,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_posit1, sfx_pistol, sfx_popain, sfx_podth1, sfx_posact,
     &states[S_POSS_STND], &states[S_POSS_RUN1], NULL, &states[S_POSS_ATK1], &states[S_POSS_PAIN],
     &states[S_POSS_DIE1], &states[S_POSS_XDIE1], NULL, &states[S_POSS_RAISE1],
-    NULL
+    NULL,
+    "ZombieMan"
   },
 
   // MT_SHOTGUY
@@ -78,7 +80,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_posit2, 0, sfx_popain, sfx_podth2, sfx_posact,
     &states[S_SPOS_STND], &states[S_SPOS_RUN1], NULL, &states[S_SPOS_ATK1], &states[S_SPOS_PAIN],
     &states[S_SPOS_DIE1], &states[S_SPOS_XDIE1], NULL, &states[S_SPOS_RAISE1],
-    NULL
+    NULL,
+    "ShotgunGuy"
   },
 
   // MT_VILE
@@ -89,7 +92,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_vilsit, 0, sfx_vipain, sfx_vildth, sfx_vilact,
     &states[S_VILE_STND], &states[S_VILE_RUN1], NULL, &states[S_VILE_ATK1], &states[S_VILE_PAIN],
     &states[S_VILE_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Archvile"
   },
 
   // MT_FIRE
@@ -111,7 +115,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_skesit, 0, sfx_popain, sfx_skedth, sfx_skeact,
     &states[S_SKEL_STND], &states[S_SKEL_RUN1], &states[S_SKEL_FIST1], &states[S_SKEL_MISS1], &states[S_SKEL_PAIN],
     &states[S_SKEL_DIE1], NULL, NULL, &states[S_SKEL_RAISE1],
-    NULL
+    NULL,
+    "Revenant"
   },
 
   // MT_TRACER
@@ -144,7 +149,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_mansit, 0, sfx_mnpain, sfx_mandth, sfx_posact,
     &states[S_FATT_STND], &states[S_FATT_RUN1], NULL, &states[S_FATT_ATK1], &states[S_FATT_PAIN],
     &states[S_FATT_DIE1], NULL, NULL, &states[S_FATT_RAISE1],
-    NULL
+    NULL,
+    "Fatso"
   },
 
   // MT_FATSHOT
@@ -166,7 +172,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_posit2, 0, sfx_popain, sfx_podth2, sfx_posact,
     &states[S_CPOS_STND], &states[S_CPOS_RUN1], NULL, &states[S_CPOS_ATK1], &states[S_CPOS_PAIN],
     &states[S_CPOS_DIE1], &states[S_CPOS_XDIE1], NULL, &states[S_CPOS_RAISE1],
-    NULL
+    NULL,
+    "ChaingunGuy"
   },
 
   // MT_TROOP
@@ -189,7 +196,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_sgtsit, sfx_sgtatk, sfx_dmpain, sfx_sgtdth, sfx_dmact,
     &states[S_SARG_STND], &states[S_SARG_RUN1], &states[S_SARG_ATK1], NULL, &states[S_SARG_PAIN],
     &states[S_SARG_DIE1], NULL, NULL, &states[S_SARG_RAISE1],
-    NULL
+    NULL,
+    "Demon"
   },
 
   // MT_SHADOWS
@@ -200,7 +208,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_sgtsit, sfx_sgtatk, sfx_dmpain, sfx_sgtdth, sfx_dmact,
     &states[S_SARG_STND], &states[S_SARG_RUN1], &states[S_SARG_ATK1], NULL, &states[S_SARG_PAIN],
     &states[S_SARG_DIE1], NULL, NULL, &states[S_SARG_RAISE1],
-    NULL
+    NULL,
+    "Spectre"
   },
 
   // MT_HEAD
@@ -211,7 +220,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_cacsit, 0, sfx_dmpain, sfx_cacdth, sfx_dmact,
     &states[S_HEAD_STND], &states[S_HEAD_RUN1], NULL, &states[S_HEAD_ATK1], &states[S_HEAD_PAIN],
     &states[S_HEAD_DIE1], NULL, NULL, &states[S_HEAD_RAISE1],
-    NULL
+    NULL,
+    "Cacodemon"
   },
 
   // MT_BRUISER
@@ -222,7 +232,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_brssit, 0, sfx_dmpain, sfx_brsdth, sfx_dmact,
     &states[S_BOSS_STND], &states[S_BOSS_RUN1], &states[S_BOSS_ATK1], &states[S_BOSS_ATK1], &states[S_BOSS_PAIN],
     &states[S_BOSS_DIE1], NULL, NULL, &states[S_BOSS_RAISE1],
-    NULL
+    NULL,
+    "BaronOfHell"
   },
 
   // MT_BRUISERSHOT
@@ -244,7 +255,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_kntsit, 0, sfx_dmpain, sfx_kntdth, sfx_dmact,
     &states[S_BOS2_STND], &states[S_BOS2_RUN1], &states[S_BOS2_ATK1], &states[S_BOS2_ATK1], &states[S_BOS2_PAIN],
     &states[S_BOS2_DIE1], NULL, NULL, &states[S_BOS2_RAISE1],
-    NULL
+    NULL,
+    "HellKnight"
   },
 
   // MT_SKULL
@@ -255,7 +267,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     0, sfx_sklatk, sfx_dmpain, sfx_firxpl, sfx_dmact,
     &states[S_SKULL_STND], &states[S_SKULL_RUN1], NULL, &states[S_SKULL_ATK1], &states[S_SKULL_PAIN],
     &states[S_SKULL_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "LostSoul"
   },
 
   // MT_SPIDER
@@ -266,7 +279,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_spisit, sfx_shotgn, sfx_dmpain, sfx_spidth, sfx_dmact,
     &states[S_SPID_STND], &states[S_SPID_RUN1], NULL, &states[S_SPID_ATK1], &states[S_SPID_PAIN],
     &states[S_SPID_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "SpiderMastermind"
   },
 
   // MT_BABY
@@ -277,7 +291,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_bspsit, 0, sfx_dmpain, sfx_bspdth, sfx_bspact,
     &states[S_BSPI_STND], &states[S_BSPI_SIGHT], NULL, &states[S_BSPI_ATK1], &states[S_BSPI_PAIN],
     &states[S_BSPI_DIE1], NULL, NULL, &states[S_BSPI_RAISE1],
-    NULL
+    NULL,
+    "Arachnotron"
   },
 
   // MT_CYBORG
@@ -288,7 +303,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_cybsit, 0, sfx_dmpain, sfx_cybdth, sfx_dmact,
     &states[S_CYBER_STND], &states[S_CYBER_RUN1], NULL, &states[S_CYBER_ATK1], &states[S_CYBER_PAIN],
     &states[S_CYBER_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Cyberdemon"
   },
 
   // MT_PAIN
@@ -299,7 +315,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_pesit, 0, sfx_pepain, sfx_pedth, sfx_dmact,
     &states[S_PAIN_STND], &states[S_PAIN_RUN1], NULL, &states[S_PAIN_ATK1], &states[S_PAIN_PAIN],
     &states[S_PAIN_DIE1], NULL, NULL, &states[S_PAIN_RAISE1],
-    NULL
+    NULL,
+    "PainElemental"
   },
 
   // MT_WOLFSS
@@ -310,7 +327,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_sssit, 0, sfx_popain, sfx_ssdth, sfx_posact,
     &states[S_SSWV_STND], &states[S_SSWV_RUN1], NULL, &states[S_SSWV_ATK1], &states[S_SSWV_PAIN],
     &states[S_SSWV_DIE1], &states[S_SSWV_XDIE1], NULL, &states[S_SSWV_RAISE1],
-    NULL
+    NULL,
+    "WolfensteinSS"
   },
 
   // MT_KEEN
@@ -387,7 +405,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_barexp, sfx_None,
     &states[S_BAR1], NULL, NULL, NULL, NULL,
     &states[S_BEXP], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ExplosiveBarrel"
   },
 
   // MT_TROOPSHOT

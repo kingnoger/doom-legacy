@@ -1164,9 +1164,7 @@ void Intermission::LoadData()
 
   switch (game.mode)
     {
-    case gm_doom1s:
     case gm_doom1:
-    case gm_udoom:
       // Doom 1 intermission animations
       anim_t *a;
       if (episode >= 1 && episode <= 3)
@@ -1301,9 +1299,7 @@ void Intermission::UnloadData()
 
   switch (game.mode)
     {
-    case gm_doom1s:
     case gm_doom1:
-    case gm_udoom:
       // Doom 1
       if (episode >= 1 && episode <= 3)
 	{
@@ -1365,7 +1361,7 @@ void Intermission::Drawer()
   SlamBackground();
 
   // draw animated background (doom1 only)
-  if (game.mode >= gm_doom1s && game.mode <= gm_udoom)
+  if (game.mode == gm_doom1)
     DrawAnimatedBack(episode);
 
   switch (state)
@@ -1404,7 +1400,7 @@ void Intermission::Ticker()
   // counter for general background animation
   bcount++;
 
-  if (game.mode >= gm_doom1s && game.mode <= gm_udoom)
+  if (game.mode == gm_doom1)
     UpdateAnimatedBack();
 
   switch (state)
@@ -1481,7 +1477,7 @@ void Intermission::Start(const MapInfo *f, const MapInfo *n, int maptic, int kil
   else
     InitCoopStats();
 
-  if (game.mode >= gm_doom1s && game.mode <= gm_udoom)
+  if (game.mode == gm_doom1)
     InitAnimatedBack(episode);
 
   S.StartMusic(intermusic, true);

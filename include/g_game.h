@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -51,14 +51,11 @@ enum skill_t
 enum gamemode_t
 {
   gm_none,
-  gm_doom1s,  // DOOM 1 shareware, E1, M9
-  gm_doom1,   // DOOM 1 registered, E3, M27
-  gm_udoom,   // DOOM 1 retail (Ultimate DOOM), E4, M36
+  gm_doom1,   // DOOM 1 shareware (E1M9), registered (E3M27), retail (Ultimate DOOM) (E4M36)
   gm_doom2,   // DOOM 2 retail (commercial), E1 M34
   gm_heretic,
   gm_hexen
 };
-
 
 
 /// \brief Game info common to all players.

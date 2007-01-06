@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -825,6 +825,20 @@ int S_GetSoundID(const char *tag)
 
   return i->second->number;
 }
+
+
+const char *S_GetSoundTag(int sfx_id)
+{
+  soundID_iter_t i = SoundID.find(sfx_id);
+  if (i == SoundID.end())
+    {
+      CONS_Printf("S_GetSoundTag: ID %d not found!\n", sfx_id);
+      return NULL;
+    }
+
+  return i->second->tag;
+}
+
 
 
 //======================================

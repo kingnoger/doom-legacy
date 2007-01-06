@@ -64,10 +64,26 @@ WHITESP [ \t\v\r\f]
 %{ // DECORATE keywords
 %}
 actor        { return ACTOR; }
-mass         { return MASS; }
+states       { return STATES; }
+
 obituary     { return OBITUARY; }
 model        { return MODEL; }
 
+health       { return HEALTH; }
+reactiontime { return REACTIONTIME; }
+painchance   { return PAINCHANCE; }
+speed        { return SPEED; }
+damage       { return DAMAGE; }
+
+radius       { return RADIUS; }
+height       { return HEIGHT; }
+mass         { return MASS; }
+
+seesound     { return SEESOUND; }
+attacksound  { return ATTACKSOUND; }
+painsound    { return PAINSOUND; }
+deathsound   { return DEATHSOUND; }
+activesound  { return ACTIVESOUND; }
 
 %{
 // octals? can be confusing...
@@ -91,6 +107,8 @@ model        { return MODEL; }
 ":" { col++; return COLON; }
 "{" { col++; return L_BRACE; }
 "}" { col++; return R_BRACE; }
+"+" { col++; return PLUS; }
+"-" { col++; return MINUS; }
 
 
 {WHITESP}  { col += strlen(yytext); /* skip whitespace */ }

@@ -161,10 +161,7 @@ void D_PageDrawer(char *lumpname)
 /// This cycles through the demo sequences.
 void GameInfo::AdvanceIntro()
 {
-  if (mode == gm_udoom)
-    demosequence = (demosequence+1)%7;
-  else
-    demosequence = (demosequence+1)%6;
+  demosequence = (demosequence+1)%6;
 
   switch (demosequence)
     {
@@ -222,11 +219,13 @@ void GameInfo::AdvanceIntro()
         case gm_hexen:
           pagename = "CREDIT";
           break;
-        case gm_udoom:
-          pagename = "CREDIT";
-          break;
+        case gm_doom1:
         default:
-          pagename = "HELP2";
+          if (fc.FindNumForName("E4M1") == -1)
+	    pagename = "HELP2";
+	  else
+	    pagename = "CREDIT";
+          break;
         }
       break;
     case 5:

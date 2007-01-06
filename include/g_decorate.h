@@ -41,6 +41,7 @@ protected:
   char    classname[64]; ///< Name of the DECORATE class, identical to the ZDoom equivalents if possible.
 
 public:
+  int              game; ///< To which game does it belong? Uses the gamemode_t enum.
   string       obituary; ///< Obituary message for players killed by "instances" of this DECORATE class.
   string      modelname; ///< Name of MD3 model to be used to represent this class.
   bool     spawn_always; ///< Do not care about mapthing "when-to-spawn" flags.
@@ -81,11 +82,13 @@ public:
 public:
   /// constructors
   ActorInfo(const string& n);
-  ActorInfo(const mobjinfo_t& m);
+  ActorInfo(const mobjinfo_t& m, int game);
 
   inline const char *GetName() const { return classname; }
   inline mobjtype_t  GetMobjType() const { return mobjtype; }
   void SetName(const char *n);
+
+  void PrintDECORATEclass(); ///< Prints the DECORATE definition for this class to stdout.
 };
 
 

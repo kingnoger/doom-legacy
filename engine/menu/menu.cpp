@@ -2458,9 +2458,7 @@ void Menu::DrawReadThis1()
     case gm_doom2:
       tc.GetPtr("HELP")->Draw(0,0,0 | V_SCALE);
       break;
-    case gm_doom1s:
     case gm_doom1:
-    case gm_udoom:
     case gm_heretic:
     case gm_hexen:
       tc.GetPtr("HELP1")->Draw(0,0,0 | V_SCALE);
@@ -2490,12 +2488,10 @@ void Menu::DrawReadThis2()
 {
   switch (game.mode)
     {
-    case gm_udoom:
     case gm_doom2:
       // This hack keeps us from having to change menus.
       tc.GetPtr("CREDIT")->Draw(0,0,0 | V_SCALE);
       break;
-    case gm_doom1s:
     case gm_doom1:
     case gm_heretic:
     case gm_hexen:
@@ -2668,10 +2664,7 @@ bool Menu::Responder(event_t *ev)
         {
         case KEY_F1:            // Help key
           Open();
-          if (game.mode == gm_udoom)
-            currentMenu = &ReadDef2;
-          else
-            currentMenu = &ReadDef1;
+	  currentMenu = &ReadDef1;
 
           itemOn = 0;
 	  break;
@@ -3221,9 +3214,7 @@ void Menu::Init()
 
   switch (game.mode)
     {
-    case gm_doom1s:
     case gm_doom1:
-    case gm_udoom:
       cv_menu_startmap.PossibleValue = exmy_cons_t;
       // fallthru
 

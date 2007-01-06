@@ -173,9 +173,7 @@ void HUD::Init()
     case gm_heretic:
       ST_LoadHereticData();
       break;
-    case gm_doom1s:
     case gm_doom1:
-    case gm_udoom:
     case gm_doom2:
       ST_LoadDoomData();
       break;

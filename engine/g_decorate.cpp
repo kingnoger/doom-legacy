@@ -36,6 +36,8 @@ ActorInfo::ActorInfo(const string& n)
 {
   strncpy(classname, n.c_str(), 63);
   mobjtype = MT_NONE;
+
+  game = gm_doom2;
   obituary = string("%s got killed by an instance of ") + classname;
   spawn_always = false;
 
@@ -73,7 +75,7 @@ ActorInfo::ActorInfo(const string& n)
 
 
 // copy values from mobjinfo_t
-ActorInfo::ActorInfo(const mobjinfo_t& m)
+ActorInfo::ActorInfo(const mobjinfo_t& m, int gm)
 {
   mobjtype = mobjtype_t(&m - mobjinfo);
 
@@ -82,6 +84,7 @@ ActorInfo::ActorInfo(const mobjinfo_t& m)
   else
     sprintf(classname, "class_%d", mobjtype);
 
+  game = gm;
   obituary = string("%s got killed by an instance of ") + classname;
   spawn_always = false;
 
@@ -124,12 +127,56 @@ void ActorInfo::SetName(const char *n)
 }
 
 
+void ActorInfo::PrintDECORATEclass()
+{
+  printf("actor %s %d\n{\n", classname, doomednum);
+  if (!obituary.empty())
+    printf("  obituary \"%s\"\n", obituary.c_str());
+  if (!modelname.empty())
+    printf("  model \"%s\"\n", modelname.c_str());
+
+  printf("  health %d\n", spawnhealth);
+  printf("  reactiontime %d\n", reactiontime);
+  printf("  painchance %d\n", painchance);
+  printf("  speed %g\n", speed);
+  printf("  damage %d\n", damage);
+  printf("  radius %g\n", radius.Float());
+  printf("  height %g\n", height.Float());
+  printf("  mass %g\n", mass);
+
+  // TODO flags
+
+  if (seesound != sfx_None)
+    printf("  seesound \"%s\"\n", S_GetSoundTag(seesound));
+  if (attacksound != sfx_None)
+    printf("  attacksound \"%s\"\n", S_GetSoundTag(attacksound));
+  if (painsound != sfx_None)
+    printf("  painsound \"%s\"\n", S_GetSoundTag(painsound));
+  if (deathsound != sfx_None)
+    printf("  deathsound \"%s\"\n", S_GetSoundTag(deathsound));
+  if (activesound != sfx_None)
+    printf("  activesound \"%s\"\n", S_GetSoundTag(activesound));
+
+  // TODO states
+  /*
+  printf("  states\n  {\n");
+  char temp[64];
+  if (spawnstate)
+    {
+      printf("  Spawn:\n");
+      printf("    %s %s %d %s\n", sprnames[s->sprite], temp, s->tics, BEX_DActorMnemonics[i].name);
+    }
+  printf("  }\n");
+  */
+  printf("}\n\n");
+}
+
 
 void ConvertMobjInfo()
 {
   int i;
+  /*
   printf("Named DECORATE classes:\n");
-
   for (i=0; i<NUMMOBJTYPES; i++)
     {
       //mobjinfo[i].reactiontime *= NEWTICRATERATIO;
@@ -138,10 +185,11 @@ void ConvertMobjInfo()
       if (mobjinfo[i].classname)
 	printf(" +%s\n", mobjinfo[i].classname);
     }
+  */
 
   for (i = MT_LEGACY; i <= MT_LEGACY_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i]);
+      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_none);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, true);
 
@@ -151,21 +199,21 @@ void ConvertMobjInfo()
 
   for (i = MT_DOOM; i <= MT_DOOM_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i]);
+      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_doom2);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode <= gm_doom2);
     }
 
   for (i = MT_HERETIC; i <= MT_HERETIC_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i]);
+      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_heretic);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode == gm_heretic);
     }
 
   for (i = MT_HEXEN; i <= MT_HEXEN_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i]);
+      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_hexen);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode == gm_hexen);
     }
@@ -173,10 +221,12 @@ void ConvertMobjInfo()
 
   Read_DECORATE(fc.FindNumForName("DECORATE"));
 
+  /*
   for (i=0;i<NUMSTATES;i++)
     {
       //states[i].tics *= NEWTICRATERATIO;
     }
+  */
 
   // this is because the ednum ranges normally overlap in different games
 }

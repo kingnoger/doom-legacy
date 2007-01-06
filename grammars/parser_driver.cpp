@@ -33,7 +33,7 @@ int  DECORATE_lex(yy_t& yylval);
 void DECORATE__delete_buffer(YY_BUFFER_STATE);
 
 void *DECORATE_ParseAlloc(void *(*mallocProc)(size_t));
-void  DECORATE_Parse(void *yyp, int yymajor, yy_t tokenval, decorate_driver& d);
+void  DECORATE_Parse(void *yyp, int yymajor, yy_t tokenval, decorate_driver *d);
 void  DECORATE_ParseTrace(FILE *TraceFILE, char *zTracePrompt);
 void  DECORATE_ParseFree(void *p, void (*freeProc)(void*));
 
@@ -68,7 +68,7 @@ bool Read_DECORATE(int lump)
   decorate_driver d;
   DECORATE_lexer_reset();
 
-  DECORATE_ParseTrace(stderr, "DECO: ");
+  //DECORATE_ParseTrace(stderr, "DECO: ");
 
   // attach the scanner to the buffer
   YY_BUFFER_STATE bufstate = DECORATE__scan_bytes(buffer, length);
@@ -77,13 +77,13 @@ bool Read_DECORATE(int lump)
   while ((tokentype = DECORATE_lex(tokenvalue)))
     { 
       //std::cout << " yylex() " << tokentype << " yylval.dval " << yylval.dval << std::endl;
-      DECORATE_Parse(p, tokentype, tokenvalue, d);
+      DECORATE_Parse(p, tokentype, tokenvalue, &d);
     }
 
   // free the scanner buffer
   DECORATE__delete_buffer(bufstate);
 
-  DECORATE_Parse(p, tokentype, tokenvalue, d);
+  DECORATE_Parse(p, tokentype, tokenvalue, &d);
   DECORATE_ParseFree(p, free);
 
   Z_Free(buffer);
@@ -108,7 +108,7 @@ bool Read_NTEXTURE(int lump)
   ntexture_driver d;
   NTEXTURE_lexer_reset();
 
-  NTEXTURE_ParseTrace(stderr, "NTEX: ");
+  //NTEXTURE_ParseTrace(stderr, "NTEX: ");
 
   // attach the scanner to the buffer
   YY_BUFFER_STATE bufstate = NTEXTURE__scan_bytes(buffer, length);

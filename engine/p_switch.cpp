@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -146,7 +144,7 @@ void P_InitSwitchList()
   switch (game.mode)
     {
     case gm_doom1:
-    case gm_udoom:
+    default:
       nameset = 2;
       break;
     case gm_doom2:
@@ -160,8 +158,6 @@ void P_InitSwitchList()
       sd = HexenSwitchList;
       nameset = 1;
       break;
-    default:
-      nameset = 1;
     }
 
   switchlist.clear();
