@@ -1488,6 +1488,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (rendermode == render_opengl && glvertexes == NULL)
     {
       CONS_Printf("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
+      CONS_Printf("Build GL nodes with glbsp and try again.\n");
       return false;
     }
 #endif
