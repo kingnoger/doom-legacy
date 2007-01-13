@@ -65,7 +65,6 @@ bool Read_DECORATE(int lump)
   yy_t tokenvalue;
   void *p = DECORATE_ParseAlloc(malloc);
 
-  decorate_driver d;
   DECORATE_lexer_reset();
 
   //DECORATE_ParseTrace(stderr, "DECO: ");
@@ -77,13 +76,13 @@ bool Read_DECORATE(int lump)
   while ((tokentype = DECORATE_lex(tokenvalue)))
     { 
       //std::cout << " yylex() " << tokentype << " yylval.dval " << yylval.dval << std::endl;
-      DECORATE_Parse(p, tokentype, tokenvalue, &d);
+      DECORATE_Parse(p, tokentype, tokenvalue, NULL);
     }
 
   // free the scanner buffer
   DECORATE__delete_buffer(bufstate);
 
-  DECORATE_Parse(p, tokentype, tokenvalue, &d);
+  DECORATE_Parse(p, tokentype, tokenvalue, NULL);
   DECORATE_ParseFree(p, free);
 
   Z_Free(buffer);

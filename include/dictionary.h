@@ -93,6 +93,8 @@ public:
       }
   }
 
+  /// Returns the number of items in the dictionary.
+  inline unsigned Size() const { return dict_map.size(); }
 
   /// Erases all dictionary items.
   void Clear()

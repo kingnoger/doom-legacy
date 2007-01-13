@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -373,86 +371,104 @@ struct weapon_mnemonic_t
 };
 
 
-// THING bit flag mnemonics
-struct flag_mnemonic_t
+struct old_flag_t
 {
-  char *name;
-  int original;
-  int flag;
+  Uint32 old_flag;
+  Uint32 new_flag;
 };
 
-flag_mnemonic_t BEX_FlagMnemonics[32] =
+// Original numerical values for the flags from Doom. For old-style DeHackEd flag entries.
+// The current counterparts of these flags reside still in the first flags word.
+static old_flag_t OriginalFlags[26] =
 {
-  {"SPECIAL",         0x0001, MF_SPECIAL},   // Call TouchSpecialThing when touched.
-  {"SOLID",           0x0002, MF_SOLID},     // Blocks
-  {"SHOOTABLE",       0x0004, MF_SHOOTABLE}, // Can be hit
-  {"NOSECTOR",        0x0008, MF_NOSECTOR},  // Don't link to sector (invisible but touchable)
-  {"NOBLOCKMAP",      0x0010, MF_NOBLOCKMAP},// Don't link to blockmap (inert but visible)
-  {"AMBUSH",          0x0020, MF_AMBUSH},    // Not to be activated by sound, deaf monster.
-  {"JUSTHIT",         0x0040, 0}, // almost useless
-  {"JUSTATTACKED",    0x0080, 0}, // even more useless
-  {"SPAWNCEILING",    0x0100, MF_SPAWNCEILING}, // Spawned hanging from the ceiling
-  {"NOGRAVITY",       0x0200, MF_NOGRAVITY}, // Does not feel gravity
-  {"DROPOFF",         0x0400, MF_DROPOFF},   // Can jump/drop from high places
-  {"PICKUP",          0x0800, MF_PICKUP},    // Can/will pick up items. (players) // useless?
-  {"NOCLIP",          0x1000, MF_NOCLIPLINE | MF_NOCLIPTHING}, // Does not clip against lines or Actors.
-  {"SLIDE",           0x2000, 0}, // slides along walls, TODO could be useful
-  {"FLOAT",           0x4000, MF_FLOAT},     // Active floater, can move freely in air (cacodemons etc.)
-  {"TELEPORT",        0x8000, 0}, // completely unused
-  {"MISSILE",     0x00010000, MF_MISSILE},   // Missile. Don't hit same species, explode on block.
-  {"DROPPED",     0x00020000, MF_DROPPED},   // Dropped by a monster
-  {"SHADOW",      0x00040000, MF_SHADOW},    // Partial invisibility (spectre). Makes targeting harder.
-  {"NOBLOOD",     0x00080000, MF_NOBLOOD},   // Does not bleed when shot (furniture)
-  {"CORPSE",      0x00100000, MF_CORPSE},    // Acts like a corpse, falls down stairs etc.
-  {"INFLOAT",     0x00200000, 0}, // almost useless
-  {"COUNTKILL",   0x00400000, MF_COUNTKILL}, // On kill, count towards intermission kill total.
-  {"COUNTITEM",   0x00800000, MF_COUNTITEM}, // On pickup, count towards intermission item total.
-  {"SKULLFLY",    0x01000000, 0}, // useless?
-  {"NOTDMATCH",   0x02000000, MF_NOTDMATCH}, // Not spawned in DM (keycards etc.)
-  {"TRANSLATION", 0x04000000, 0},
-  {"UNUSED1",     0x08000000, 0},
-  {"UNUSED2",     0x10000000, 0},
-  {"UNUSED3",     0x20000000, 0},
-  {"UNUSED4",     0x40000000, 0},
-  {"TRANSLUCENT", 0x80000000, 0}
+  {0x0001, MF_SPECIAL},   // Call TouchSpecialThing when touched.
+  {0x0002, MF_SOLID},     // Blocks
+  {0x0004, MF_SHOOTABLE}, // Can be hit
+  {0x0008, MF_NOSECTOR},  // Don't link to sector (invisible but touchable)
+  {0x0010, MF_NOBLOCKMAP},// Don't link to blockmap (inert but visible)
+  {0x0020, MF_AMBUSH},    // Not to be activated by sound, deaf monster.
+  {0x0040, 0}, // MF_JUSTHIT, almost useless
+  {0x0080, 0}, // MF_JUSTATTACKED, even more useless
+  {0x0100, MF_SPAWNCEILING}, // Spawned hanging from the ceiling
+  {0x0200, MF_NOGRAVITY}, // Does not feel gravity
+  {0x0400, MF_DROPOFF},   // Can jump/drop from high places
+  {0x0800, MF_PICKUP},    // Can/will pick up items. (players) // useless?
+  {0x1000, MF_NOCLIPLINE | MF_NOCLIPTHING}, // Does not clip against lines or Actors.
+  {0x2000, 0}, // MF_SLIDE, completely unused
+  {0x4000, MF_FLOAT},     // Active floater, can move freely in air (cacodemons etc.)
+  {0x8000, 0}, // MF_TELEPORT, not used for any mobjtype
+  {0x00010000, MF_MISSILE},   // Missile. Don't hit same species, explode on block.
+  {0x00020000, MF_DROPPED},   // Dropped by a monster
+  {0x00040000, MF_SHADOW},    // Partial invisibility (spectre). Makes targeting harder.
+  {0x00080000, MF_NOBLOOD},   // Does not bleed when shot (furniture)
+  {0x00100000, MF_CORPSE},    // Acts like a corpse, falls down stairs etc.
+  {0x00200000, 0}, // MF_INFLOAT, useless?
+  {0x00400000, MF_COUNTKILL}, // On kill, count towards intermission kill total.
+  {0x00800000, MF_COUNTITEM}, // On pickup, count towards intermission item total.
+  {0x01000000, 0}, // MF_SKULLFLY, useless?
+  {0x02000000, MF_NOTDMATCH}, // Not spawned in DM (keycards etc.)
 };
 
 
-flag_mnemonic_t BEX_Flag2Mnemonics[32] =
+// also used by DECORATE
+flag_mnemonic_t BEX_FlagMnemonics[] =
 {
-  {"LOGRAV",           0x0001, MF2_LOGRAV},       // Experiences only 1/8 gravity
-  {"WINDTHRUST",       0x0002, MF2_WINDTHRUST},   // Is affected by wind
-  {"FLOORBOUNCE",      0x0004, MF2_FLOORBOUNCE},  // Bounces off the floor
-  {"THRUGHOST",        0x0008, MF2_THRUGHOST},    // Will pass through ghosts (missile)
-  {"FLY",              0x0010, 0}, // eflags, useless
-  {"FOOTCLIP",         0x0020, MF2_FOOTCLIP},     // Feet may be be clipped
-  {"SPAWNFLOAT",       0x0040, 0x08000000}, // FIXME TEMP
-  {"NOTELEPORT",       0x0080, MF2_NOTELEPORT},   // Does not teleport
-  {"RIP",              0x0100, MF2_RIP},          // Rips through solid targets (missile)
-  {"PUSHABLE",         0x0200, MF2_PUSHABLE},     // Can be pushed by other moving actors
-  {"SLIDE",            0x0400, MF2_SLIDE},        // Slides against walls
-  {"ONMOBJ",           0x0800, 0}, // eflags, useless
-  {"PASSMOBJ",         0x1000, 0},     // Can move over/under other Actors 
-  {"CANNOTPUSH",       0x2000, MF2_CANNOTPUSH},   // Cannot push other pushable actors
-  {"FEETARECLIPPED",   0x4000, 0}, // made a variable, useless
-  {"BOSS",             0x8000, MF2_BOSS},         // Is a major boss, not as easy to kill
-  {"FIREDAMAGE",   0x00010000, 0},   // Does fire damage, TODO
-  {"NODMGTHRUST",  0x00020000, MF2_NODMGTHRUST},  // Does not thrust target when damaging        
-  {"TELESTOMP",    0x00040000, MF2_TELESTOMP},    // Can telefrag another Actor
-  {"FLOATBOB",     0x00080000, MF2_FLOATBOB},     // Bobs up and down in the air (item)
-  {"DONTDRAW",     0x00100000, MF2_DONTDRAW},     // Invisible (does not generate a vissprite)
-  // Hexen additions
-  {"IMPACT",       0x00200000, MF2_IMPACT},       // Can activate SPAC_IMPACT
-  {"PUSHWALL",     0x00400000, MF2_PUSHWALL},     // Can activate SPAC_PUSH
-  {"MCROSS",       0x00800000, MF2_MCROSS},       // Can activate SPAC_MCROSS
-  {"PCROSS",       0x01000000, MF2_PCROSS},       // Can activate SPAC_PCROSS
-  {"CANTLEAVEFLOORPIC", 0x02000000, MF2_CANTLEAVEFLOORPIC},    // Stays within a certain floor texture
-  {"NONSHOOTABLE", 0x04000000, MF2_NONSHOOTABLE}, // Transparent to MF_MISSILEs
-  {"INVULNERABLE", 0x08000000, MF2_INVULNERABLE}, // Does not take damage
-  {"DORMANT",      0x10000000, MF2_DORMANT},      // Cannot be damaged, is not noticed by seekers
-  {"ICEDAMAGE",    0x20000000, 0},    // Does ice damage, TODO
-  {"SEEKERMISSILE", 0x40000000, MF2_SEEKERMISSILE}, // Is a seeker (for reflection)
-  {"REFLECTIVE",   0x80000000, MF2_REFLECTIVE},   // Reflects missiles
+  {"NOSECTOR",     MF_NOSECTOR,     1}, // Don't link to sector (invisible but touchable)
+  {"NOBLOCKMAP",   MF_NOBLOCKMAP,   1}, // Don't link to blockmap (inert but visible)
+  {"SOLID",        MF_SOLID,        1}, // Blocks
+  {"SHOOTABLE",    MF_SHOOTABLE,    1}, // Can be hit
+  {"NOCLIP",       MF_NOCLIPLINE | MF_NOCLIPTHING, 1}, // Does not clip against lines or Actors.
+  {"NOGRAVITY",    MF_NOGRAVITY,    1}, // Does not feel gravity
+  {"PICKUP",       MF_PICKUP,       1}, // Can/will pick up items. (players)
+  {"FLOAT",        MF_FLOAT,        1}, // Active floater, can move freely in air (cacodemons etc.)
+  {"DROPOFF",      MF_DROPOFF,      1}, // Can jump/drop from high places
+  {"AMBUSH",       MF_AMBUSH,       1}, // Not to be activated by sound, deaf monster.
+  {"DONTSPLASH",   MF_NOSPLASH,     1}, // Does not cause splashes in liquid.
+  {"SHADOW",       MF_SHADOW,       1}, // Partial invisibility (spectre). Makes targeting harder.
+  {"NOBLOOD",      MF_NOBLOOD,      1}, // Does not bleed when shot (furniture)
+  {"SPAWNCEILING", MF_SPAWNCEILING, 1}, // Spawned hanging from the ceiling
+  {"SPAWNFLOAT",   MF_SPAWNFLOAT,   1}, // Spawned at random height
+  {"NOTDMATCH",    MF_NOTDMATCH,    1}, // Not spawned in DM (keycards etc.)
+  {"COUNTKILL",    MF_COUNTKILL,    1}, // On kill, count towards intermission kill total.
+  {"COUNTITEM",    MF_COUNTITEM,    1}, // On pickup, count towards intermission item total.
+  {"SPECIAL",      MF_SPECIAL,      1}, // Call TouchSpecialThing when touched.
+  {"DROPPED",      MF_DROPPED,      1}, // Dropped by a monster
+  {"MISSILE",      MF_MISSILE,      1}, // Missile. Don't hit same species, explode on block.
+  {"CORPSE",       MF_CORPSE,       1}, // Acts like a corpse, falls down stairs etc.
+  {"ISMONSTER",    MF_MONSTER,      1},
+
+  // Heretic/Hexen/ZDoom additions
+  {"LOWGRAVITY",     MF2_LOGRAV,        2}, // Experiences only 1/8 gravity
+  {"WINDTHRUST",     MF2_WINDTHRUST,    2}, // Is affected by wind
+  {"HERETICBOUNCE",  MF2_FLOORBOUNCE,   2}, // Bounces off the floor
+  {"HEXENBOUNCE",    MF2_FULLBOUNCE,    2}, // Bounces off walls and floor
+  {"SLIDESONWALLS",  MF2_SLIDE,         2}, // Slides against walls
+  {"PUSHABLE",       MF2_PUSHABLE,      2}, // Can be pushed by other moving actors
+  {"CANNOTPUSH",     MF2_CANNOTPUSH,    2}, // Cannot push other pushable actors
+  {"FLOORHUGGER",    MF2_FLOORHUGGER,   2},
+  {"CEILINGHUGGER",  MF2_CEILINGHUGGER, 2},
+  {"DONTBLAST",      MF2_NONBLASTABLE,  2},
+  {"FLOATBOB",       MF2_FLOATBOB,      2}, // Bobs up and down in the air (item)
+  {"THRUGHOST",      MF2_THRUGHOST,     2}, // Will pass through ghosts (missile)
+  {"RIPPER",         MF2_RIP,           2}, // Rips through solid targets (missile)
+  {"CANPASS",        0,                 2}, // TODO inverted!  Can move over/under other Actors
+  {"NOTELEPORT",     MF2_NOTELEPORT,    2}, // Does not teleport
+  {"NONSHOOTABLE",   MF2_NONSHOOTABLE,  2}, // Transparent to MF_MISSILEs
+  {"INVULNERABLE",   MF2_INVULNERABLE,  2}, // Does not take damage
+  {"DORMANT",        MF2_DORMANT,       2}, // Cannot be damaged, is not noticed by seekers
+  {"CANTLEAVEFLOORPIC", MF2_CANTLEAVEFLOORPIC, 2}, // Stays within a certain floor texture
+  {"BOSS",           MF2_BOSS,          2}, // Is a major boss, not as easy to kill
+  {"SEEKERMISSILE",  MF2_SEEKERMISSILE, 2}, // Is a seeker (for reflection)
+  {"REFLECTIVE",     MF2_REFLECTIVE,    2}, // Reflects missiles
+  {"FLOORCLIP",      MF2_FOOTCLIP,      2}, // Feet may be be clipped
+  {"DONTDRAW",       MF2_DONTDRAW,      2}, // Invisible (does not generate a vissprite)
+  {"NODAMAGETHRUST", MF2_NODMGTHRUST,   2}, // Does not thrust target when damaging        
+  {"TELESTOMP",      MF2_TELESTOMP,     2}, // Can telefrag another Actor
+  {"ACTIVATEIMPACT", MF2_IMPACT,        2}, // Can activate SPAC_IMPACT
+  {"CANPUSHWALLS",   MF2_PUSHWALL,      2}, // Can activate SPAC_PUSH
+  {"ACTIVATEMCROSS", MF2_MCROSS,        2}, // Can activate SPAC_MCROSS
+  {"ACTIVATEPCROSS", MF2_PCROSS,        2}, // Can activate SPAC_PCROSS
+  {NULL, 0, 0} // terminator
 };
 
 
@@ -604,51 +620,69 @@ int dehacked_t::FindValue()
 
 
 
-int dehacked_t::ReadFlags(flag_mnemonic_t *mnemonics)
+bool dehacked_t::ReadFlags(mobjinfo_t *m)
 {
-  int i, value = 0;
+  int v1 = 0, v2 = 0;
   char *word = p.GetToken("=+| \t");
+  flag_mnemonic_t *b;
 
+  // we allow bitwise-ORed combinations of BEX mnemonics and numeric values
   while (word)
     {
       if (isdigit(word[0]))
 	{
 	  // old-style numeric entry, just do the conversion
 	  int temp = atoi(word);
-	  for (i=0; i<32; i++)
-	    if (temp & mnemonics[i].original)
-	      value |= mnemonics[i].flag;
+	  for (int i=0; i<26; i++)
+	    if (temp & OriginalFlags[i].old_flag)
+	      {
+		int f = OriginalFlags[i].new_flag;
+		if (f == 0)
+		  error("NOTE: Flag %d has no in-game effect.\n", OriginalFlags[i].old_flag);
+		v1 |= f;
+	      }
 
 	  word = p.GetToken("+| \t"); // next token
 	  continue;
 	}
-
-      for (i=0; i<32; i++)
-	if (!strcasecmp(word, mnemonics[i].name))
+      
+      // must be a mnemonic
+      for (b = BEX_FlagMnemonics; b->name; b++)
+	if (!strcasecmp(word, b->name))
 	  {
-	    value |= mnemonics[i].flag;
-	    if (mnemonics[i].flag == 0)
-	      error("NOTE: Mnemonic %s has no in-game effect.\n", mnemonics[i].name);
+	    switch (b->flagword)
+	      {
+	      case 1:
+		v1 |= b->flag;
+		break;
+
+	      case 2:
+	      default:
+		v2 |= b->flag;
+		break;
+	      }
+
 	    break;
 	  }
 
-      if (i >= 32)
+      if (!b->name)
 	{
 	  error("Unknown bit mnemonic '%s'\n", word);
-	  break;
 	}
 		
       word = p.GetToken("+| \t"); // next token
     }
 
-  if (value == 0)
+
+  if (v1 == 0 && v2 == 0)
     fputs("0", out);
-  else for (i=0; i<32; i++)
-    if (value & mnemonics[i].flag)
-      fprintf(out, "%s ", mnemonics[i].name);
+  else for (b = BEX_FlagMnemonics; b->name; b++)
+    if (((b->flagword == 1) ? v1 : v2) & b->flag)
+      fprintf(out, "%s ", b->name);
 
   fputs("\n", out);
-  return value;
+
+  return true;
 }
 
 
@@ -705,13 +739,7 @@ void dehacked_t::Read_Thing(const char *str)
       if (!strcasecmp(word, "Bits"))
 	{
 	  fprintf(out, "Bits = ");
-	  ReadFlags(BEX_FlagMnemonics);
-	  continue;
-	}
-      else if (!strcasecmp(word,"Bits2"))
-	{
-	  fprintf(out, "Bits2 = ");
-	  ReadFlags(BEX_Flag2Mnemonics);
+	  ReadFlags(NULL);
 	  continue;
 	}
 

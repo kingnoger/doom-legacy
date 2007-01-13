@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -26,6 +24,7 @@
 #define dehacked_h 1
 
 #include "parser.h"
+#include "info.h"
 
 class dehacked_t
 {
@@ -33,9 +32,9 @@ private:
   Parser p;
   int  num_errors;
 
-  int FindValue();
-  int FindState();
-  int ReadFlags(struct flag_mnemonic_t *mnemonics);
+  int  FindValue();
+  int  FindState();
+  bool ReadFlags(struct mobjinfo_t *m);
 
   void Read_Thing(const char *str);
   void Read_Frame(const char *str);
@@ -66,5 +65,36 @@ public:
 };
 
 extern dehacked_t DEH;
+
+
+/// [CODEPTR] DActor action function mnemonics
+struct dactor_mnemonic_t
+{
+  char       *name;
+  actionf_p1  ptr;
+};
+
+extern dactor_mnemonic_t BEX_DActorMnemonics[];
+
+
+/// [CODEPTR] Weapon action function mnemonics
+struct weapon_mnemonic_t
+{
+  char       *name;
+  actionf_p2  ptr;
+};
+
+extern weapon_mnemonic_t BEX_WeaponMnemonics[];
+
+
+/// \brief BEX/DECORATE flag mnemonics.
+struct flag_mnemonic_t
+{
+  char *name;
+  int   flag;
+  int   flagword;
+};
+
+extern flag_mnemonic_t BEX_FlagMnemonics[];
 
 #endif

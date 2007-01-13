@@ -37,12 +37,15 @@
 }
 
 %token_type {yy_t}
+%token_destructor { if (yymajor == STR) Z_Free(const_cast<char*>($$.stype)); }
+
 %type str {const char *}
 %type int {int}
 %type num {float}
 
 %include {
 #include "parser_driver.h"
+#include "decorate.parser.h"
 }
 
 //============================================================================

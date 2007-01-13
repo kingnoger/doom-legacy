@@ -385,17 +385,19 @@ int spritepres_t::Marshal(LArchive &a)
       a << (temp = PID_SPRITE); // type id
       a << (temp = info->GetMobjType());
       ST_PTR(state, states);
+      a << (temp = animseq);
     }
   else
     {
-      a << temp;
-      info = aid[mobjtype_t(temp)];
+      a << temp; info = aid[static_cast<mobjtype_t>(temp)];
       state_t *st;
       RE_PTR(st, states);
+      spr = NULL;
       SetFrame(st);
+      a << temp; animseq = static_cast<animseq_e>(temp);
     }
 
-  a << color << (temp = animseq);
+  a << color;
   return 0;
 }
 

@@ -89,7 +89,9 @@ void DActor::Killed(PlayerPawn *victim, Actor *inflictor)
   // monster killer
 
   const char *str = NULL;
-  if (!info->obituary.empty())
+  if (!inflictor && !info->hitobituary.empty())
+    str = info->hitobituary.c_str();
+  else if (!info->obituary.empty())
     str = info->obituary.c_str();
   else
     str = text[TXT_DEATHMSG_DEAD];

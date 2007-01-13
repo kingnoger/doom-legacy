@@ -45,7 +45,7 @@ WHITESP [ \t\v\r\f]
   \"      { // closing quote
             BEGIN(INITIAL);
 	    // TODO col update
-            yylval.stype = temp.c_str(); return STR; }
+            yylval.stype = Z_StrDup(temp.c_str()); return STR; }
 
   \n       { /* error, unterminated string */ }
   \\[0-9]+ { /* error, unknown escape seq */ }
@@ -76,16 +76,16 @@ offset       { return OFFSET; }
 //0{D}+	     { yylval.itype = strtol(yytext, NULL, 8);  return INT; }
 %}
 
-0[xX]{H}+  { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 16); return INT; }
-{D}+	   { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 10); return INT; }
+[+-]?0[xX]{H}+  { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 16); return INT; }
+[+-]?{D}+	{ col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 10); return INT; }
 
-{D}+{E}          |
-{D}*"."{D}+{E}?	 |
-{D}+"."{D}*{E}?	 { col += strlen(yytext);  yylval.ftype = strtod(yytext, NULL); return FLOAT; }
+[+-]?{D}+{E}          |
+[+-]?{D}*"."{D}+{E}?  |
+[+-]?{D}+"."{D}*{E}?  { col += strlen(yytext);  yylval.ftype = strtod(yytext, NULL); return FLOAT; }
 
 %{ // unquoted string TODO should accept more chars
 %}
-{L}({L}|{D})*  { col += strlen(yytext);  temp = yytext; yylval.stype = temp.c_str(); return STR; }
+{L}({L}|{D})*  { col += strlen(yytext);  yylval.stype = Z_StrDup(yytext); return STR; }
 
 %{ // delimiters
 %}

@@ -39,10 +39,12 @@ class ActorInfo
 protected:
   mobjtype_t   mobjtype; ///< Old mobjtype_t number.
   char    classname[64]; ///< Name of the DECORATE class, identical to the ZDoom equivalents if possible.
+  state_t *owned_states; ///< New DActor states owned by this class.
 
 public:
   int              game; ///< To which game does it belong? Uses the gamemode_t enum.
   string       obituary; ///< Obituary message for players killed by "instances" of this DECORATE class.
+  string    hitobituary; ///< Same, but for melee attacks.
   string      modelname; ///< Name of MD3 model to be used to represent this class.
   bool     spawn_always; ///< Do not care about mapthing "when-to-spawn" flags.
 
@@ -84,11 +86,40 @@ public:
   ActorInfo(const string& n);
   ActorInfo(const mobjinfo_t& m, int game);
 
-  inline const char *GetName() const { return classname; }
-  inline mobjtype_t  GetMobjType() const { return mobjtype; }
-  void SetName(const char *n);
+  /// destructor
+  ~ActorInfo();
 
-  void PrintDECORATEclass(); ///< Prints the DECORATE definition for this class to stdout.
+  /// Returns the DECORATE class name.
+  inline const char *GetName() const { return classname; }
+  /// Returns the mobjtype number.
+  inline mobjtype_t  GetMobjType() const { return mobjtype; }
+  /// Sets the DECORATE class name.
+  void SetName(const char *n);
+  /// Sets the mobjtype.
+  inline void SetMobjType(mobjtype_t t) { mobjtype = t; }
+  /// Sets or resets one or more Actor flags depending on the mnemonic 'flag'.
+  void SetFlag(const char *flag, bool on);
+
+  /// \name Functions for generating new AI states.
+  //@{
+  /// Clears the static temporary variables.
+  static void ResetStates();
+  /// Defines a new state label, which will point to the next state to be added.
+  static void AddLabel(const char *l);
+  /// Adds a sequence of AI states, which only differ in the frame field.
+  static void AddStates(const char *spr, const char *frames, int tics, const char *func);
+  /// Finishes an AI state sequence with a jump to a label, or if 'label' is NULL, to the beginning of the sequence.
+  static void FinishSequence(const char *label, int offset);
+  /// If 'label' has been defined return the corresponding state number, else return -1.
+  static int  FindLabel(const char *label);
+  /// Allocates space for the new AI states and associates the labels with the various state_t pointers.
+  bool CreateStates();
+  //@}
+
+  /// Utility for printing error messages during DECORATE parsing.
+  static void Error(const char *format, ...);
+  /// Prints the DECORATE definition for this class to stdout.
+  void PrintDECORATEclass();
 };
 
 
@@ -128,6 +159,12 @@ public:
       return false;
   }
 
+  /// Returns the first unused mobjtype_t number.
+  inline mobjtype_t GetFreeMT() const
+  {
+    // Map is ordered according to key.
+    return static_cast<mobjtype_t>(mt_map.rbegin()->first + 1);
+  }
 
   /// Find the ActorInfo corresponding to mobjtype mt.
   ActorInfo *operator[](mobjtype_t mt)
@@ -139,7 +176,7 @@ public:
       return t->second;
   }
 
-
+  /// Inserts p into DoomEd map, possibly replacing original.
   inline bool InsertDoomEd(ActorInfo *p, bool replace)
   {
     if (p->doomednum >= 0)
@@ -152,8 +189,7 @@ public:
     return false;
   }
 
-
-  /// Find the ActorInfo corresponding to doomednum n
+  /// Find the ActorInfo corresponding to doomednum n.
   ActorInfo *FindDoomEdNum(int n)
   {
     doomed_iter_t t = doomed_map.find(n);

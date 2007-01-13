@@ -32,7 +32,7 @@ union yy_t
 {
   float ftype;
   int   itype;
-  const char *stype; // just a pointer, not a copy! thus no destructor!
+  const char *stype; // copy of the parsed string, must be destroyed later on
 };
 # define YYSTYPE yy_t // sizeof(yy_t) == small, no point in using a pointer
 # define YYSTYPE_IS_TRIVIAL 1
@@ -53,10 +53,7 @@ struct ntexture_driver
 
 
 /// temp variables for building ActorInfos
-struct decorate_driver
-{
-  class ActorInfo *t;
-};
+typedef void decorate_driver;
 
 
 #endif

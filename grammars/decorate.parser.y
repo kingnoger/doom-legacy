@@ -25,26 +25,31 @@
 %extra_argument {decorate_driver *d}
 
 %parse_accept {
-  fprintf(stderr, "Parsing complete!\n");
+  //ActorInfo::Error("Parsing complete!\n");
 }
 
 %parse_failure {
-  fprintf(stderr,"Giving up.  Parser is hopelessly lost...\n");
+  ActorInfo::Error("Giving up. Parser is hopelessly lost...\n");
 }
 
 %stack_overflow {
-  fprintf(stderr,"Giving up.  Parser stack overflow\n");
+  ActorInfo::Error("Giving up. Parser stack overflow\n");
 }
 
 %token_type {yy_t}
+%token_destructor { if (yymajor == STR) Z_Free(const_cast<char*>($$.stype)); }
+
 %type str {const char *}
 %type int {int}
 %type num {float}
 
 %include {
 #include "g_decorate.h"
-#include "parser_driver.h"
 #include "sounds.h"
+#include "parser_driver.h"
+#include "decorate.parser.h"
+
+static ActorInfo *t; // replaces the unnecessary parser driver
 }
 
 //============================================================================
@@ -55,50 +60,52 @@ start ::= definitions.
 definitions ::= . // empty
 definitions ::= definitions actor. // left recursion
 
-actor ::= actor_init construction doomednum L_BRACE actor_properties R_BRACE.
+actor ::= actor_init construction doomednum NL L_BRACE NL actor_properties R_BRACE NL.
   {
-    d->t = NULL; // done updating it
+    t = NULL; // done updating it
   }
+actor ::= NL.
 actor ::= SEMICOLON. // HACK
 
 
 // initialize temp variables
-actor_init ::= ACTOR. { d->t = NULL; }
+actor_init ::= ACTOR. { t = NULL; ActorInfo::ResetStates(); }
 
 
 // after this we must have a valid ActorInfo pointer
 construction ::= str(A).
   {
-    d->t = aid.Find(A); // see if it already exists
-    if (!d->t)
+    t = aid.Find(A); // see if it already exists
+    if (!t)
     {
-      d->t = new ActorInfo(A);
-      aid.Insert(d->t);
+      t = new ActorInfo(A);
+      aid.Insert(t);
     }
   }
 construction ::= str(A) COLON str(P). // inheritance
   {
-    d->t = aid.Find(A); // see if it already exists
-    if (!d->t)
+    t = aid.Find(A); // see if it already exists
+    if (!t)
     {
       ActorInfo *parent = aid.Find(P);
       if (!parent)
 	{
-	  CONS_Printf("DECORATE error: parent class '%s' is unknown.\n", P);
-	  d->t = new ActorInfo(A);
+	  ActorInfo::Error("Parent class '%s' is unknown.\n", P);
+	  t = new ActorInfo(A);
 	}
       else
 	{
 	  // copy of parent
-	  d->t = new ActorInfo(*parent);
-	  d->t->SetName(A);
+	  t = new ActorInfo(*parent);
+	  t->SetName(A);
 	}
 
-      aid.Insert(d->t);
+      t->SetMobjType(aid.GetFreeMT());
+      aid.Insert(t);
     }
     else
     {
-      CONS_Printf("DECORATE error: class '%s' already exists, and thus cannot inherit.\n", A);
+      ActorInfo::Error("Class '%s' already exists, and thus cannot inherit.\n", A);
     }
   }
 
@@ -106,47 +113,66 @@ construction ::= str(A) COLON str(P). // inheritance
 doomednum ::= . // empty
 doomednum ::= int(A).
   {
-    d->t->doomednum = A;
-    aid.InsertDoomEd(d->t, true);
+    t->doomednum = A;
+    aid.InsertDoomEd(t, true);
   }
 
 
 // list of 0-N properties
 actor_properties ::= . // empty
-actor_properties ::= actor_properties actor_property.
+actor_properties ::= actor_properties actor_property NL.
 
+actor_property ::= .
+actor_property ::= OBITUARY str(A).    { t->obituary = A; }
+actor_property ::= HITOBITUARY str(A). { t->hitobituary = A; }
+actor_property ::= MODEL str(A).    { t->modelname = A; }
 
-actor_property ::= OBITUARY str(A). { d->t->obituary = A; }
-actor_property ::= MODEL str(A).    { d->t->modelname = A; }
+actor_property ::= HEALTH int(A).       { t->spawnhealth = A; }
+actor_property ::= REACTIONTIME int(A). { t->reactiontime = A; }
+actor_property ::= PAINCHANCE int(A).   { t->painchance = A; }
+actor_property ::= SPEED num(A).        { t->speed = A; }
+actor_property ::= DAMAGE int(A).       { t->damage = A; }
 
-actor_property ::= HEALTH int(A).       { d->t->spawnhealth = A; }
-actor_property ::= REACTIONTIME int(A). { d->t->reactiontime = A; }
-actor_property ::= PAINCHANCE int(A).   { d->t->painchance = A; }
-actor_property ::= SPEED num(A).        { d->t->speed = A; }
-actor_property ::= DAMAGE int(A).       { d->t->damage = A; }
+actor_property ::= RADIUS num(A). { t->radius = A; }
+actor_property ::= HEIGHT num(A). { t->height = A; }
+actor_property ::= MASS num(A).   { t->mass = A; }
 
-actor_property ::= RADIUS num(A). { d->t->radius = A; }
-actor_property ::= HEIGHT num(A). { d->t->height = A; }
-actor_property ::= MASS num(A).   { d->t->mass = A; }
+actor_property ::= SEESOUND str(A).    { t->seesound = S_GetSoundID(A); }
+actor_property ::= ATTACKSOUND str(A). { t->attacksound = S_GetSoundID(A); }
+actor_property ::= PAINSOUND str(A).   { t->painsound = S_GetSoundID(A); }
+actor_property ::= DEATHSOUND str(A).  { t->deathsound = S_GetSoundID(A); }
+actor_property ::= ACTIVESOUND str(A). { t->activesound = S_GetSoundID(A); }
 
-actor_property ::= SEESOUND str(A).    { d->t->seesound = S_GetSoundID(A); }
-actor_property ::= ATTACKSOUND str(A). { d->t->attacksound = S_GetSoundID(A); }
-actor_property ::= PAINSOUND str(A).   { d->t->painsound = S_GetSoundID(A); }
-actor_property ::= DEATHSOUND str(A).  { d->t->deathsound = S_GetSoundID(A); }
-actor_property ::= ACTIVESOUND str(A). { d->t->activesound = S_GetSoundID(A); }
 
 // flags
-actor_property ::= PLUS  str(A).
-actor_property ::= MINUS str(A).
+actor_property ::= CLEARFLAGS.   { t->flags = 0; t->flags2 = 0; }
+actor_property ::= MONSTER.      { t->SetFlag("MONSTER", true); }
+actor_property ::= PROJECTILE.   { t->SetFlag("PROJECTILE", true); }
+actor_property ::= PLUS  str(A). { t->SetFlag(A, true); }
+actor_property ::= MINUS str(A). { t->SetFlag(A, false); }
 
-// state definition structure
-actor_property ::= STATES L_BRACE state_defs R_BRACE.
+
+// states
+actor_property ::= STATES NL L_BRACE NL state_seqs R_BRACE. { t->CreateStates(); }
+
+state_seqs ::= . // empty
+state_seqs ::= state_seqs state_labeled_seq.
+
+state_labeled_seq ::= state_label state_defs state_jump NL.  // labeled sequence of states
+
+state_label ::= str(L) COLON NL. { t->AddLabel(L); }
 
 state_defs ::= . // empty
-state_defs ::= state_defs state_def.
+state_defs ::= state_defs state_def NL.
 
-state_def ::= str(L) COLON. // label
-state_def ::= str(S) str(F) int(T) str(A). // sequence of states
+state_def ::= str(S) str(F) int(T). { t->AddStates(S, F, T, NULL); } // no action func
+state_def ::= str(S) str(F) int(T) str(A). { t->AddStates(S, F, T, A); } // with action func
+
+state_jump ::= LOOP.        { t->FinishSequence(NULL, 0); }   // loop to beginning of sequence
+state_jump ::= STOP.        { t->FinishSequence("NULL", 0); } // go to S_NULL
+state_jump ::= GOTO str(L). { t->FinishSequence(L, 0); }      // go to another label
+state_jump ::= GOTO str(L) PLUS int(A). { t->FinishSequence(L, A); }
+
 
 
 // string

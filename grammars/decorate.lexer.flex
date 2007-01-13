@@ -1,5 +1,5 @@
 %{// Emacs style mode select   -*- C++ -*-
-// GNU Flex scanner for various plaintext lumps.
+// GNU Flex scanner for DECORATE lumps.
 // Ville Bergholm 2005-2007
 
 // prologue
@@ -45,7 +45,7 @@ WHITESP [ \t\v\r\f]
   \"      { // closing quote
             BEGIN(INITIAL);
 	    // TODO col update
-            yylval.stype = temp.c_str(); return STR; }
+            yylval.stype = Z_StrDup(temp.c_str()); return STR; }
 
   \n       { /* error, unterminated string */ }
   \\[0-9]+ { /* error, unknown escape seq */ }
@@ -64,9 +64,9 @@ WHITESP [ \t\v\r\f]
 %{ // DECORATE keywords
 %}
 actor        { return ACTOR; }
-states       { return STATES; }
 
 obituary     { return OBITUARY; }
+hitobituary  { return HITOBITUARY; }
 model        { return MODEL; }
 
 health       { return HEALTH; }
@@ -85,34 +85,44 @@ painsound    { return PAINSOUND; }
 deathsound   { return DEATHSOUND; }
 activesound  { return ACTIVESOUND; }
 
+monster      { return MONSTER; }
+projectile   { return PROJECTILE; }
+clearflags   { return CLEARFLAGS; }
+
+states       { return STATES; }
+loop         { return LOOP; }
+stop         { return STOP; }
+goto         { return GOTO; }
+
 %{
 // octals? can be confusing...
 //0{D}+	     { yylval.itype = strtol(yytext, NULL, 8);  return INT; }
 %}
 
-0[xX]{H}+  { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 16); return INT; }
-{D}+	   { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 10); return INT; }
+[+-]?0[xX]{H}+  { col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 16); return INT; }
+[+-]?{D}+	{ col += strlen(yytext);  yylval.itype = strtol(yytext, NULL, 10); return INT; }
 
-{D}+{E}          |
-{D}*"."{D}+{E}?	 |
-{D}+"."{D}*{E}?	 { col += strlen(yytext);  yylval.ftype = strtod(yytext, NULL); return FLOAT; }
+[+-]?{D}+{E}          |
+[+-]?{D}*"."{D}+{E}?  |
+[+-]?{D}+"."{D}*{E}?  { col += strlen(yytext);  yylval.ftype = strtod(yytext, NULL); return FLOAT; }
 
 %{ // unquoted string TODO should accept more chars
 %}
-{L}({L}|{D})*  { col += strlen(yytext);  temp = yytext; yylval.stype = temp.c_str(); return STR; }
+{L}({L}|{D})*  { col += strlen(yytext);  yylval.stype = Z_StrDup(yytext); return STR; }
 
 %{ // delimiters
 %}
-";" { col++; return SEMICOLON; }
-":" { col++; return COLON; }
-"{" { col++; return L_BRACE; }
-"}" { col++; return R_BRACE; }
-"+" { col++; return PLUS; }
-"-" { col++; return MINUS; }
+";"  { col++; return SEMICOLON; }
+":"  { col++; return COLON; }
+"{"  { col++; return L_BRACE; }
+"}"  { col++; return R_BRACE; }
+"+"  { col++; return PLUS; }
+"-"  { col++; return MINUS; }
+"\n" { col = 0; line++; return NL; }
 
 
 {WHITESP}  { col += strlen(yytext); /* skip whitespace */ }
-\n         { col = 0; line++; }
+
 
 %%
 
