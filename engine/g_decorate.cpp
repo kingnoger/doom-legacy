@@ -35,19 +35,38 @@ ActorInfoDictionary aid;
 
 bool Read_DECORATE(int lump);
 
+// Label names for standard state sequences
+static const char *StandardLabels[] = {"spawn", "see", "melee", "missile", "pain", "death", "xdeath", "crash", "raise"};
+
 
 ActorInfo::~ActorInfo()
 {
-  if (owned_states)
-    Z_Free(owned_states);
+  int n = labels.size();
+  for (int i=0; i<n; i++)
+    if (labels[i].dyn_states && labels[i].label_states)
+      free(labels[i].label_states);
+}
+
+
+// copy constructor, tricky
+ActorInfo::ActorInfo(const ActorInfo& a)
+{
+  *this = a; // first use auto-generated assignment op
+  // then fix dynamically allocated stuff
+  int n = labels.size();
+  for (int i=0; i<n; i++)
+    if (labels[i].dyn_states && labels[i].label_states)
+      {
+	int size = labels[i].num_states * sizeof(state_t);
+	labels[i].label_states = static_cast<state_t*>(malloc(size));
+	memcpy(labels[i].label_states, a.labels[i].label_states, size);
+      }
 }
 
 
 // fill fields with default values
 ActorInfo::ActorInfo(const string& n)
 {
-  owned_states = NULL;
-
   strncpy(classname, n.c_str(), 63);
   mobjtype = MT_NONE;
 
@@ -91,8 +110,6 @@ ActorInfo::ActorInfo(const string& n)
 // copy values from mobjinfo_t
 ActorInfo::ActorInfo(const mobjinfo_t& m, int gm)
 {
-  owned_states = NULL;
-
   mobjtype = mobjtype_t(&m - mobjinfo);
 
   if (m.classname)
@@ -134,6 +151,26 @@ ActorInfo::ActorInfo(const mobjinfo_t& m, int gm)
   raisestate   = m.raisestate;
 
   touchf = m.touchf;
+
+  // create labels
+  for (int i=0; i<9; i++)
+    {
+      if ((&spawnstate)[i]) // HACK, works if struct is packed...
+	{
+	  statelabel_t temp;
+	  strncpy(temp.label, StandardLabels[i], SL_LEN);
+
+	  temp.dyn_states = false; // until states table is got rid of
+	  temp.label_states = (&spawnstate)[i]; // HACK
+	  temp.num_states = 10; // TODO guesstimate
+
+	  temp.jumplabel[0] = '\0';
+	  temp.jumplabelnum = -1;
+	  temp.jumpoffset = 0;
+
+	  labels.push_back(temp);
+	}
+    }
 }
 
 
@@ -186,39 +223,29 @@ void ActorInfo::SetFlag(const char *flagname, bool on)
 }
 
 
-struct statelabel_t
+ActorInfo::statelabel_t *ActorInfo::FindLabel(const char *l)
 {
-#define SL_LEN 20
-  char label[SL_LEN];
-  int  statenum;
-};
-static vector<statelabel_t> state_labels;
+  int n = labels.size();
+  for (int i=0; i<n; i++)
+    if (!strncasecmp(l, labels[i].label, SL_LEN))
+      {
+	// label found
+	return &labels[i];
+      }
 
-struct statemodel_t
-{
-  spritenum_t sprite;    ///< Sprite to use.
-  int         frame;
-  int         tics;
-  actionf_p1  action;    ///< Action function to call when entering this state, or NULL if none.
-  char        gotolabel[SL_LEN];
-  int         offset;
-};
-static vector<statemodel_t> new_states;
-
-
-void ActorInfo::ResetStates()
-{
-  state_labels.clear();
-  new_states.clear();
+  return NULL; // not found
 }
 
 
-void ActorInfo::AddLabel(const char *l)
+// used during state construction
+static string new_label;
+static vector<state_t> new_states;
+
+
+void ActorInfo::AddLabel(const char *label)
 {
-  statelabel_t temp;
-  strncpy(temp.label, l, SL_LEN);
-  temp.statenum = new_states.size(); // label points to next state to be defined
-  state_labels.push_back(temp);
+  new_states.clear(); // get ready to accept new state definitions for this label
+  new_label = label;
 }
 
 
@@ -246,7 +273,7 @@ void ActorInfo::AddStates(const char *spr, const char *frames, int tics, const c
 	break;
       }
 
-  statemodel_t s = {spr_num, 0, tics, f, "", 1};
+  state_t s = {spr_num, 0, tics, f, NULL};
 
   for ( ; *frames; frames++)
     {
@@ -260,87 +287,166 @@ void ActorInfo::AddStates(const char *spr, const char *frames, int tics, const c
 }
 
 
-void ActorInfo::FinishSequence(const char *label, int offset)
+void ActorInfo::FinishSequence(const char *jumplab, int offset)
 {
-  if (label)
+  statelabel_t *s = FindLabel(new_label.c_str());
+  if (s)
     {
-      strncpy(new_states.back().gotolabel, label, SL_LEN);
-      new_states.back().offset = offset;
+      // replace existing sequence
+      // discard old states
+      if (s->dyn_states && s->label_states)
+	free(s->label_states);
+    }
+  else
+    {
+      // add a new sequence
+      labels.resize(labels.size() + 1);
+      s = &labels.back();
+      strncpy(s->label, new_label.c_str(), SL_LEN);
+    }
+
+  int n = s->num_states = new_states.size();
+  s->dyn_states = true;
+
+  // set label_states
+  if (n)
+    {
+      // allocate label_states
+      s->label_states = static_cast<state_t*>(malloc(n * sizeof(state_t)));
+      state_t *st = s->label_states;
+
+      for (int j=0; j < n; j++, st++)
+	{
+	  *st = new_states[j];
+	  st->nextstate = st + 1;
+	}
+    }
+  else
+    {
+      s->label_states = NULL;
+    }
+
+  // fill in jump data
+  if (jumplab)
+    {
+      strncpy(s->jumplabel, jumplab, SL_LEN); // either a label, or "" denoting S_NULL
     }
   else
     {
       // loop to first state in sequence (equivalent to "goto current_label", but save some effort here)
-      new_states.back().gotolabel[0] = 1; // HACK
-      new_states.back().offset = state_labels.back().statenum;
+      s->jumplabel[0] = 1; // HACK
     }
+
+  s->jumplabelnum = -2; // means "needs to be set"
+  s->jumpoffset = offset;
+
+  // So far so good, now we only need to fix nextstate pointer for last state in sequence
+  // and check that jumplabel is good, but for that we need _all_ the state definitions...
+  // This happens in UpdateSequences().
 }
 
 
-int ActorInfo::FindLabel(const char *label)
+bool ActorInfo::UpdateSequences()
 {
-  int n = state_labels.size();
+  int n = labels.size();
+
+  // set jumplabelnum
   for (int i=0; i<n; i++)
-    if (!strncasecmp(label, state_labels[i].label, SL_LEN))
-      {
-	// label found
-	return state_labels[i].statenum;
-      }
-
-  return -1; // not found
-}
-
-
-bool ActorInfo::CreateStates()
-{
-  int n = new_states.size();
-  owned_states = static_cast<state_t*>(Z_Malloc(n*sizeof(state_t), PU_STATIC, NULL));
-
-  state_t *s = owned_states;
-  for (int i=0; i<n; i++, s++)
     {
-      s->sprite = new_states[i].sprite;
-      s->frame  = new_states[i].frame;
-      s->tics   = new_states[i].tics;
-      s->action = new_states[i].action;
+      statelabel_t *p, *s = &labels[i];
+      if (s->jumplabelnum != -2)
+	continue; // already ok (never changes even if new labels are added or old ones redefined!)
 
-      const char *p = new_states[i].gotolabel;
+      const char *temp = s->jumplabel;
 
-      if (!p[0]) // "next"
-	s->nextstate = s+1;
-      else if (p[0] == 1) // "loop", HACK
-	s->nextstate = &owned_states[new_states[i].offset];
-      else if (!strcmp(p, "NULL")) // "stop"
-	s->nextstate = &states[S_NULL];
-      else // "goto"
+      if (!temp[0]) // empty string denotes S_NULL
 	{
-	  int temp = FindLabel(p);
-	  if (temp >= 0)
-	    s->nextstate = &owned_states[temp];
-	  else
+	  s->jumplabelnum = -1;
+	}
+      else if (temp[0] == 1) // HACK, loop
+	{
+	  s->jumplabelnum = s - &labels.front(); // TODO is this certain to work? would iterators be better?
+	}
+      else if ((p = FindLabel(temp))) 
+	{
+	  s->jumplabelnum = p - &labels.front();
+	}
+      else
+	{
+	  // label not found
+	  Error("Unknown state label '%s'.\n", temp);
+	  s->jumplabelnum = -1; // go to S_NULL
+	}
+
+      if (s->jumplabelnum == -1 && s->num_states == 0)
+	{
+	  // handle "xxx: stop"
+	  s->dyn_states = false;
+	  s->label_states = &states[S_NULL];
+	  s->num_states = 1;
+	}
+    }
+
+  // now re-set nextstate pointer for the last state in _every_ sequence using jump* info
+  for (int i=0; i<n; i++)
+    {
+      statelabel_t *s = &labels[i];
+      if (!s->dyn_states)
+	continue; // don't mess with static statetable
+
+      int j = s->jumplabelnum;
+      if (j < 0)
+	{
+	  if (s->num_states == 0)
 	    {
-	      Error("Unknown state label '%s'.\n", p);
-	      s->nextstate = &states[S_NULL];
+	      I_Error("FIXME, unexpected\n");
+	    }
+	  else
+	    s->label_states[s->num_states-1].nextstate = &states[S_NULL]; // offset is ignored
+	}
+      else
+	{
+	  // check redirection
+#define MAX_REDIRECTS 10 // allow max. 10 redirects
+	  int k;
+	  for (k=0; !labels[j].num_states && k < MAX_REDIRECTS; k++)
+	    {
+	      // follow redirect
+	      j = labels[j].jumplabelnum;
+	      if (j < 0)
+		I_Error("DECORATE: Redirect to bad label.\n");
+	    }
+
+	  if (k >= MAX_REDIRECTS)
+	    I_Error("DECORATE: Too many redirects.\n"); // or a cyclic redirect, "a: goto b; b: goto a;"
+
+	  if (s->num_states) // for redirects, do nothing
+	    {
+	      // update last state
+	      if (s->jumpoffset < labels[j].num_states)
+		s->label_states[s->num_states-1].nextstate = &labels[j].label_states[s->jumpoffset];
+	      else
+		I_Error("DECORATE: State offset too large.\n"); // TODO wrap offsets to next seqs?
 	    }
 	}
     }
 
-  n = state_labels.size();
+  // fill in shorthand state pointers
+  for (int j=0; j<9; j++)
+    (&spawnstate)[j] = NULL; // HACK
+
   for (int i=0; i<n; i++)
     {
-      const char *label = state_labels[i].label;
-      state_t **p = NULL;
-      if (!strcasecmp("spawn", label))        p = &spawnstate;
-      else if (!strcasecmp("see", label))     p = &seestate;
-      else if (!strcasecmp("melee", label))   p = &meleestate;
-      else if (!strcasecmp("missile", label)) p = &missilestate;
-      else if (!strcasecmp("pain", label))    p = &painstate;
-      else if (!strcasecmp("death", label))   p = &deathstate;
-      else if (!strcasecmp("xdeath", label))  p = &xdeathstate;
-      else if (!strcasecmp("crash", label))   p = &crashstate;
-      else if (!strcasecmp("raise", label))   p = &raisestate;
-
-      if (p)
-	*p = &owned_states[state_labels[i].statenum];
+      const char *temp = labels[i].label;
+      for (int j=0; j<9; j++)
+	{
+	  if (!strcasecmp(StandardLabels[j], temp))
+	    {
+	      // found a match for this label
+	      (&spawnstate)[j] = labels[i].label_states; // HACK
+	      break;
+	    }
+	}
     }
 
   if (!spawnstate)
@@ -351,7 +457,6 @@ bool ActorInfo::CreateStates()
 
   return true;
 }
-
 
 
 void ActorInfo::Error(const char *format, ...)
@@ -420,9 +525,6 @@ void ConvertMobjInfo()
   printf("Named DECORATE classes:\n");
   for (i=0; i<NUMMOBJTYPES; i++)
     {
-      //mobjinfo[i].reactiontime *= NEWTICRATERATIO;
-      //mobjinfo[i].speed        /= NEWTICRATERATIO;
-
       if (mobjinfo[i].classname)
 	printf(" +%s\n", mobjinfo[i].classname);
     }
@@ -469,10 +571,4 @@ void ConvertMobjInfo()
     }
 
   CONS_Printf(" %d Actor types defined.\n", aid.Size());
-  /*
-  for (i=0;i<NUMSTATES;i++)
-    {
-      //states[i].tics *= NEWTICRATERATIO;
-    }
-  */
 }

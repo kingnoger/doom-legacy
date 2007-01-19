@@ -36,10 +36,24 @@ using namespace std;
  */
 class ActorInfo
 {
+public:
+  /// State labels are retained indefinitely.
+  struct statelabel_t
+  {
+#define SL_LEN 16
+    char label[SL_LEN]; ///< Label string, NUL-terminated.
+    int  num_states;    ///< Number of states in the sequence.
+    state_t *label_states;  ///< DActor states owned by this label.
+    bool dyn_states;    ///< Are the states dynamically allocated?
+    char jumplabel[SL_LEN]; ///< Label to jump to after the sequence.
+    int  jumplabelnum;  ///< Number of label to jump to after the sequence, or -1 for S_NULL.
+    int  jumpoffset;    ///< Additional offset for the jump.
+  };
+
 protected:
   mobjtype_t   mobjtype; ///< Old mobjtype_t number.
   char    classname[64]; ///< Name of the DECORATE class, identical to the ZDoom equivalents if possible.
-  state_t *owned_states; ///< New DActor states owned by this class.
+  vector<statelabel_t> labels; ///< All known state labels for this class.
 
 public:
   int              game; ///< To which game does it belong? Uses the gamemode_t enum.
@@ -85,6 +99,7 @@ public:
   /// constructors
   ActorInfo(const string& n);
   ActorInfo(const mobjinfo_t& m, int game);
+  ActorInfo(const ActorInfo& a);
 
   /// destructor
   ~ActorInfo();
@@ -102,18 +117,21 @@ public:
 
   /// \name Functions for generating new AI states.
   //@{
-  /// Clears the static temporary variables.
-  static void ResetStates();
   /// Defines a new state label, which will point to the next state to be added.
   static void AddLabel(const char *l);
   /// Adds a sequence of AI states, which only differ in the frame field.
   static void AddStates(const char *spr, const char *frames, int tics, const char *func);
   /// Finishes an AI state sequence with a jump to a label, or if 'label' is NULL, to the beginning of the sequence.
-  static void FinishSequence(const char *label, int offset);
-  /// If 'label' has been defined return the corresponding state number, else return -1.
-  static int  FindLabel(const char *label);
-  /// Allocates space for the new AI states and associates the labels with the various state_t pointers.
-  bool CreateStates();
+  /// Allocates space for the new AI states.
+  void FinishSequence(const char *jumplabel, int offset);
+
+protected:
+  /// If 'label' has been defined return the corresponding state label, else return NULL.
+  statelabel_t *FindLabel(const char *label);
+
+public:
+  /// Associates the labels with the various state_t pointers.
+  bool UpdateSequences();
   //@}
 
   /// Utility for printing error messages during DECORATE parsing.

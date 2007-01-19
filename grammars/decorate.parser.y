@@ -69,7 +69,7 @@ actor ::= SEMICOLON. // HACK
 
 
 // initialize temp variables
-actor_init ::= ACTOR. { t = NULL; ActorInfo::ResetStates(); }
+actor_init ::= ACTOR. { t = NULL; }
 
 
 // after this we must have a valid ActorInfo pointer
@@ -153,7 +153,7 @@ actor_property ::= MINUS str(A). { t->SetFlag(A, false); }
 
 
 // states
-actor_property ::= STATES NL L_BRACE NL state_seqs R_BRACE. { t->CreateStates(); }
+actor_property ::= STATES NL L_BRACE NL state_seqs R_BRACE. { t->UpdateSequences(); }
 
 state_seqs ::= . // empty
 state_seqs ::= state_seqs state_labeled_seq.
@@ -169,7 +169,7 @@ state_def ::= str(S) str(F) int(T). { t->AddStates(S, F, T, NULL); } // no actio
 state_def ::= str(S) str(F) int(T) str(A). { t->AddStates(S, F, T, A); } // with action func
 
 state_jump ::= LOOP.        { t->FinishSequence(NULL, 0); }   // loop to beginning of sequence
-state_jump ::= STOP.        { t->FinishSequence("NULL", 0); } // go to S_NULL
+state_jump ::= STOP.        { t->FinishSequence("", 0); }     // go to S_NULL
 state_jump ::= GOTO str(L). { t->FinishSequence(L, 0); }      // go to another label
 state_jump ::= GOTO str(L) PLUS int(A). { t->FinishSequence(L, A); }
 
