@@ -82,7 +82,7 @@ private:
 
   void RenderBSPNode(int nodenum); ///< Render level using BSP.
   void RenderGLSubsector(int num);
-  void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor);
+  void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor, GLfloat xoff=0.0, GLfloat yoff=0.0);
   void RenderGLSeg(int num);
   void RenderActors(sector_t *sec);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);

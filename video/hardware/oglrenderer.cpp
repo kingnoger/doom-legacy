@@ -784,7 +784,7 @@ void OGLRenderer::RenderBSPNode(int nodenum)
 }
 
 /// Draws one single GL subsector polygon that is either a floor or a ceiling. 
-void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor)
+void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor, GLfloat xoff, GLfloat yoff)
 {
   int curseg;
   int firstseg;
@@ -823,8 +823,8 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     x = v->x.Float();
     y = v->y.Float();
     
-    tx = x/tex->worldwidth;
-    ty = 1.0 - y/tex->worldheight;
+    tx = (x+xoff)/tex->worldwidth;
+    ty = 1.0 - (y+yoff)/tex->worldheight;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
@@ -845,6 +845,7 @@ void OGLRenderer::RenderGLSubsector(int num)
   int segcount;
   subsector_t *ss;
   sector_t *s;
+  ffloor_t *ff;
   Texture *ftex;
   GLfloat c[4];
   byte light;
@@ -868,16 +869,84 @@ void OGLRenderer::RenderGLSubsector(int num)
   // Draw ceiling texture, skip sky flats.
   ftex = tc[s->ceilingpic];
   if (ftex && s->ceilingpic != skyflatnum)
-    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false);
+    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false, s->ceiling_xoffs.Float(), s->ceiling_yoffs.Float());
  
   // Then the floor.
   ftex = tc[s->floorpic];
   if(ftex && s->floorpic != skyflatnum)
-    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true);
+    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true, s->floor_xoffs.Float(), s->floor_yoffs.Float());
 
   // Draw the walls of this subsector.
   for(curseg=firstseg; curseg<firstseg+segcount; curseg++)
     RenderGLSeg(curseg);
+
+  // A quick hack: draw 3D floors here. To do it Right, they (and
+  // things in this subsector) need to be depth-sorted.
+  for(ff = s->ffloors; ff; ff = ff->next) {
+    line_t *mline;
+    side_t *mside;
+
+    GLfloat textop, texbottom, texleft, texright;
+    GLfloat fsheight; // Height of this 3D floor.
+    ftex = tc[*ff->toppic];
+    RenderGlSsecPolygon(ss, ff->topheight->Float(), ftex, true);
+    ftex = tc[*ff->bottompic];
+    RenderGlSsecPolygon(ss, ff->bottomheight->Float(), ftex, false);
+
+    // Draw "edges" of 3D floor.
+
+    // Sanity check.
+    mline = ff->master;
+    if(mline == NULL)
+      continue;
+    mside = mline->sideptr[0];
+    if(mside == NULL)
+      continue;
+    ftex = tc[mside->midtexture];
+    if(ftex == NULL)
+      continue;
+
+    // Calculate texture offsets. (They are the same for every edge.)
+    fsheight = mside->sector->ceilingheight.Float() -
+               mside->sector->floorheight.Float();
+    if(mline->flags & ML_DONTPEGBOTTOM) {
+      texbottom = mside->rowoffset.Float();
+      textop = texbottom - fsheight;
+    } else {
+      textop = mside->rowoffset.Float();
+      texbottom = textop + fsheight;
+    }
+    texleft = mside->textureoffset.Float();
+
+
+    glBindTexture(GL_TEXTURE_2D, ftex->GLPrepare());
+    for(curseg=firstseg; curseg<firstseg+segcount; curseg++) {
+      seg_t *s;
+      vertex_t *fv;
+      vertex_t *tv;
+      fixed_t nx, ny;
+      s = &(mp->segs[curseg]);
+      texright = texleft + s->length;
+      fv = s->v1;
+      tv = s->v2;
+
+      // Surface normal points to the opposite direction than if we
+      // were drawing a wall.
+      nx = -(tv->y - fv->y);
+      ny = -(fv->x - tv->x);
+      glNormal3f(nx.Float(), ny.Float(), 0.0);
+      DrawSingleQuad(tv, fv, 
+		     mside->sector->floorheight.Float(), 
+		     mside->sector->ceilingheight.Float(),
+		     texleft/ftex->worldwidth,
+		     texright/ftex->worldwidth,
+		     textop/ftex->worldheight,
+		     texbottom/ftex->worldheight);
+
+    }
+
+
+  }
 
   // finally the actors
   RenderActors(s);
