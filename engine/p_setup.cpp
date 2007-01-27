@@ -1397,9 +1397,9 @@ bool Map::Setup(tic_t start, bool spawnthings)
   string glname = "GL_";
   glname.append(lumpname, 0, 5);
 
-  int gllump = fc.FindNumForName(glname.c_str());
+  int gllump = fc.FindNumForName(glname.c_str(), false);
   int gl_version = 0;
-  if (gllump != -1)
+  if (gllump != -1 && gllump > lumpnum)
     {
       gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
       CONS_Printf("Map %s has v%d GL nodes.\n", lumpname.c_str(), gl_version);
@@ -1410,6 +1410,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   else
     {
       CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
+      gllump = -1;
     }
 
   LoadVertexes(lumpnum+LUMP_VERTEXES); // These are always needed.
