@@ -1287,12 +1287,14 @@ void Map::LoadGLVis(const int lump) {
   // glVIS is not always present. Check for it.
   if(lname == NULL || !strcmp(lname, "GL_VIS")) {
     CONS_Printf("Level does not have GL_VIS data.\n");
+    CONS_Printf("Automap will not work until you run glvis on this file.\n");
     return;
   }
 
   vissize = fc.LumpLength(lump);
   if(vissize == 0) {
     CONS_Printf("Level has empty GL_VIS data.\n");
+    CONS_Printf("Automap will not work until you run glvis on this file.\n");
     return;
   }
 
