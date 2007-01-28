@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1995 by Sebastien Bacquet.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -68,14 +67,14 @@ static byte    MIDItrack;
 
 inline void fwriteshort(Uint16 x, byte **f)
 {
-  Sint16 *p = reinterpret_cast<Sint16*>(*f);
-  *p++ = ((x>>8) & 0xff) | (x<<8);
+  *reinterpret_cast<Uint16*>(*f) = SHORT_BE(x);
+  *f += 2;
 }
 
 inline void fwritelong(Uint32 x, byte **f)
 {
-  Sint32 *p = reinterpret_cast<Sint32*>(*f);
-  *p++ = ((x>>24) & 0xff) | ((x>>8) & 0xff00) | ((x<<8) & 0xff0000) | (x<<24);
+  *reinterpret_cast<Uint32*>(*f) = LONG_BE(x);
+  *f += 4;
 }
 
 

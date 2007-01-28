@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -27,21 +26,29 @@
 
 #include "doomtype.h"
 
-// WAD files are always little endian.
+// WAD files are always little-endian.
+// Other files, such as MIDI files, are always big-endian.
 
-#ifdef __BIG_ENDIAN__
-# define SHORT(x) ((Sint16)( \
+#define SWAP_INT16(x) ((Sint16)( \
 (((Uint16)(x) & (Uint16)0x00ffU) << 8) | \
 (((Uint16)(x) & (Uint16)0xff00U) >> 8) ))
-# define LONG(x) ((Sint32)( \
+
+#define SWAP_INT32(x) ((Sint32)( \
 (((Uint32)(x) & (Uint32)0x000000ffUL) << 24) | \
 (((Uint32)(x) & (Uint32)0x0000ff00UL) <<  8) | \
 (((Uint32)(x) & (Uint32)0x00ff0000UL) >>  8) | \
 (((Uint32)(x) & (Uint32)0xff000000UL) >> 24) ))
-#else
+
+#ifdef __BIG_ENDIAN__
+# define SHORT(x) SWAP_INT16(x)
+# define LONG(x)  SWAP_INT32(x)
+# define SHORT_BE(x) (x)
+# define LONG_BE(x)  (x)
+#else // little-endian
 # define SHORT(x) (x)
 # define LONG(x)  (x)
+# define SHORT_BE(x) SWAP_INT16(x)
+# define LONG_BE(x)  SWAP_INT32(x)
 #endif
-
 
 #endif
