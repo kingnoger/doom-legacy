@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by Doom Legacy Team
+// Copyright (C) 2002-2007 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -246,6 +246,7 @@ bool MD3_t::Load(const string& filename)
   // read tags
   int nt = header.numTags;
   tags = reinterpret_cast<MD3_tag*>(data + header.ofsTags);
+  //for (i=0; i<nt; i++) printf("tag '%s'\n", tags[i].name);
 
   // init links
   links.resize(nt, NULL);
@@ -274,8 +275,7 @@ bool MD3_t::Load(const string& filename)
       // load the shaders (skins)
       // TODO how are these used?
       meshes[i].shaders = reinterpret_cast<MD3_mesh_shader*>(meshbase + meshes[i].header.ofsShaders);
-      for (int ttt=0; ttt<meshes[i].header.numShaders; ttt++)
-	printf("mesh %d, shader '%s'.\n", ttt, meshes[i].shaders[ttt].name);
+      //for (int j=0; j<meshes[i].header.numShaders; j++) printf("mesh %d, shader '%s'.\n", j, meshes[i].shaders[j].name);
 
       // triangles
       meshes[i].triangles = reinterpret_cast<MD3_mesh_triangle*>(meshbase + meshes[i].header.ofsTriangles);
@@ -422,7 +422,7 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
 }
 
 // draw this model and all the models that have been linked to it
-MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st)
+MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st, float pitch)
 {
 #ifndef NO_OPENGL
   int i, j, k;
@@ -476,7 +476,8 @@ MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st)
 	  st++; // important! st must be an array of animstates big enough for the 
 	  // entire linked submodel complex! Not a very easy system, but should work...
 	  // Note the order in which the models have been linked to one another
-	  st = mp->DrawRecursive(st);
+	  glRotatef(-0.5*pitch, 0, 1, 0);
+	  st = mp->DrawRecursive(st, pitch);
 	  glPopMatrix();
 	}
     }
@@ -795,13 +796,15 @@ bool modelpres_t::Draw(const Actor *p)
 
   vec_t<fixed_t> pos = p->pos;
 
-  // TODO what is the correct floorlevel offset?
-  glTranslatef(pos.x.Float(), pos.y.Float(), pos.z.Float() + mdl->legs.frames[st[0].frame].radius*0.66);
-  glScalef(0.7, 0.7, 0.7);
-  //glRotatef(Degrees(p->pitch), 1, 0, 0);
-  glRotatef(Degrees(p->yaw), 0, 0, 1);
+#define Q2D_scale 0.75
 
-  mdl->legs.DrawRecursive(&st[0]);
+  // TODO what is the correct floorlevel offset? Theoretically there
+  // should be a tag_floor, but haven't seen one yet in any model. 24 seems to work.
+  glTranslatef(pos.x.Float(), pos.y.Float(), pos.z.Float() + Q2D_scale*(mdl->legs.frames[st->frame].origin[2]+24));
+  glScalef(Q2D_scale, Q2D_scale, Q2D_scale);
+  glRotatef(Degrees(p->yaw), 0, 0, 1);
+  // TODO yaw for head and torso, directed leg animation
+  mdl->legs.DrawRecursive(&st[0], DegreesSigned(p->pitch));
 
   glPopMatrix();
   glFrontFace(GL_CCW);

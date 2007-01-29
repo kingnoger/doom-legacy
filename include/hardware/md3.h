@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by Doom Legacy Team
+// Copyright (C) 2002-2007 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -169,7 +169,7 @@ public:
   void DrawInterpolated(struct MD3_animstate *st);
 
   /// draw this model and all the models that have been linked to it
-  MD3_animstate *DrawRecursive(MD3_animstate *st);
+  MD3_animstate *DrawRecursive(MD3_animstate *st, float pitch);
 };
 
 

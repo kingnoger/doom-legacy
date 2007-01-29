@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,10 +45,16 @@
 typedef Uint32 angle_t;
 
 
-/// Converts angle_t to degrees.
+/// Converts angle_t to degrees, normalized to [0, 360)
 inline double Degrees(angle_t a)
 {
   return double(a) * (45.0 / double(1 << 29));
+}
+
+/// Converts angle_t to degrees, normalized to [-180, 180)
+inline double DegreesSigned(angle_t a)
+{
+  return double(static_cast<Sint32>(a)) * (45.0 / double(1 << 29));
 }
 
 
