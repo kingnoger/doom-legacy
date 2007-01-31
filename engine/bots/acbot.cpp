@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -54,6 +54,8 @@
 DATAEXPORT dll_info_t dll_info = {0, 1, "Doom Legacy ACBot plugin"};
 */
 
+const fixed_t MAXSTEP = 24;
+const fixed_t MAXWATERSTEP = 37;
 
 static int botforwardmove[2] = {50, 100};
 static int botsidemove[2]    = {48, 80};
@@ -77,19 +79,21 @@ static ai_target_t fTeammate;       // furthest directly reachable teammate
 static ai_target_t cUnseenTeammate; // closest not directly reachable teammate (node-reachable)
 
 static ai_target_t bItem; // best directly reachable AND visible item
-static double  bItemWeight;
+static float  bItemWeight;
 static ai_target_t bUnseenItem; // best non-visible item (node-reachable)
-static double  bUnseenItemWeight;
+static float  bUnseenItemWeight;
 
-static int bWeaponValue; // value of the best currently usable weapon
-static bool HaveWeaponFor[NUMAMMO]; // does the bot have a weapon for the given ammotype?
+static float bWeaponValue; // value of the best currently usable weapon
+static bool  HaveWeaponFor[NUMAMMO]; // does the bot have a weapon for the given ammotype?
 
+static fixed_t JumpHeight; // How high can the bots jump?
 
 //=================================================================
 //     Simple straight-line reachability checks
 //=================================================================
 static Actor	*bot, *goal;
 static sector_t *last_sector;
+static fixed_t   last_floorz;
 
 /// returns true if the intercepting object can be bypassed
 static bool PTR_QuickReachable(intercept_t *in)
@@ -104,16 +108,14 @@ static bool PTR_QuickReachable(intercept_t *in)
 	{
 	  // determine the next sector to be traversed
 	  sector_t *s = (line->backsector == last_sector) ? line->frontsector : line->backsector;
-	  fixed_t ceilingheight = s->ceilingheight;
-	  fixed_t floorheight = s->floorheight;
+	  range_t r = s->FindZRange(bot);
 
-	  if (((floorheight <= last_sector->floorheight + 37) ||
-	       ((floorheight <= last_sector->floorheight + 45) &&
-		(last_sector->floortype != FLOOR_WATER))) && // can we jump there?
-	      ((ceilingheight == floorheight && line->special) ||
-	       (ceilingheight - floorheight >= bot->height))) // do we fit?
+	  if ((r.low <= last_floorz + ((last_sector->floortype != FLOOR_WATER) ? (JumpHeight + MAXSTEP) : MAXWATERSTEP)) && // can we jump there?
+	      (((r.high == r.low) && line->special) ||
+	       (r.high - r.low >= bot->height))) // do we fit?
 	    {
 	      last_sector = s;
+	      last_floorz = r.low; // climb from floor to floor
 	      return true;
 	    }
 	  else
@@ -138,26 +140,24 @@ bool ACBot::QuickReachable(Actor *g)
   bot = pawn;
   goal = g;
   last_sector = pawn->subsector->sector;
+  last_floorz = pawn->Feet(); // 3d floors...
 
-  //#ifdef FIXROVERBUGS
   // Bots shouldn't try to get stuff that's on a 3dfloor they can't get to. SSNTails 06-10-2003
-  if (pawn->subsector == goal->subsector)
+  if (last_sector == goal->subsector->sector)
     for (ffloor_t *rover = last_sector->ffloors; rover; rover = rover->next)
       {
         if (!(rover->flags & FF_SOLID) || !(rover->flags & FF_EXISTS))
 	  continue;
 
-	if (*rover->topheight <= pawn->Feet() && goal->pos.z < *rover->topheight)
+	if (*rover->topheight <= pawn->Feet() && goal->Top() < *rover->topheight)
 	  return false;
 
 	if (*rover->bottomheight >= pawn->Top()
-	    && goal->pos.z > *rover->bottomheight)
+	    && goal->Feet() > *rover->bottomheight)
 	  return false;
       }
-  //#endif
 
-  return mp->PathTraverse(pawn->pos, goal->pos,
-			  PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->PathTraverse(pawn->pos, goal->pos, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 
@@ -168,10 +168,10 @@ bool ACBot::QuickReachable(fixed_t x, fixed_t y)
   bot = pawn;
   goal = NULL;
   last_sector = pawn->subsector->sector;
+  last_floorz = pawn->Feet(); // 3d floors...
   vec_t<fixed_t> r(x, y, 0);
 
-  return mp->PathTraverse(pawn->pos, r,
-			  PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->PathTraverse(pawn->pos, r, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 
@@ -196,6 +196,17 @@ ACBot::ACBot(int sk)
 
   lastTarget = NULL;
   destination = NULL;
+
+  // how high can we jump?
+  fixed_t g = cv_gravity.Get();
+  if (g < 0.1)
+    {
+      JumpHeight = 0;
+      return;
+    }
+  fixed_t vz = cv_jumpspeed.Get();
+  fixed_t temp = (vz/g).floor();
+  JumpHeight = -8 +vz*(temp+1) -0.5*g*temp*(temp+1); // some margin
 }
 
 
@@ -434,13 +445,10 @@ void ACBot::LookForThings()
 	}
       else if ((actor->flags & MF_MISSILE) && actor->owner != pawn) // a threatening missile
 	{
-	  // see if the missile is heading my way, if the missile will be closer to me, next tick
-	  //then its heading at least somewhat towards me, so better dodge it
-	  
+	  // see if the missile is heading my way
 	  vec_t<fixed_t> dpos = actor->pos - pawn->pos;
 	  vec_t<fixed_t> dv   = actor->vel - pawn->vel;
 	  if (dot(dpos, dv) < 0)
-	  //if (P_AproxDistance(pawn->x + pawn->px - (actor->x + actor->px), pawn->y+pawn->py - (actor->y+actor->py)) < dist)
 	    {
 	      //if its the closest missile and its reasonably close I should try and avoid it
 	      if (dist != 0 && (dist < cMissile.dist) && (dist <= 300))
@@ -450,7 +458,7 @@ void ACBot::LookForThings()
 		}
 	    }
 	}
-      else if ((actor->flags & MF_SPECIAL) || (actor->flags & MF_DROPPED)) // most likely a pickup
+      else if (actor->flags & MF_SPECIAL) // most likely a pickup
 	{
 	  float weight = 0.0;
 	  bool selfish = cv_deathmatch.value;
@@ -582,18 +590,17 @@ void ACBot::LookForThings()
 // maybe should do search through thes switches array instead
 bool ACBot::LookForSpecialLine(fixed_t *x, fixed_t *y)
 {
-  msecnode_t *insectornode = pawn->touching_sectorlist;
-  while (insectornode)
+  for (msecnode_t *secnode = pawn->touching_sectorlist; secnode; secnode = secnode->m_tnext)
     {
-      sector_t *sec = insectornode->m_sector;
+      sector_t *sec = secnode->m_sector;
       for (int i = 0; i < sec->linecount; i++)
 	{
 	  line_t *edge = sec->lines[i];
 	  int spac = GET_SPAC(edge->flags);
 	  int special = edge->special;
 	  //sector_t *specialsector = (sec == edge->frontsector) ? edge->backsector : edge->frontsector;
-	  if (!(edge->flags & ML_REPEAT_SPECIAL) && (spac == SPAC_USE || spac == SPAC_PASSUSE)
-	      && (special == 11 || special == 21 || special == 200))
+	  if (!(edge->flags & ML_REPEAT_SPECIAL) && (spac == SPAC_USE || spac == SPAC_PASSUSE))
+	    // && (special == 11 || special == 21 || special == 200))
 	    //(!specialsector || !specialsector->ceilingdata))
 	    //!(line->flags & ML_TWOSIDED) || (line->flags & ML_BLOCKING))
 	    //(edge->frontsector == sec) //if its a pressable switch
@@ -605,22 +612,16 @@ bool ACBot::LookForSpecialLine(fixed_t *x, fixed_t *y)
 	    }
 	  else if (edge->sideptr[1]) //if its a double sided sector
 	    {
-	      sector_t *sector;
-	      if (edge->frontsector == sec)
-		sector = edge->backsector;
-	      else
-		sector = edge->frontsector;
+	      sector_t *sector = (sec == edge->frontsector) ? edge->backsector : edge->frontsector;
 
 	      for (int j = 0; j < sector->linecount; j++)
 		{
 		  edge = sector->lines[j];
-		  //specialsector = (sector == edge->frontsector) ? edge->backsector : edge->frontsector;
 		  spac = GET_SPAC(edge->flags);
 		  special = edge->special;
-		  //sector_t *specialsector = (sec == edge->frontsector) ? edge->backsector : edge->frontsector;
 
-		  if (!(edge->flags & ML_REPEAT_SPECIAL) && (spac == SPAC_USE || spac == SPAC_PASSUSE)
-		      && (special == 11 || special == 21 || special == 200))
+		  if (!(edge->flags & ML_REPEAT_SPECIAL) && (spac == SPAC_USE || spac == SPAC_PASSUSE))
+		    //&& (special == 11 || special == 21 || special == 200))
 		    {
 		      *x = (edge->v1->x + edge->v2->x) / 2;
 		      *y = (edge->v1->y + edge->v2->y) / 2;
@@ -630,7 +631,6 @@ bool ACBot::LookForSpecialLine(fixed_t *x, fixed_t *y)
 		}
 	    }
 	}
-      insectornode = insectornode->m_snext;
     }
 
   return false;
@@ -647,7 +647,7 @@ bool ACBot::LookForSpecialLine(fixed_t *x, fixed_t *y)
 struct ai_weapon_t
 {
   byte       type;       // flags
-  byte       value;      // preference when changing weapon (not exactly the original ones!)
+  float      value;      // preference when changing weapon (not exactly the original ones!)
   mobjtype_t missile;    // or MT_NONE
   fixed_t    dangerdist; // blast radius
 };
@@ -669,17 +669,17 @@ static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
   wp_missile,  wp_plasma,  wp_bfg,
   wp_chainsaw, wp_supershotgun
   */
-  {0, 0, MT_NONE, 0}, {1|AF, 0, MT_NONE, 0}, {1, 30, MT_NONE, 0}, {1|AF, 50, MT_NONE, 0},
-  {2, 50, MT_ROCKET, 100}, {2|AF, 50, MT_PLASMA, 0}, {2, 20, MT_BFG, 0},
-  {0, 0, MT_NONE, 0}, {1, 55, MT_NONE, 0},
+  {MELEE, 0.1, MT_NONE, 0}, {INSTANT|AF, 0.5, MT_NONE, 0}, {INSTANT, 30, MT_NONE, 0}, {INSTANT|AF, 50, MT_NONE, 0},
+  {MISSILE, 50, MT_ROCKET, 100}, {MISSILE|AF, 50, MT_PLASMA, 0}, {MISSILE, 20, MT_BFG, 0},
+  {MELEE, 1, MT_NONE, 0}, {INSTANT, 55, MT_NONE, 0},
   /*
   wp_staff, wp_gauntlets, wp_goldwand,
   wp_crossbow, wp_blaster, wp_phoenixrod,
   wp_skullrod, wp_mace, wp_beak,
   */
-  {0, 0, MT_NONE, 0}, {0, 0, MT_NONE, 0}, {1|AF, 0, MT_NONE, 0},
-  {2, 35, MT_CRBOWFX1, 0}, {1|AF, 50, MT_NONE, 0}, {2, 50, MT_PHOENIXFX1, 100},
-  {2|AF, 55, MT_HORNRODFX1, 0}, {2|AF, 50, MT_MACEFX1, 0}, {0, 0, MT_NONE, 0},
+  {MELEE, 0.1, MT_NONE, 0}, {MELEE, 1, MT_NONE, 0}, {INSTANT|AF, 0.5, MT_NONE, 0},
+  {MISSILE, 35, MT_CRBOWFX1, 0}, {INSTANT|AF, 50, MT_NONE, 0}, {MISSILE, 50, MT_PHOENIXFX1, 100},
+  {MISSILE|AF, 55, MT_HORNRODFX1, 0}, {MISSILE|AF, 50, MT_MACEFX1, 0}, {MELEE, 0.1, MT_NONE, 0},
 
   /*
   wp_fpunch, wp_cmace, wp_mwand,
@@ -687,10 +687,10 @@ static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
   wp_hammer_of_retribution, wp_firestorm, wp_arc_of_death,
   wp_quietus, wp_wraithverge, wp_bloodscourge, wp_snout
   */
-  {0, 10, MT_NONE, 0}, {0, 0, MT_NONE, 0}, {1|AF, 20, MT_NONE, 0},
-  {0, 30, MT_NONE, 0}, {2, 30, MT_NONE, 0}, {2, 30, MT_NONE, 0},
-  {2, 40, MT_NONE, 0}, {2, 40, MT_NONE, 0}, {2, 40, MT_NONE, 0},
-  {2, 50, MT_NONE, 0}, {2, 50, MT_NONE, 0}, {2, 50, MT_NONE, 0}, {0, 0, MT_NONE, 0}
+  {MELEE, 10, MT_NONE, 0}, {MELEE, 1, MT_NONE, 0}, {INSTANT|AF, 20, MT_NONE, 0},
+  {MELEE, 30, MT_NONE, 0}, {MISSILE, 30, MT_CSTAFF_MISSILE, 0}, {MISSILE, 30, MT_SHARDFX1, 0},
+  {MISSILE, 40, MT_HAMMER_MISSILE, 0}, {INSTANT, 40, MT_NONE, 0}, {MISSILE, 40, MT_LIGHTNING_FLOOR, 0},
+  {MISSILE, 50, MT_FSWORD_MISSILE, 0}, {MISSILE, 50, MT_HOLY_MISSILE, 0}, {MISSILE, 50, MT_MSTAFF_FX2, 0}, {MELEE, 0.1, MT_NONE, 0}
 };
 
 
@@ -713,17 +713,27 @@ void ACBot::ChangeWeapon()
 
   bWeaponValue = 0;
 
+  ai_weapon_data[wp_fist].value = pawn->powers[pw_strength] ? 5 : 0.1;
+
   for (i=0; i<NUMAMMO; i++)
     HaveWeaponFor[i] = false;
 
   for (i=0; i<NUMWEAPONS; i++)
     {
       ammotype_t at = pawn->weaponinfo[i].ammo;
-      HaveWeaponFor[at] = true;
-
+      if (pawn->weaponowned[i])
+	{
+	  if (at == am_manaboth)
+	    HaveWeaponFor[am_mana1] = HaveWeaponFor[am_mana2] = true;
+	  else if (at == am_noammo)
+	    ;
+	  else 
+	    HaveWeaponFor[at] = true;
+	}
+	  
       weapon_usable[i] = pawn->weaponowned[i] &&
-	(at == am_noammo || pawn->ammo[at] >= pawn->weaponinfo[i].ammopershoot);
-      // should not use fist? ((i == wp_fist) && p->powers[pw_strength]))
+	(at == am_noammo ||
+	 ((at == am_manaboth) ? min(pawn->ammo[am_mana1], pawn->ammo[am_mana2]) : pawn->ammo[at]) >= pawn->weaponinfo[i].ammopershoot);
 
       if (weapon_usable[i])
 	{
@@ -738,14 +748,14 @@ void ACBot::ChangeWeapon()
     {
       weapon_usable[pawn->readyweapon] = false; // must change
 
-      int sum = 0;
+      float sum = 0;
       for (i=0; i<NUMWEAPONS; i++)
 	if (weapon_usable[i])
 	  sum += ai_weapon_data[i].value;
 
       if (sum > 0)
 	{
-	  int r = (std::rand() * sum) / RAND_MAX;
+	  float r = (std::rand() * sum) / RAND_MAX;
 
 	  for (i=0; i<NUMWEAPONS; i++)
 	    if (weapon_usable[i] && r < ai_weapon_data[i].value)
@@ -754,15 +764,11 @@ void ACBot::ChangeWeapon()
 	      r -= ai_weapon_data[i].value;
 
 	  cmd->buttons &= ~ticcmd_t::BT_ATTACK; // stop rocket from jamming;
+	  cmd->buttons |= (i + 1) << ticcmd_t::WEAPONSHIFT;
 	}
-      else if (weapon_usable[wp_pistol])
-	i = wp_pistol;
-      else if (weapon_usable[wp_chainsaw] && !pawn->powers[pw_strength]) // has chainsaw, and no berserk
-	i = wp_chainsaw;
-      else // resort to fists, if have powered fists, better with fists than with chainsaw
-	i = wp_fist;
+      else
+	; // no usable weapons! Should not happen.
 
-      cmd->buttons |= (i + 1) << ticcmd_t::WEAPONSHIFT;
       weaponchangetimer = (std::rand() << 11) / RAND_MAX + 1000; // how long until I next change my weapon
     }
   else
@@ -991,7 +997,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	    botspeed = 0;
 	  TurnTowardsPoint(bItem.a->pos.x, bItem.a->pos.y);
 	  forwardmove = botforwardmove[botspeed];
-	  if ((bItem.a->floorz - pawn->Feet()).floor() > 24 && dist <= 100)
+	  if ((bItem.a->floorz - pawn->Feet()).floor() > MAXSTEP && dist <= 100)
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 	}
       else if (cEnemy.a)

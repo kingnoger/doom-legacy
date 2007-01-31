@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,8 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -462,7 +460,7 @@ void Command_NewGame_f()
       if (COM_Argc() >= 5)
 	{
 	  sk = atoi(COM_Argv(4));
-	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
+	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < sk_baby) ? sk_baby : sk);
 	}
     }
 
@@ -529,8 +527,8 @@ void Command_StartGame_f()
       if (COM_Argc() >= 3)
 	{
 	  sk = atoi(COM_Argv(2));
-	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < 0) ? 0 : sk);
-	}
+	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < sk_baby) ? sk_baby : sk);
+  	}
     }
 
   if (!game.SV_StartGame(skill_t(sk), epi-1))
@@ -543,10 +541,28 @@ void Command_StartGame_f()
 /// Called either from map <mapname> console command, or idclev cheat.
 void Command_Map_f()
 {
-  if (COM_Argc() < 2 || COM_Argc() > 3)
+  if (COM_Argc() < 2 || COM_Argc() > 7)
     {
       CONS_Printf("Usage: map <number|name> [<entrypoint>]: warp players to a map.\n");
       return;
+    }
+
+  if (COM_Argc() > 3)
+    {
+      CONS_Printf("Warning: Using old syntax for map command.\n");
+      // map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]
+      int i;
+      if ((i = COM_CheckParm("-skill")) != 0)
+	{
+	  int temp = atoi(COM_Argv(i + 1)) - 1;
+	  game.skill = skill_t(max(min(temp, int(sk_nightmare)), int(sk_baby)));
+	}
+
+      if ((i = COM_CheckParm("-monsters")) != 0)
+	cv_nomonsters.Set(*COM_Argv(i + 1) == '0');
+
+      if (COM_CheckParm("-noresetplayers"))
+	; // TODO
     }
 
   if (!game.server)

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -23,8 +23,6 @@
 
 #ifndef doomtype_h
 #define doomtype_h 1
-
-#include <stdint.h>
 
 // Standard library differences
 #ifdef __WIN32__
@@ -57,22 +55,27 @@
 
 
 // Basic typedefs.
-// Throughout the code, we assume that int = 32 bits, short = 16 bits
-
-typedef signed char  Sint8;
-typedef signed short Sint16;
-typedef signed int   Sint32;
-#ifdef __WIN32__
-typedef __int64 Sint64;
+// NOTE! Somewhere in the code we may still implicitly assume that int = 32 bits, short = 16 bits!
+// These should be replaced with the unambiguous types defined below.
+#ifdef SDL
+# include <SDL/SDL_types.h>
 #else
+# include <stdint.h>
+typedef int8_t  Sint8;
+typedef int16_t Sint16;
+typedef int32_t Sint32;
+# ifdef __WIN32__
+typedef __int64 Sint64;
+# else
 typedef int64_t Sint64;
+# endif
+
+typedef uint8_t  Uint8;
+typedef uint16_t Uint16;
+typedef uint32_t Uint32;
 #endif
 
-typedef unsigned char  byte;
-typedef unsigned char  Uint8;
-typedef unsigned short Uint16;
-typedef unsigned int   Uint32;
-
+typedef Uint8  byte;
 typedef Uint32 tic_t;
 typedef Uint32 angle_t;
 

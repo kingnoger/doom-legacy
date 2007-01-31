@@ -115,8 +115,9 @@ position_check_t PosCheck;
 
 
 const float   SHOOTFRAC   = 36.0/56; ///< fraction of Actor height where shots start
-const fixed_t MAXSTEPMOVE = 24; ///< Max Z move up or down without jumping. Above this, a heigth difference is considered a 'dropoff'
-const fixed_t MAXWATERSTEPMOVE = 37;
+const fixed_t MAXSTEP      = 24; ///< Max Z move up or down without jumping. Above this, a height difference is considered a 'dropoff'.
+const fixed_t MAXWATERSTEP = 37; ///< Same, but in water.
+
 
 
 // Attempt to move to a new position,
@@ -142,7 +143,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
       if (PosCheck.block_thing)
 	{
 	  // try to climb on top of it
-	  if (PosCheck.block_thing->Top() - Feet() <= MAXSTEPMOVE &&
+	  if (PosCheck.block_thing->Top() - Feet() <= MAXSTEP &&
 	      //PosCheck.block_thing->subsector->sector->ceilingheight - PosCheck.block_thing->Top() >= height &&
 	      PosCheck.op.top - PosCheck.block_thing->Top() >= height)
 	    PosCheck.floor_thing = PosCheck.block_thing;
@@ -177,7 +178,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	      vel.z = -8;
 	      return false;
 	    }
-	  else if (Feet() < PosCheck.op.bottom && PosCheck.op.Drop() > MAXSTEPMOVE)
+	  else if (Feet() < PosCheck.op.bottom && PosCheck.op.Drop() > MAXSTEP)
 	    {
 	      vel.z = 8;
 	      return false;
@@ -198,7 +199,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 	  !(flags2 & MF2_FLOORHUGGER)) // floorhuggers step up any amount
 	{
 	  // easier to move in water / climb out of water
-	  fixed_t maxstep = (eflags & MFE_UNDERWATER) ? MAXWATERSTEPMOVE : MAXSTEPMOVE;
+	  fixed_t maxstep = (eflags & MFE_UNDERWATER) ? MAXWATERSTEP : MAXSTEP;
 
 	  if (flags & MF_MISSILE || // missiles do not step up
 	      PosCheck.op.bottom - Feet() > maxstep)
@@ -211,7 +212,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 
       // are we afraid of the dropoff?
       if (!allowdropoff && !(flags & MF_DROPOFF) && !(eflags & MFE_BLASTED))
-	if (PosCheck.op.Drop() > MAXSTEPMOVE && !PosCheck.floor_thing)
+	if (PosCheck.op.Drop() > MAXSTEP && !PosCheck.floor_thing)
 	  return false; // don't go over a dropoff (unless blasted)
 
       // are we unable to leave the floor texture? (water monsters)
@@ -927,7 +928,7 @@ static bool PTR_SlideTraverse(intercept_t *in)
 
       if (!(open->Range() < slidemo->height ||
 	    open->top < slidemo->Top() || 
-	    open->bottom > slidemo->Feet() + MAXSTEPMOVE))
+	    open->bottom > slidemo->Feet() + MAXSTEP))
 	return true; // this line doesn't block movement
     }
 

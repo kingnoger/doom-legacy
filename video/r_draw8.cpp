@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -683,7 +683,8 @@ void R_DrawTranslucentSpan_8()
   while (count)
     {
       int spot = ((ds_xfrac.value() & xmask) >> xshift) | (ds_yfrac.floor() & ymask);
-      *dest++ = ds_colormap[ds_transmap[(ds_source[spot] << 8) + *dest]];
+      *dest = ds_colormap[ds_transmap[(ds_source[spot] << 8) + *dest]];
+      dest++;
       ds_xfrac += ds_xstep;
       ds_yfrac += ds_ystep;
       count--;

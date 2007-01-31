@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -82,15 +82,20 @@ bool singletics = false; // timedemo
 
 
 
-// "Mission packs". Used only for Evilution and Plutonia.
+// "Mission packs". Used only during startup.
 enum gamemission_t
 {
-  gmi_doom2 = 0,  // DOOM 2, default
-  gmi_tnt,    // TNT Evilution mission pack
-  gmi_plut    // Plutonia Experiment pack
+  gmi_shareware, // DOOM 1 shareware (E1M9)
+  gmi_doom1,     // registered (E3M27)
+  gmi_ultimate,  // retail (Ultimate DOOM) (E4M36)
+  gmi_doom2,   // DOOM 2, default
+  gmi_tnt,     // TNT Evilution mission pack
+  gmi_plut,    // Plutonia Experiment pack
+  gmi_heretic,
+  gmi_hexen
 };
 
-int mission = gmi_doom2;
+gamemission_t mission = gmi_doom2;
 
 
 // Helper function: start a new game
@@ -123,7 +128,7 @@ bool shiftdown = false, altdown = false;
 void D_PostEvent(const event_t* ev)
 {
   events[eventhead] = *ev;
-  eventhead = (++eventhead)&(MAXEVENTS-1);
+  eventhead = (eventhead+1)&(MAXEVENTS-1);
 }
 
 
@@ -132,7 +137,7 @@ void D_PostEvent(const event_t* ev)
 //
 void D_ProcessEvents()
 {
-  for ( ; eventtail != eventhead ; eventtail = (++eventtail)&(MAXEVENTS-1) )
+  for ( ; eventtail != eventhead ; eventtail = (eventtail+1)&(MAXEVENTS-1) )
     {
       event_t *ev = &events[eventtail];
 
@@ -248,8 +253,8 @@ static void D_AddFile(const char *file)
 // available (notable loading PWAD files).
 // ==========================================================================
 
-// return gamemode for Doom or Ultimate Doom, use size to detect which one
-static gamemode_t D_GetDoomType(const char *wadname)
+// Decide between Doom or Ultimate Doom, use size to detect which one
+static gamemission_t D_GetDoomType(const char *wadname)
 {
   struct stat sbuf;
   // Fab: and if I patch my main wad and the size gets
@@ -257,9 +262,9 @@ static gamemode_t D_GetDoomType(const char *wadname)
   // BP: main wad MUST not be patched !
   stat(wadname, &sbuf);
   if (sbuf.st_size<12408292)
-    return gm_doom1;
+    return gmi_doom1;
   else
-    return gm_doom1;      // Ultimate
+    return gmi_ultimate;      // Ultimate
 }
 
 
@@ -272,15 +277,26 @@ static void D_IdentifyVersion()
   // The -iwad parameter just means that we MUST have this wad file
   // in order to continue. It is also loaded right after legacy.wad.
 
-  char *doom1wad = "doom1.wad";
-  char *doomwad = "doom.wad";
-  char *doomuwad = "doomu.wad";
-  char *doom2wad = "doom2.wad";
-  char *plutoniawad = "plutonia.wad";
-  char *tntwad = "tnt.wad";
-  char *hereticwad = "heretic.wad";
-  char *heretic1wad = "heretic1.wad";
-  char *hexenwad = "hexen.wad";
+#define NUM_IWADS 9
+  struct {
+    const char    *wadname;
+    gamemode_t     mode;
+    gamemission_t  mission;
+  } iwads[NUM_IWADS] = { // order of preference
+    {"doom2.wad",    gm_doom2, gmi_doom2},
+    {"doomu.wad",    gm_doom1, gmi_ultimate},
+    {"doom.wad",     gm_doom1, gmi_doom1},
+    {"heretic.wad",  gm_heretic, gmi_heretic},
+    {"hexen.wad",    gm_hexen, gmi_hexen},
+    {"tnt.wad",      gm_doom2, gmi_tnt},
+    {"plutonia.wad", gm_doom2, gmi_plut},
+    {"doom1.wad",    gm_doom1, gmi_shareware},
+    {"heretic1.wad", gm_heretic, gmi_heretic},
+  };
+
+  // default
+  game.mode = gm_doom2;
+  mission   = gmi_doom2;
 
   if (M_CheckParm("-iwad"))
     {
@@ -293,85 +309,36 @@ static void D_IdentifyVersion()
 
       // point to start of filename only
       s = FIL_StripPath(s);
-      
+
       // try to find implied gamemode
-      if (!strcasecmp(plutoniawad, s))
-	{
-	  game.mode = gm_doom2;
-	  mission = gmi_plut;
-	}
-      else if (!strcasecmp(tntwad, s))
-	{
-	  game.mode = gm_doom2;
-	  mission = gmi_tnt;
-	}
-      else if (!strcasecmp(hereticwad, s) || !strcasecmp(heretic1wad, s))
-	game.mode = gm_heretic;
-      else if (!strcasecmp(hexenwad, s))
-	game.mode = gm_hexen;
-      else if (!strcasecmp(doom2wad, s))
-	game.mode = gm_doom2;
-      else if (!strcasecmp(doomuwad, s))
-	game.mode = gm_doom1;
-      else if (!strcasecmp(doomwad, s))
-	game.mode = D_GetDoomType(s);
-      else if (!strcasecmp(doom1wad, s))
-	game.mode = gm_doom1;
-      else
-	game.mode = gm_doom2;
+      for (int i=0; i<NUM_IWADS; i++)
+	if (!strcasecmp(s, iwads[i].wadname))
+	  {
+	    game.mode = iwads[i].mode;
+	    mission   = iwads[i].mission;
+	    break;
+	  }
+
+      // Ultimate doom or not?
+      if (mission == gmi_doom1)
+	mission = D_GetDoomType(s);
     }
-  // FIXME perhaps we should not try to find a wadfile here, rather
+  // TODO perhaps we should not try to find a wadfile here, rather
   // start the game without any preloaded wadfiles other than legacy.wad
   else // finally we'll try to find a wad file by ourselves
     {
-      if (fc.Access(doom2wad))
-	{
-	  game.mode = gm_doom2;
-	  D_AddFile(doom2wad);
-	}
-      else if (fc.Access(doomuwad))
-	{
-	  game.mode = gm_doom1;
-	  D_AddFile(doomuwad);
-	}
-      else if (fc.Access(doomwad))
-	{
-	  game.mode = D_GetDoomType(doomwad);
-	  D_AddFile(doomwad);
-	}
-      else if (fc.Access(doom1wad))
-	{
-	  game.mode = gm_doom1;
-	  D_AddFile(doom1wad);
-	}
-      else if (fc.Access(plutoniawad))
-	{
-	  game.mode = gm_doom2;
-	  mission = gmi_plut;
-	  D_AddFile(plutoniawad);
-	}
-      else if (fc.Access(tntwad))
-	{
-	  game.mode = gm_doom2;
-	  mission = gmi_tnt;
-	  D_AddFile(tntwad);
-	}
-      else if (fc.Access(hereticwad))
-	{
-	  game.mode = gm_heretic;
-	  D_AddFile(hereticwad);
-	}
-      else if (fc.Access(heretic1wad))
-	{
-	  game.mode = gm_heretic;
-	  D_AddFile(heretic1wad);
-	}
-      else if (fc.Access(hexenwad))
-	{
-	  game.mode = gm_hexen;
-	  D_AddFile(hexenwad);
-	}
-      else
+      int i;
+      // try to find implied gamemode
+      for (i=0; i<NUM_IWADS; i++)
+	if (fc.Access(iwads[i].wadname))
+	  {
+	    D_AddFile(iwads[i].wadname);
+	    game.mode = iwads[i].mode;
+	    mission   = iwads[i].mission;
+	    break;
+	  }
+
+      if (i == NUM_IWADS)
 	{
 	  I_Error("Main IWAD file not found.\n"
 		  "You need either doom.wad, doom1.wad, doomu.wad, doom2.wad,\n"
@@ -554,27 +521,24 @@ void D_DoomMain()
   D_AddFile("legacy.wad");
 
   // identify the main IWAD file to use (if any),
-  // set game.mode, game.mission accordingly
+  // set game.mode, mission accordingly
   D_IdentifyVersion();
 
   // game title
   const char *Titles[] =
   {
-    "No game mode chosen.",
+    //"No game mode chosen.",
     "DOOM Shareware Startup",
     "DOOM Registered Startup",
     "The Ultimate DOOM Startup",
     "DOOM 2: Hell on Earth",
+    "DOOM 2: TNT - Evilution",
+    "DOOM 2: Plutonia Experiment",
     "Heretic: Shadow of the Serpent Riders",
     "Hexen: Beyond Heretic"
   };
 
-  const char *title = Titles[game.mode];
-
-  if (mission == gmi_plut)
-    title = "DOOM 2: Plutonia Experiment";
-  else if (mission == gmi_tnt)
-    title = "DOOM 2: TNT - Evilution";
+  const char *title = Titles[mission];
 
   // print out game title
   CONS_Printf("%s\n\n", title);

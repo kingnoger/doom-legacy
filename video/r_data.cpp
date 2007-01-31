@@ -1259,9 +1259,13 @@ int texturecache_t::ReadTextures()
 	    // Flat is 64*64 bytes of raw paletted picture data in one lump
 	    t = new LumpTexture(name, lump, 64, 64);
 	  else if (size == 128*64) // Some Hexen flats (X_001-X_011) are larger! Why?
-	    t = new LumpTexture(name, lump, 128, 64); // TEST
+	    t = new LumpTexture(name, lump, 128, 64);
 	  else if (size == 128*128)
-	    t = new LumpTexture(name, lump, 128, 128); // TEST
+	    t = new LumpTexture(name, lump, 128, 128);
+	  else if (size == 256*128)
+	    t = new LumpTexture(name, lump, 256, 128);
+	  else if (size == 256*256)
+	    t = new LumpTexture(name, lump, 256, 256);
 	  else
 	    {
 	      if (size != 0) // markers are OK

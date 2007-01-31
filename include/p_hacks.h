@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2006 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -28,10 +28,12 @@
 /// \brief Voodoo dolls
 ///
 /// Originally a bug in the player spawning code. When there are several player_x
-/// playerstarts in a map, the PlayerPawn is spawned to the first (FIXME last?) one and the rest
-/// spawn Voodoo dolls attached to the real pawn.
-/// Whatever happens to the dolls, happens to the pawn.
- 
+/// playerstarts in a map, the real PlayerPawn is spawned to the last one and the rest
+/// spawn Voodoo dolls attached to the player.
+///
+/// In our implementation the doll is attached to a PlayerPawn (its victim).
+/// Basically whatever happens to the doll, happens to the pawn.
+/// Exceptions: recoil, sector damage. 
 class VoodooDoll : public PlayerPawn
 {
   PlayerPawn *victim;
