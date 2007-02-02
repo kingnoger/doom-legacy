@@ -88,7 +88,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
   {
     64, 700, 8, 10, 15, 20, 56, 500, 0,
     FLAGS_monster,
-    FLAGS2_monster,
+    FLAGS2_monster | MF2_NOTARGET,
     sfx_vilsit, 0, sfx_vipain, sfx_vildth, sfx_vilact,
     &states[S_VILE_STND], &states[S_VILE_RUN1], NULL, &states[S_VILE_ATK1], &states[S_VILE_PAIN],
     &states[S_VILE_DIE1], NULL, NULL, NULL,
@@ -104,7 +104,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_FIRE1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ArchvileFire"
   },
 
   // MT_UNDEAD
@@ -127,7 +128,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_skeatk, sfx_None, sfx_None, sfx_barexp, sfx_None,
     &states[S_TRACER], NULL, NULL, NULL, NULL,
     &states[S_TRACEEXP1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "RevenantTracer"
   },
 
   // MT_SMOKE
@@ -138,7 +140,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SMOKE1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "RevenantTracerSmoke"
   },
 
   // MT_FATSO
@@ -161,7 +164,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_firsht, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_FATSHOT1], NULL, NULL, NULL, NULL,
     &states[S_FATSHOTX1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "FatShot"
   },
 
   // MT_CHAINGUY
@@ -244,7 +248,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_firsht, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_BRBALL1], NULL, NULL, NULL, NULL,
     &states[S_BRBALLX1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BaronBall"
   },
 
   // MT_KNIGHT
@@ -339,7 +344,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_keenpn, sfx_keendt, sfx_None,
     &states[S_KEENSTND], NULL, NULL, NULL, &states[S_KEENPAIN],
     &states[S_COMMKEEN], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "CommanderKeen"
   },
 
   // MT_BOSSBRAIN
@@ -350,7 +356,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_bospn, sfx_bosdth, sfx_None,
     &states[S_BRAIN], NULL, NULL, NULL, &states[S_BRAIN_PAIN],
     &states[S_BRAIN_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BossBrain"
   },
 
   // MT_BOSSSPIT
@@ -361,7 +368,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BRAINEYE], &states[S_BRAINEYESEE], NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BossEye"
   },
 
   // MT_BOSSTARGET
@@ -372,7 +380,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_NULL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BossTarget"
   },
 
   // MT_SPAWNSHOT
@@ -383,7 +392,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_bospit, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_SPAWN1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "SpawnShot"
   },
 
   // MT_SPAWNFIRE
@@ -394,7 +404,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SPAWNFIRE1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "SpawnFire"
   },
 
   // MT_BARREL
@@ -417,7 +428,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_firsht, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_TBALL1], NULL, NULL, NULL, NULL,
     &states[S_TBALLX1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "DoomImpBall"
   },
 
   // MT_HEADSHOT
@@ -428,7 +440,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_firsht, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_RBALL1], NULL, NULL, NULL, NULL,
     &states[S_RBALLX1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "CacodemonBall"
   },
 
   // MT_ROCKET
@@ -439,7 +452,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_rlaunc, sfx_None, sfx_None, sfx_barexp, sfx_None,
     &states[S_ROCKET], NULL, NULL, NULL, NULL,
     &states[S_EXPLODE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Rocket"
   },
 
   // MT_PLASMA
@@ -450,7 +464,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_plasma, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_PLASBALL], NULL, NULL, NULL, NULL,
     &states[S_PLASEXP], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "PlasmaBall"
   },
 
   // MT_BFG
@@ -461,7 +476,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     0, sfx_None, sfx_None, sfx_rxplod, sfx_None,
     &states[S_BFGSHOT], NULL, NULL, NULL, NULL,
     &states[S_BFGLAND], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BFGBall"
   },
 
   // MT_ARACHPLAZ
@@ -472,7 +488,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_plasma, sfx_None, sfx_None, sfx_firxpl, sfx_None,
     &states[S_ARACH_PLAZ], NULL, NULL, NULL, NULL,
     &states[S_ARACH_PLEX], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ArachnotronPlasma"
   },
 
   // MT_PUFF
@@ -483,7 +500,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_PUFF1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BulletPuff"
   },
 
   //WARNING: this mobj is hacked in g_downgrade (g_game.c)
@@ -495,7 +513,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BLOOD1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Blood"
   },
 
   // MT_TFOG
@@ -506,7 +525,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_TFOG], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "TeleportFog"
   },
 
   // MT_IFOG
@@ -517,7 +537,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_IFOG], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ItemFog"
   },
 
   // MT_TELEPORTMAN
@@ -528,7 +549,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_NULL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "TeleportDest"
   },
 
   // MT_EXTRABFG
@@ -539,7 +561,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BFGEXP], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BFGExtra"
   },
 
   // MT_MISC0
@@ -770,7 +793,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_CLIP], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Clip"
   },
 
   // MT_AMMOBOX
@@ -781,7 +805,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_AMMO], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ClipBox"
   },
 
   // MT_ROCKETAMMO
@@ -792,7 +817,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_ROCK], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "RocketAmmo"
   },
 
   // MT_ROCKETBOX
@@ -803,7 +829,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BROK], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "RocketBox"
   },
 
   // MT_CELL
@@ -814,7 +841,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_CELL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Cell"
   },
 
   // MT_CELLPACK
@@ -825,7 +853,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_CELP], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "CellPack"
   },
 
   // MT_SHELL
@@ -836,7 +865,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SHEL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Shell"
   },
 
   // MT_SHELLBOX
@@ -847,10 +877,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SBOX], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "ShellBox"
   },
 
-  // MT_MISC24
+  // MT_BACKPACK
   {
     8, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_SPECIAL,
@@ -858,7 +889,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BPAK], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Backpack"
   },
 
   // MT_BFG9000
@@ -869,7 +901,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_BFUG], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "BFG9000"
   },
 
   // MT_CHAINGUN
@@ -880,7 +913,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_MGUN], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Chaingun"
   },
 
   // MT_SHAINSAW
@@ -891,7 +925,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_CSAW], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Chainsaw"
   },
 
   // MT_ROCKETLAUNCH
@@ -902,7 +937,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_LAUN], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "RocketLauncher"
   },
 
   // MT_PLASMAGUN
@@ -913,7 +949,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_PLAS], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "PlasmaRifle"
   },
 
   // MT_SHOTGUN
@@ -924,7 +961,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SHOT], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Shotgun"
   },
 
   // MT_SUPERSHOTGUN
@@ -935,7 +973,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SHOT2], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "SuperShotgun"
   },
 
   // MT_MISC29
@@ -2822,7 +2861,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_chicpai, sfx_chicatk, sfx_chicpai, sfx_chicdth, sfx_chicact,
     &states[S_CHICKEN_LOOK1], &states[S_CHICKEN_WALK1], &states[S_CHICKEN_ATK1], NULL, &states[S_CHICKEN_PAIN1],
     &states[S_CHICKEN_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Chicken"
   },
 
   // MT_FEATHER
@@ -2833,7 +2873,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_FEATHER1], NULL, NULL, NULL, NULL,
     &states[S_FEATHERX], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Feather"
   },
 
   // MT_MUMMY
@@ -2844,7 +2885,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_mumsit, sfx_mumat1, sfx_mumpai, sfx_mumdth, sfx_mumact,
     &states[S_MUMMY_LOOK1], &states[S_MUMMY_WALK1], &states[S_MUMMY_ATK1], NULL, &states[S_MUMMY_PAIN1],
     &states[S_MUMMY_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Mummy"
   },
 
   // MT_MUMMYLEADER
@@ -2855,7 +2897,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_mumsit, sfx_mumat1, sfx_mumpai, sfx_mumdth, sfx_mumact,
     &states[S_MUMMY_LOOK1], &states[S_MUMMY_WALK1], &states[S_MUMMY_ATK1], &states[S_MUMMYL_ATK1], &states[S_MUMMY_PAIN1],
     &states[S_MUMMY_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MummyLeader"
   },
 
   // MT_MUMMYGHOST
@@ -2866,7 +2909,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_mumsit, sfx_mumat1, sfx_mumpai, sfx_mumdth, sfx_mumact,
     &states[S_MUMMY_LOOK1], &states[S_MUMMY_WALK1], &states[S_MUMMY_ATK1], NULL, &states[S_MUMMY_PAIN1],
     &states[S_MUMMY_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MummyGhost"
   },
 
   // MT_MUMMYLEADERGHOST
@@ -2877,7 +2921,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_mumsit, sfx_mumat1, sfx_mumpai, sfx_mumdth, sfx_mumact,
     &states[S_MUMMY_LOOK1], &states[S_MUMMY_WALK1], &states[S_MUMMY_ATK1], &states[S_MUMMYL_ATK1], &states[S_MUMMY_PAIN1],
     &states[S_MUMMY_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MummyLeaderGhost"
   },
 
   // MT_MUMMYSOUL
@@ -2888,7 +2933,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_MUMMY_SOUL1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MummySoul"
   },
 
   // MT_MUMMYFX1
@@ -2910,7 +2956,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_bstsit, sfx_bstatk, sfx_bstpai, sfx_bstdth, sfx_bstact,
     &states[S_BEAST_LOOK1], &states[S_BEAST_WALK1], NULL, &states[S_BEAST_ATK1], &states[S_BEAST_PAIN1],
     &states[S_BEAST_DIE1], &states[S_BEAST_XDIE1], NULL, NULL,
-    NULL
+    NULL,
+    "Beast"
   },
 
   // MT_BEASTBALL
@@ -2965,7 +3012,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_snksit, sfx_snkatk, sfx_snkpai, sfx_snkdth, sfx_snkact,
     &states[S_SNAKE_LOOK1], &states[S_SNAKE_WALK1], NULL, &states[S_SNAKE_ATK1], &states[S_SNAKE_PAIN1],
     &states[S_SNAKE_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Snake"
   },
 
   // MT_SNAKEPRO_A
@@ -2998,7 +3046,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_hedsit, sfx_hedat1, sfx_hedpai, sfx_heddth, sfx_hedact,
     &states[S_HHEAD_LOOK], &states[S_HHEAD_FLOAT], NULL, &states[S_HHEAD_ATK1], &states[S_HHEAD_PAIN1],
     &states[S_HHEAD_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Ironlich"
   },
 
   // MT_HEADFX1
@@ -3053,7 +3102,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_clksit, sfx_clkatk, sfx_clkpai, sfx_clkdth, sfx_clkact,
     &states[S_CLINK_LOOK1], &states[S_CLINK_WALK1], &states[S_CLINK_ATK1], NULL, &states[S_CLINK_PAIN1],
     &states[S_CLINK_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Clink"
   },
 
   // MT_WIZARD
@@ -3064,7 +3114,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_wizsit, sfx_wizatk, sfx_wizpai, sfx_wizdth, sfx_wizact,
     &states[S_WIZARD_LOOK1], &states[S_WIZARD_WALK1], NULL, &states[S_WIZARD_ATK1], &states[S_WIZARD_PAIN1],
     &states[S_WIZARD_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Wizard"
   },
 
   // MT_WIZFX1
@@ -3086,7 +3137,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_impsit, sfx_impat1, sfx_imppai, sfx_impdth, sfx_impact,
     &states[S_IMP_LOOK1], &states[S_IMP_FLY1], &states[S_IMP_MEATK1], &states[S_IMP_MSATK1_1], &states[S_IMP_PAIN1],
     &states[S_IMP_DIE1], &states[S_IMP_XDIE1], &states[S_IMP_CRASH1], NULL,
-    NULL
+    NULL,
+    "HereticImp"
   },
 
   // MT_IMPLEADER
@@ -3097,7 +3149,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_impsit, sfx_impat2, sfx_imppai, sfx_impdth, sfx_impact,
     &states[S_IMP_LOOK1], &states[S_IMP_FLY1], NULL, &states[S_IMP_MSATK2_1], &states[S_IMP_PAIN1],
     &states[S_IMP_DIE1], &states[S_IMP_XDIE1], &states[S_IMP_CRASH1], NULL,
-    NULL
+    NULL,
+    "HereticImpLeader"
   },
 
   // MT_IMPCHUNK1
@@ -3108,7 +3161,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_IMP_CHUNKA1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "HereticImpChunk1"
   },
 
   // MT_IMPCHUNK2
@@ -3119,7 +3173,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_IMP_CHUNKB1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "HereticImpChunk2"
   },
 
   // MT_IMPBALL
@@ -3141,7 +3196,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_kgtsit, sfx_kgtatk, sfx_kgtpai, sfx_kgtdth, sfx_kgtact,
     &states[S_KNIGHT_STND1], &states[S_KNIGHT_WALK1], &states[S_KNIGHT_ATK1], &states[S_KNIGHT_ATK1], &states[S_KNIGHT_PAIN1],
     &states[S_KNIGHT_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Knight"
   },
 
   // MT_KNIGHTGHOST
@@ -3152,7 +3208,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_kgtsit, sfx_kgtatk, sfx_kgtpai, sfx_kgtdth, sfx_kgtact,
     &states[S_KNIGHT_STND1], &states[S_KNIGHT_WALK1], &states[S_KNIGHT_ATK1], &states[S_KNIGHT_ATK1], &states[S_KNIGHT_PAIN1],
     &states[S_KNIGHT_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "KnightGhost"
   },
 
   // MT_KNIGHTAXE
@@ -3181,11 +3238,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
   {
     7, 2000, 8, 56, 16, 28, 100, 800, 0,
     FLAGS_monster,
-    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS,
+    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS | MF2_NOTARGET,
     sfx_sbtsit, sfx_sbtatk, sfx_sbtpai, sfx_sbtdth, sfx_sbtact,
     &states[S_SRCR1_LOOK1], &states[S_SRCR1_WALK1], NULL, &states[S_SRCR1_ATK1], &states[S_SRCR1_PAIN1],
     &states[S_SRCR1_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer1"
   },
 
   // MT_SRCRFX1
@@ -3196,18 +3254,20 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     0, sfx_None, sfx_None, 0, sfx_None,
     &states[S_SRCRFX1_1], NULL, NULL, NULL, NULL,
     &states[S_SRCRFXI1_1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "SorcererFX1"
   },
 
   // MT_SORCERER2
   {
     -1, 3500, 8, 32, 14, 16, 70, 300, 0,
     FLAGS_monster | MF_DROPOFF,
-    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS,
+    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS | MF2_NOTARGET,
     sfx_sorsit, sfx_soratk, sfx_sorpai, 0, sfx_soract,
     &states[S_SOR2_LOOK1], &states[S_SOR2_WALK1], NULL, &states[S_SOR2_ATK1], &states[S_SOR2_PAIN1],
     &states[S_SOR2_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer2"
   },
 
   // MT_SOR2FX1
@@ -3218,7 +3278,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     0, sfx_None, sfx_None, 0, sfx_None,
     &states[S_SOR2FX1_1], NULL, NULL, NULL, NULL,
     &states[S_SOR2FXI1_1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer2FX1"
   },
 
   // MT_SOR2FXSPARK
@@ -3229,7 +3290,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SOR2FXSPARK1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer2FXSpark"
   },
 
   // MT_SOR2FX2
@@ -3240,7 +3302,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     0, sfx_None, sfx_None, 0, sfx_None,
     &states[S_SOR2FX2_1], NULL, NULL, NULL, NULL,
     &states[S_SOR2FXI2_1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer2FX2"
   },
 
   // MT_SOR2TELEFADE
@@ -3251,18 +3314,20 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_SOR2TELEFADE1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Sorcerer2Telefade"
   },
 
   // MT_MINOTAUR
   {
     9, 3000, 8, 25, 16, 28, 100, 800, 7,
     FLAGS_monster | MF_DROPOFF,
-    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS,
+    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS | MF2_NOTARGET,
     sfx_minsit, sfx_minat1, sfx_minpai, sfx_mindth, sfx_minact,
     &states[S_MNTR_LOOK1], &states[S_MNTR_WALK1], &states[S_MNTR_ATK1_1], &states[S_MNTR_ATK2_1], &states[S_MNTR_PAIN1],
     &states[S_MNTR_DIE1], NULL, NULL, NULL,
-    NULL
+    NULL,
+    "Minotaur"
   },
 
   // MT_MNTRFX1
@@ -3497,7 +3562,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_MAPSPOT], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MapSpot"
   },
 
   // MT_MAPSPOTGRAVITY
@@ -3508,7 +3574,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
     &states[S_MAPSPOT], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
-    NULL
+    NULL,
+    "MapSpotGravity"
   },
 
   // MT_FIREBALL1
@@ -7095,7 +7162,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
   {
     254, 640, 8, 128, 10, 20, 65, MAXINT, 0,
     FLAGS_monster | FLAGS_floater | MF_NOBLOOD,
-    MF2_BOSS,
+    MF2_BOSS | MF2_NOTARGET,
     SFX_DRAGON_SIGHT, SFX_DRAGON_ATTACK, SFX_DRAGON_PAIN, SFX_DRAGON_DEATH, SFX_DRAGON_ACTIVE,
     &states[S_DRAGON_LOOK1], &states[S_DRAGON_INIT], NULL, &states[S_DRAGON_ATK1], &states[S_DRAGON_PAIN1],
     &states[S_DRAGON_DEATH1], NULL, NULL, NULL,
@@ -7579,7 +7646,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
   {
     10080, 5000, 8, 10, 16, 40, 110, 500, 9,
     FLAGS_monster|MF_NOBLOOD,
-    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS,
+    FLAGS2_monster | MF2_FOOTCLIP | MF2_BOSS | MF2_NOTARGET,
     SFX_SORCERER_SIGHT, sfx_None, SFX_SORCERER_PAIN, SFX_SORCERER_DEATHSCREAM, SFX_SORCERER_ACTIVE,
     &states[S_SORC_SPAWN1], &states[S_SORC_WALK1], NULL, &states[S_SORC_ATK2_1], &states[S_SORC_PAIN1],
     &states[S_SORC_DIE1], NULL, NULL, NULL,
@@ -7722,7 +7789,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
   {
     10200, 5000, 8, 20, 10, 65, 115, 2000, 15,
     FLAGS_monster,
-    MF2_FOOTCLIP|MF2_PUSHWALL|MF2_MCROSS|MF2_TELESTOMP|MF2_BOSS,
+    FLAGS2_monster | MF2_FOOTCLIP | MF2_TELESTOMP | MF2_BOSS | MF2_NOTARGET,
     SFX_KORAX_SIGHT, SFX_KORAX_ATTACK, SFX_KORAX_PAIN, SFX_KORAX_DEATH, SFX_KORAX_ACTIVE,
     &states[S_KORAX_LOOK1], &states[S_KORAX_CHASE2], NULL, &states[S_KORAX_ATTACK1], &states[S_KORAX_PAIN1],
     &states[S_KORAX_DEATH1], NULL, NULL, NULL,

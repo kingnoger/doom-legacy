@@ -329,7 +329,7 @@ bool DActor::Touch(Actor *p)
 	    {
 	    case MT_CENTAUR:
 	    case MT_CENTAURLEADER:
-	      if ((abs(int(yaw - p->yaw)) >> 24) > 45 || type == MT_HOLY_FX) // flank shot or wraithverge
+	      if ((Abs(yaw - p->yaw) >> 24) > 45 || type == MT_HOLY_FX) // flank shot or wraithverge
 		goto explode;
 
 	      // fallthru
@@ -765,10 +765,12 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
   reactiontime = 0;
 
   // get angry
-  if ((!threshold || type == MT_VILE) && source && (source != target))
-      //&& !(source->flags2 & MF2_BOSS) // FIXME Hexen
+  if ((!threshold || (flags2 & MF2_QUICKTORETALIATE)) &&
+      source &&
+      source != target)
     {
-      if (source->team == team && cv_infighting.value == 0)
+      if (source->team == team &&
+	  (cv_infighting.value == 0 || source->flags2 & MF2_NOTARGET))
 	return true;
 
       if (source->IsOf(DActor::_type))
@@ -776,8 +778,7 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  DActor *ds = (DActor *)source;
 	  
 	  // let's not get angry, after all
-	  if ((ds->type == MT_VILE) ||
-	      (ds->type == MT_WIZARD && type == MT_SORCERER2) ||
+	  if ((ds->type == MT_WIZARD && type == MT_SORCERER2) ||
 	      (ds->type == MT_MINOTAUR && type == MT_MINOTAUR))
 	    //|| (target->type == MT_BISHOP) || (target->type == MT_XMINOTAUR))
 	    return true;

@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Hexen enemy AI
+/// \brief Hexen enemy AI.
 
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -41,7 +41,6 @@
 #include "tables.h"
 
 
-angle_t abs(angle_t a);
 int  P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 void P_SpawnDirt(DActor *actor, fixed_t radius);
 
@@ -619,11 +618,8 @@ void A_XMinotaurCharge(DActor *actor)
 
 void A_XMinotaurAtk2(DActor *actor)
 {
-  DActor *mo;
-  angle_t angle;
-  fixed_t momz;
-
-  if(!actor->target) return;
+  if (!actor->target)
+    return;
 
   S_StartSound(actor, SFX_MAULATOR_HAMMER_SWING);
   if(actor->CheckMeleeRange())
@@ -631,16 +627,16 @@ void A_XMinotaurAtk2(DActor *actor)
       actor->target->Damage(actor, actor, HITDICE(3));
       return;
     }
-  mo = actor->SpawnMissile(actor->target, MT_MNTRFX1);
+  DActor *mo = actor->SpawnMissile(actor->target, MT_MNTRFX1, 40);
   if(mo)
     {
       //S_StartSound(mo, sfx_minat2);
-      momz = mo->vel.z;
-      angle = mo->yaw;
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), momz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), momz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), momz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/16), momz);
+      fixed_t pz = mo->vel.z;
+      angle_t angle = mo->yaw;
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/16), 40, pz);
     }
 }
 
@@ -1277,11 +1273,10 @@ void A_CentaurAttack(DActor *actor)
 
 void A_CentaurAttack2(DActor *actor)
 {
-  if(!actor->target)
-    {
-      return;
-    }
-  actor->SpawnMissile(actor->target, MT_CENTAUR_FX);
+  if (!actor->target)
+    return;
+
+  actor->SpawnMissile(actor->target, MT_CENTAUR_FX, 45);
   S_StartSound(actor, SFX_CENTAURLEADER_ATTACK);
 }
 
@@ -1591,7 +1586,7 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
     { // attack the destination mobj if it's attackable
       Actor *oldTarget;
 	
-      if (abs(actor->yaw - R_PointToAngle2(actor->pos, t->pos)) < ANG45/2)
+      if (Abs(actor->yaw - R_PointToAngle2(actor->pos, t->pos)) < ANG45/2)
 	{
 	  oldTarget = actor->target;
 	  actor->target = t;
@@ -1627,9 +1622,9 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 
 	      Actor *mo = actor->mp->FindFromTIDmap(t->args[i], &search);
 	      angleToSpot = R_PointToAngle2(actor->pos, mo->pos);
-	      if (abs(angleToSpot-angleToTarget) < bestAngle)
+	      if (Abs(angleToSpot-angleToTarget) < bestAngle)
 		{
-		  bestAngle = abs(angleToSpot-angleToTarget);
+		  bestAngle = Abs(angleToSpot-angleToTarget);
 		  bestArg = i;
 		}
 	    }
@@ -1691,12 +1686,12 @@ void A_DragonFlight(DActor *actor)
 	}
 
       angle_t an = R_PointToAngle2(actor->pos, actor->target->pos);
-      if (abs(actor->yaw - an) < ANG45/2 && actor->CheckMeleeRange())
+      if (Abs(actor->yaw - an) < ANG45/2 && actor->CheckMeleeRange())
 	{
 	  actor->target->Damage(actor, actor, HITDICE(8));
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
 	}
-      else if(abs(actor->yaw - an) <= ANGLE_1*20)
+      else if (Abs(actor->yaw - an) <= ANGLE_1*20)
 	{
 	  actor->SetState(actor->info->missilestate);
 	  S_StartSound(actor, SFX_DRAGON_ATTACK);
@@ -2546,16 +2541,11 @@ void A_IceGuyDie(DActor *actor)
 
 void A_IceGuyMissileExplode(DActor *actor)
 {
-  DActor *mo;
-  int i;
-
-  for(i = 0; i < 8; i++)
+  for (int i = 0; i < 8; i++)
     {
-      mo = actor->SpawnMissileAngle(MT_ICEGUY_FX2, i*ANG45, -0.3f);
-      if(mo)
-	{
-	  mo->target = actor->target;
-	}
+      DActor *mo = actor->SpawnMissileAngle(MT_ICEGUY_FX2, i*ANG45, 3, -0.3f);
+      if (mo)
+	mo->owner = actor->owner;
     }
 }
 
@@ -2773,7 +2763,6 @@ void A_SorcBallOrbit(DActor *actor)
       break;
     }
   actor->yaw = angle;
-  angle >>= ANGLETOFINESHIFT;
 
   switch(mode)
     {
@@ -2789,9 +2778,9 @@ void A_SorcBallOrbit(DActor *actor)
       A_SorcUpdateBallAngle(actor);
       break;
     case SORC_STOPPING:			// Balls stopping
-      if ((parent->special2 == actor->type) &&
-	  (parent->args[1] > SORCBALL_SPEED_ROTATIONS) &&
-	  (abs(angle - (parent->yaw>>ANGLETOFINESHIFT)) < (30<<5)))
+      if (parent->special2 == actor->type &&
+	  parent->args[1] > SORCBALL_SPEED_ROTATIONS &&
+	  (Abs(angle - parent->yaw) >> 24) < 30)
 	{
 				// Can stop now
 	  parent->args[3] = SORC_FIRESPELL;
@@ -2870,8 +2859,8 @@ void A_SorcBallOrbit(DActor *actor)
   actor->special1 = angle;		// Set previous angle
 
   actor->pos = parent->pos;
-  actor->pos.x += dist * finecosine[angle];
-  actor->pos.y += dist * finesine[angle];
+  actor->pos.x += dist * Cos(angle);
+  actor->pos.y += dist * Sin(angle);
   actor->pos.z += -parent->floorclip + parent->info->height;
 }
 
@@ -2956,14 +2945,14 @@ void A_CastSorcererSpell(DActor *actor)
       ang2 = actor->yaw + ANG45;
       if(actor->health < (actor->info->spawnhealth/3))
 	{	// Spawn 2 at a time
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4);
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang2, 4);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 32, 4);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang2, 32, 4);
 	}			
       else
 	{
 	  if (P_Random() < 128)
 	    ang1 = ang2;
-	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 4);
+	  mo = parent->SpawnMissileAngle(MT_SORCFX3, ang1, 32, 4);
 	}
       break;
     default:
@@ -2979,7 +2968,7 @@ void A_SpawnReinforcements(DActor *actor)
 	angle_t ang;
 
 	ang = ANGLE_1 * P_Random();
-	mo = actor->SpawnMissileAngle(MT_SORCFX3, ang, 5);
+	mo = actor->SpawnMissileAngle(MT_SORCFX3, ang, 32, 5);
 }
 */
 
@@ -2992,14 +2981,14 @@ void A_SorcOffense1(DActor *actor)
 
   ang1 = actor->yaw + ANGLE_1*70;
   ang2 = actor->yaw - ANGLE_1*70;
-  mo = parent->SpawnMissileAngle(MT_SORCFX1, ang1, 0);
+  mo = parent->SpawnMissileAngle(MT_SORCFX1, ang1);
   if (mo)
     {
       mo->target = parent->target; // seeker missiles...
       mo->args[4] = BOUNCE_TIME_UNIT;
       mo->args[3] = 15;				// Bounce time in seconds
     }
-  mo = parent->SpawnMissileAngle(MT_SORCFX1, ang2, 0);
+  mo = parent->SpawnMissileAngle(MT_SORCFX1, ang2);
   if (mo)
     {
       mo->target = parent->target;
@@ -3021,7 +3010,7 @@ void A_SorcOffense2(DActor *actor)
   actor->args[4] += 15;
   delta = (SORCFX4_SPREAD_ANGLE * finesine[index]).floor() * ANGLE_1;
   angle_t ang1 = actor->yaw + delta;
-  mo = parent->SpawnMissileAngle(MT_SORCFX4, ang1, 0);
+  mo = parent->SpawnMissileAngle(MT_SORCFX4, ang1);
   if (mo)
     {
       mo->special2 = 35*5/2;		// 5 seconds
@@ -3655,17 +3644,17 @@ void A_KoraxBonePop(DActor *actor)
   x=actor->pos.x, y=actor->pos.y, z=actor->pos.z;
 
   // Spawn 6 spirits equalangularly
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT1, ANGLE_60*0, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT1, ANGLE_60*0, 32, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT2, ANGLE_60*1, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT2, ANGLE_60*1, 32, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT3, ANGLE_60*2, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT3, ANGLE_60*2, 32, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT4, ANGLE_60*3, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT4, ANGLE_60*3, 32, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT5, ANGLE_60*4, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT5, ANGLE_60*4, 32, 5);
   if (mo) KSpiritInit(mo,actor);
-  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT6, ANGLE_60*5, 5);
+  mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT6, ANGLE_60*5, 32, 5);
   if (mo) KSpiritInit(mo,actor);
 
   actor->mp->StartACS(255, args, actor, NULL, 0);		// Death script

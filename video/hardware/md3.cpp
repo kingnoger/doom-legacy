@@ -637,6 +637,10 @@ void modelpres_t::SetAnim(animseq_e seq)
       leg_seq = MD3_animstate::LEGS_WALK;
       break;
 
+    case Back:
+      leg_seq = MD3_animstate::LEGS_BACK;
+      break;
+
     case Pain:
       torso_seq = MD3_animstate::TORSO_GESTURE;
       break;

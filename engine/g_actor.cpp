@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -28,6 +28,7 @@
 #include "cvars.h"
 
 #include "g_game.h"
+#include "g_team.h"
 #include "g_map.h"
 #include "g_mapinfo.h"
 #include "g_pawn.h"
@@ -446,6 +447,8 @@ void PlayerPawn::LandedOnThing(Actor *onmobj)
 
 void Actor::Think()
 {
+  extern const fixed_t MAXSTEP;
+
   // check possible sector water content, set water eflags, cause splashes on ffloors
   CheckWater();
 
@@ -503,7 +506,7 @@ void Actor::Think()
 	      if (vel.z < -8 && !(eflags & MFE_FLY))
 		p->LandedOnThing(onmo);
 
-	      if (onmo->Top() <= pos.z + 24) // FIXME magic number
+	      if (onmo->Top() <= pos.z + MAXSTEP)
 		{
 		  p->player->viewheight -= onmo->Top() - pos.z;
 		  p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
@@ -1177,6 +1180,14 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
   info = ai;
   type = ai->GetMobjType();
 
+  // TEST monster teams
+  if (info->game <= gm_doom2)
+    team = TeamInfo::TEAM_Doom;
+  else if (info->game == gm_heretic)
+    team = TeamInfo::TEAM_Heretic;
+  else
+    team = TeamInfo::TEAM_Hexen;
+
   mass = info->mass;
   radius = info->radius;
   height = info->height;
@@ -1454,47 +1465,16 @@ void DActor::NightmareRespawn()
 
 
 // send a missile towards another Actor
-DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type)
+DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type, fixed_t h)
 {
-  fixed_t mz = pos.z;
-
 #ifdef PARANOIA
   if (!dest)
-    I_Error("P_SpawnMissile : no dest");
+    I_Error("DActor::SpawnMissile : no dest");
 #endif
-  switch (type)
-    {
-    case MT_MNTRFX1: // Minotaur swing attack missile
-      mz += 40;
-      break;
-    case MT_MNTRFX2: // Minotaur floor fire missile
-      mz = ONFLOORZ +floorclip;
-      break;
-    case MT_SRCRFX1: // Sorcerer Demon fireball
-      mz += 48;
-      break;
-    case MT_KNIGHTAXE: // Knight normal axe
-    case MT_REDAXE: // Knight red power axe
-      mz += 36;
-      break;
-    case MT_CENTAUR_FX:
-      mz += 45;
-      break;
-    case MT_ICEGUY_FX:
-      mz += 40;
-      break;
-    case MT_HOLY_MISSILE:
-      mz += 40;
-      break;
 
-    default:
-      mz += 32;
-      break;
-    }
+  h += Feet() -floorclip;
 
-  mz -= floorclip;
-
-  DActor *th = mp->SpawnDActor(pos.x, pos.y, mz, type);
+  DActor *th = mp->SpawnDActor(pos.x, pos.y, h, type);
 
   if (th->info->seesound)
     S_StartSound(th, th->info->seesound);

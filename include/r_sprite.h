@@ -104,6 +104,8 @@ public:
     // Legacy "animation sequences"
     Idle = 0, ///< spawnstate
     Run,      ///< seestate
+    Back,     ///< walk backwards (used only with players)
+    LAST_LOOPING = Back,
     Pain,     ///< painstate
     Melee,    ///< meleestate (attack 1)
     Shoot,    ///< missilestate (attack 2)
@@ -112,8 +114,7 @@ public:
     Death2,   ///< xdeathstate (explode, die)
     Death3,   ///< crashstate, one more way to die (heretic/hexen imps)
 
-    Raise,    ///< raisestate, being raised from death by an arch-vile
-    Other
+    Raise     ///< raisestate, being raised from death by an arch-vile
   };
 
   char  color;       ///< Skin colormap.

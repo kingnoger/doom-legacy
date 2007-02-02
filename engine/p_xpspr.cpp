@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Hexen weapon action functions
+/// \brief Hexen weapon action functions.
 
 #include "g_game.h"
 #include "g_actor.h"
@@ -44,26 +44,15 @@ void A_UnHideThing(DActor *actor);
 int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
 
-//============================================================================
-//
-//	AdjustPlayerAngle
-//
-//============================================================================
-
-static const int MAX_ANGLE_ADJUST = 5*ANGLE_1;
-
 void Pawn::AdjustPlayerAngle(Actor *t)
 {
-  angle_t angle = R_PointToAngle2(pos, t->pos);
-  int difference = Sint32(angle - yaw); // to signed
-  if (abs(difference) > MAX_ANGLE_ADJUST)
-    {
-      yaw += difference > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
-    }
+  const angle_t MAX_ANGLE_ADJUST = 5*ANGLE_1;
+  angle_t ang = R_PointToAngle2(pos, t->pos);
+  angle_t diff = ang - yaw;
+  if (Abs(diff) > MAX_ANGLE_ADJUST)
+    yaw += diff > 0 ? MAX_ANGLE_ADJUST : -MAX_ANGLE_ADJUST;
   else
-    {
-      yaw = angle;
-    }
+    yaw = ang;
 }
 
 
@@ -602,9 +591,7 @@ void A_MStaffTrack(DActor *actor)
 
 void MStaffSpawn2(DActor *actor, angle_t angle)
 {
-  Actor *mo;
-
-  mo = actor->SpawnMissileAngle(MT_MSTAFF_FX2, angle, 0);
+  Actor *mo = actor->SpawnMissileAngle(MT_MSTAFF_FX2, angle, 40);
   if (mo)
     {
       mo->owner = actor;
@@ -1071,7 +1058,7 @@ void A_CFlameRotate(DActor *actor)
 // Cleric boss enemy uses this
 void A_CHolyAttack3(DActor *actor)
 {
-  actor->SpawnMissile(actor->target, MT_HOLY_MISSILE);
+  actor->SpawnMissile(actor->target, MT_HOLY_MISSILE, 40);
   S_StartSound(actor, SFX_CHOLY_FIRE);
 }
 

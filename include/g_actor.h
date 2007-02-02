@@ -98,9 +98,10 @@ enum mobjflag2_t
   MF2_FLOORHUGGER    =     0x0080,    ///< Stays on floor, climbs any step up or down
   MF2_CEILINGHUGGER  =     0x0100,    ///< Stays on ceiling, climbs any step down or up
   MF2_NONBLASTABLE   =     0x0200,    ///< Cannot be blasted. Implied by MF2_BOSS.
-  // 2 bits free
 
   // game mechanics
+  MF2_QUICKTORETALIATE =   0x0400,    ///< Will immediately switch targets and retaliate when attacked.
+  MF2_NOTARGET       =     0x0800,    ///< Will not be targeted by other monsters of the same team (like Arch-Vile)
   MF2_FLOATBOB       =     0x1000,    ///< Bobs up and down in the air (item)
   MF2_THRUGHOST      =     0x2000,    ///< Will pass through ghosts (missile)
   MF2_RIP            =     0x4000,    ///< Rips through solid targets (missile)
@@ -423,12 +424,12 @@ public:
 
   void NightmareRespawn();
 
-  DActor *SpawnMissile(Actor *dest, mobjtype_t type);
+  DActor *SpawnMissile(Actor *dest, mobjtype_t type, fixed_t h = 32);
   bool   CheckMissileSpawn();
   void   ExplodeMissile();
   void   FloorBounceMissile();
 
-  DActor *SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t vz = 0);
+  DActor *SpawnMissileAngle(mobjtype_t type, angle_t angle, fixed_t h = 32, fixed_t vz = 0);
 
   // in p_enemy.cpp
   bool CheckMeleeRange();

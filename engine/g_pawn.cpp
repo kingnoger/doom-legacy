@@ -745,9 +745,8 @@ void PlayerPawn::Move()
   if (cmd->forward || cmd->side)
     {
       // set the running state if nothing more important is going on
-      int anim = pres->GetAnim();
-      if (anim == presentation_t::Idle)
-	pres->SetAnim(presentation_t::Run);
+      if (pres->GetAnim() <= presentation_t::LAST_LOOPING)
+	pres->SetAnim((cmd->forward >= 0) ? presentation_t::Run : presentation_t::Back);
     }
 
   if (eflags & MFE_FLY)
@@ -860,8 +859,7 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy)
       (player->cmd.forward == 0 && player->cmd.side == 0 ))
     {
       // if in a walking frame, stop moving
-      int anim = pres->GetAnim();
-      if (anim == presentation_t::Run)
+      if (pres->GetAnim() <= presentation_t::LAST_LOOPING)
 	pres->SetAnim(presentation_t::Idle);
     
       vel.x = 0;

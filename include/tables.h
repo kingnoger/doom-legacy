@@ -86,6 +86,13 @@ const angle_t ANGLE_1   = ANG45 / 45;
 const angle_t ANGLE_60  = ANG180 / 3;
 
 
+/// Absolute value of angle difference, always in [0, ANG180].
+inline angle_t Abs(angle_t a)
+{
+  return (a <= ANG180) ? a : -a; // -a is effectively 2pi - a since it wraps
+};
+
+
 /// Encapsulation for tabulated sine, cosine and tangent
 //#define AIMINGTOSLOPE(aiming)   finesine[((aiming) >> ANGLETOFINESHIFT) & FINEMASK]
 inline fixed_t Sin(angle_t a) { return finesine[a >> ANGLETOFINESHIFT]; }

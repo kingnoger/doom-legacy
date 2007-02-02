@@ -149,6 +149,8 @@ flag_mnemonic_t BEX_FlagMnemonics[] =
   {"FLOORHUGGER",    MF2_FLOORHUGGER,   2},
   {"CEILINGHUGGER",  MF2_CEILINGHUGGER, 2},
   {"DONTBLAST",      MF2_NONBLASTABLE,  2},
+  {"QUICKTORETALIATE", MF2_QUICKTORETALIATE, 2},
+  {"NOTARGET",       MF2_NOTARGET,      2}, // Will not be targeted by other monsters of same team (like Arch-Vile)
   {"FLOATBOB",       MF2_FLOATBOB,      2}, // Bobs up and down in the air (item)
   {"THRUGHOST",      MF2_THRUGHOST,     2}, // Will pass through ghosts (missile)
   {"RIPPER",         MF2_RIP,           2}, // Rips through solid targets (missile)

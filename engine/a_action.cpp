@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Hexen action functions
+/// \brief Hexen world and utility action functions.
 
 #include "command.h"
 #include "cvars.h"
@@ -40,36 +40,9 @@
 #include "info.h"
 
 
-
 bool A_RaiseMobj(DActor *actor);
 bool A_SinkMobj(DActor *actor);
 void P_ThrustSpike(Actor *actor);
-
-// PUBLIC DATA DEFINITIONS -------------------------------------------------
-
-/*
-static fixed_t::value_t FloatBobOffsets_int[64] =
-{
-  0, 51389, 102283, 152192,
-  200636, 247147, 291278, 332604,
-  370727, 405280, 435929, 462380,
-  484378, 501712, 514213, 521763,
-  524287, 521763, 514213, 501712,
-  484378, 462380, 435929, 405280,
-  370727, 332604, 291278, 247147,
-  200636, 152192, 102283, 51389,
-  -1, -51390, -102284, -152193,
-  -200637, -247148, -291279, -332605,
-  -370728, -405281, -435930, -462381,
-  -484380, -501713, -514215, -521764,
-  -524288, -521764, -514214, -501713,
-  -484379, -462381, -435930, -405280,
-  -370728, -332605, -291279, -247148,
-  -200637, -152193, -102284, -51389
-};
-const fixed_t *FloatBobOffsets = reinterpret_cast<fixed_t *>(FloatBobOffsets_int);
-*/
-
 
 
 // A Hexen hack to store a mobjtype number into one byte
@@ -187,21 +160,6 @@ mobjtype_t TranslateThingType[] =
 };
 
 
-// angle_t is an unsigned int (wraps around nicely)
-// This is used on angle differences
-angle_t abs(angle_t a)
-{
-  if (a <= ANG180)
-    return a;
-  else
-    return -a; // effectively 2pi - a since it wraps
-};
-
-//--------------------------------------------------------------------------
-//
-// Environmental Action routines
-//
-//--------------------------------------------------------------------------
 
 //============================================================================
 //
@@ -291,7 +249,7 @@ void A_PotteryCheck(DActor *actor)
     {
       Actor *pmo = m->players[i]->pawn;
       if (m->CheckSight(actor, pmo) &&
-	  (abs(R_PointToAngle2(pmo->pos.x, pmo->pos.y, actor->pos.x, actor->pos.y)-pmo->yaw) <= ANG45))
+	  Abs(R_PointToAngle2(pmo->pos.x, pmo->pos.y, actor->pos.x, actor->pos.y) - pmo->yaw) <= ANG45)
 	{
 	  // Previous state (pottery bit waiting state)
 	  actor->SetState(actor->state - 1);
@@ -1270,7 +1228,7 @@ void A_BatSpawn(DActor *actor)
   int delta = actor->args[1];
   if (delta==0) delta=1;
   angle_t angle = actor->yaw + (((P_Random()%delta)-(delta>>1))<<24);
-  DActor *mo = actor->SpawnMissileAngle(MT_BAT, angle, 0);
+  DActor *mo = actor->SpawnMissileAngle(MT_BAT, angle);
   if (mo)
     {
       mo->args[0] = P_Random()&63;			// floatbob index

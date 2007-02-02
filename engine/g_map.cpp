@@ -23,7 +23,6 @@
 #include "g_map.h"
 #include "g_mapinfo.h"
 #include "g_game.h"
-#include "g_team.h"
 #include "g_player.h"
 #include "g_actor.h"
 #include "g_pawn.h"
@@ -304,15 +303,6 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
     p->floorclip = FOOTCLIPSIZE;
   else
     p->floorclip = 0;
-
-
-  // TEST monster teams
-  if (t < MT_HERETIC)
-    p->team = TeamInfo::TEAM_Doom;
-  else if (t < MT_HEXEN)
-    p->team = TeamInfo::TEAM_Heretic;
-  else
-    p->team = TeamInfo::TEAM_Hexen;
 
   return p;
 }

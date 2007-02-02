@@ -357,19 +357,6 @@ const char *ExpandStateNum(int s)
 //     BEX mnemonics
 //========================================================================
 
-// [CODEPTR] mnemonics
-struct dactor_mnemonic_t
-{
-  char       *name;
-  actionf_p1  ptr;
-};
-
-struct weapon_mnemonic_t
-{
-  char       *name;
-  actionf_p2  ptr;
-};
-
 
 struct old_flag_t
 {

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -169,45 +169,19 @@ bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
 
 // Returns NULL if the missile exploded immediately, otherwise returns
 // a Actor pointer to the missile.
-DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t momz)
+DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t h, fixed_t vz)
 {
-  fixed_t mz;
-
-  switch (t)
-    {
-    case MT_MNTRFX1: // Minotaur swing attack missile
-      mz = pos.z+40;
-      break;
-    case MT_MNTRFX2: // Minotaur floor fire missile
-      mz = ONFLOORZ +floorclip; 
-      break;
-    case MT_SRCRFX1: // Sorcerer Demon fireball
-      mz = pos.z+48;
-      break;
-    case MT_ICEGUY_FX2: // Secondary Projectiles of the Ice Guy
-      mz = pos.z+3;
-      break;
-    case MT_MSTAFF_FX2:
-      mz = pos.z+40;
-      break;
-    default:
-      mz = pos.z+32;
-      break;
-
-    }
-
-  mz -= floorclip;
+  h += Feet() -floorclip;
     
-  DActor *mo = mp->SpawnDActor(pos.x, pos.y, mz, t);
+  DActor *mo = mp->SpawnDActor(pos.x, pos.y, h, t);
   if (mo->info->seesound)
     S_StartSound(mo, mo->info->seesound);
 
   mo->owner = this; // Originator
   mo->yaw = angle;
-  angle >>= ANGLETOFINESHIFT;
-  mo->vel.x = mo->info->speed * finecosine[angle];
-  mo->vel.y = mo->info->speed * finesine[angle];
-  mo->vel.z = momz;
+  mo->vel.x = mo->info->speed * Cos(angle);
+  mo->vel.y = mo->info->speed * Sin(angle);
+  mo->vel.z = vz;
   return mo->CheckMissileSpawn() ? mo : NULL;
 }
 

@@ -115,7 +115,7 @@ position_check_t PosCheck;
 
 
 const float   SHOOTFRAC   = 36.0/56; ///< fraction of Actor height where shots start
-const fixed_t MAXSTEP      = 24; ///< Max Z move up or down without jumping. Above this, a height difference is considered a 'dropoff'.
+extern const fixed_t MAXSTEP      = 24; ///< Max Z move up or down without jumping. Above this, a height difference is considered a 'dropoff'.
 const fixed_t MAXWATERSTEP = 37; ///< Same, but in water.
 
 

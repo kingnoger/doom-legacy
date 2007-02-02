@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,11 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Like p_enemy.cpp but for Heretic enemies
+/// \brief Heretic enemy AI.
 
 #include "doomdef.h"
 
@@ -38,10 +37,6 @@
 #include "m_fixed.h"
 #include "tables.h"
 
-
-//=========================================
-//   ACTION ROUTINES
-//=========================================
 
 void A_AddPlayerCorpse(DActor *actor) {}
 
@@ -73,24 +68,24 @@ void A_DripBlood(DActor *actor)
 void A_KnightAttack(DActor *actor)
 {
   if (!actor->target)
-    {
-      return;
-    }
+    return;
+
   if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(3));
       S_StartSound(actor, sfx_kgtat2);
       return;
     }
+
   // Throw axe
   S_StartSound(actor, actor->info->attacksound);
-  if(actor->type == MT_KNIGHTGHOST || P_Random() < 40)
+  if (actor->type == MT_KNIGHTGHOST || P_Random() < 40)
     { // Red axe
-      actor->SpawnMissile(actor->target, MT_REDAXE);
+      actor->SpawnMissile(actor->target, MT_REDAXE, 36);
       return;
     }
   // Green axe
-  actor->SpawnMissile(actor->target, MT_KNIGHTAXE);
+  actor->SpawnMissile(actor->target, MT_KNIGHTAXE, 36);
 }
 
 //----------------------------------------------------------------------------
@@ -517,14 +512,9 @@ void A_Sor1Chase(DActor *actor)
 
 void A_Srcr1Attack(DActor *actor)
 {
-  DActor *mo;
-  fixed_t pz;
-  angle_t angle;
+  if (!actor->target)
+    return;
 
-  if(!actor->target)
-    {
-      return;
-    }
   S_StartSound(actor, actor->info->attacksound);
   if(actor->CheckMeleeRange())
     {
@@ -533,17 +523,17 @@ void A_Srcr1Attack(DActor *actor)
     }
   if(actor->health > (actor->info->spawnhealth/3)*2)
     { // Spit one fireball
-      actor->SpawnMissile(actor->target, MT_SRCRFX1);
+      actor->SpawnMissile(actor->target, MT_SRCRFX1, 48);
     }
   else
     { // Spit three fireballs
-      mo = actor->SpawnMissile(actor->target, MT_SRCRFX1);
+      DActor *mo = actor->SpawnMissile(actor->target, MT_SRCRFX1, 48);
       if(mo)
 	{
-	  pz = mo->vel.z;
-	  angle = mo->yaw;
-	  actor->SpawnMissileAngle(MT_SRCRFX1, angle-ANGLE_1*3, pz);
-	  actor->SpawnMissileAngle(MT_SRCRFX1, angle+ANGLE_1*3, pz);
+	  fixed_t pz = mo->vel.z;
+	  angle_t angle = mo->yaw;
+	  actor->SpawnMissileAngle(MT_SRCRFX1, angle-ANGLE_1*3, 48, pz);
+	  actor->SpawnMissileAngle(MT_SRCRFX1, angle+ANGLE_1*3, 48, pz);
 	}
       if(actor->health < actor->info->spawnhealth/3)
 	{ // Maybe attack again
@@ -655,8 +645,8 @@ void A_Srcr2Attack(DActor *actor)
   chance = actor->health < actor->info->spawnhealth/2 ? 96 : 48;
   if(P_Random() < chance)
     { // Wizard spawners
-      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw-ANG45, 0.5f);
-      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw+ANG45, 0.5f);
+      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw-ANG45, 32, 0.5f);
+      actor->SpawnMissileAngle(MT_SOR2FX2, actor->yaw+ANG45, 32, 0.5f);
     }
   else
     { // Blue bolt
@@ -851,30 +841,26 @@ void A_MinotaurCharge(DActor *actor)
 
 void A_MinotaurAtk2(DActor *actor)
 {
-  DActor *mo;
-  angle_t angle;
-  fixed_t pz;
+  if (!actor->target)
+    return;
 
-  if(!actor->target)
-    {
-      return;
-    }
   S_StartSound(actor, sfx_minat2);
-  if(actor->CheckMeleeRange())
+  if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(5));
       return;
     }
-  mo = actor->SpawnMissile(actor->target, MT_MNTRFX1);
-  if(mo)
+
+  DActor *mo = actor->SpawnMissile(actor->target, MT_MNTRFX1, 40);
+  if (mo)
     {
       S_StartSound(mo, sfx_minat2);
-      pz = mo->vel.z;
-      angle = mo->yaw;
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), pz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), pz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), pz);
-      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/16), pz);
+      fixed_t pz = mo->vel.z;
+      angle_t angle = mo->yaw;
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/8), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/8), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle-(ANG45/16), 40, pz);
+      actor->SpawnMissileAngle(MT_MNTRFX1, angle+(ANG45/16), 40, pz);
     }
 }
 
@@ -1199,28 +1185,23 @@ void A_WizAtk2(DActor *actor)
 
 void A_WizAtk3(DActor *actor)
 {
-  DActor *mo;
-  angle_t angle;
-  fixed_t pz;
-
   actor->flags &= ~MF_SHADOW;
-  if(!actor->target)
-    {
-      return;
-    }
+  if (!actor->target)
+    return;
+
   S_StartSound(actor, actor->info->attacksound);
-  if(actor->CheckMeleeRange())
+  if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(4));
       return;
     }
-  mo = actor->SpawnMissile(actor->target, MT_WIZFX1);
-  if(mo)
+  DActor *mo = actor->SpawnMissile(actor->target, MT_WIZFX1);
+  if (mo)
     {
-      pz = mo->vel.z;
-      angle = mo->yaw;
-      actor->SpawnMissileAngle(MT_WIZFX1, angle-(ANG45/8), pz);
-      actor->SpawnMissileAngle(MT_WIZFX1, angle+(ANG45/8), pz);
+      fixed_t pz = mo->vel.z;
+      angle_t angle = mo->yaw;
+      actor->SpawnMissileAngle(MT_WIZFX1, angle-(ANG45/8), 32, pz);
+      actor->SpawnMissileAngle(MT_WIZFX1, angle+(ANG45/8), 32, pz);
     }
 }
 
