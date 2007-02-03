@@ -32,6 +32,27 @@
 /// this module contains all the handler functions for the
 /// basic FraggleScript Functions.
 
+
+/*!
+  \defgroup g_fs FraggleScript
+
+  FraggleScript guidelines.
+*/
+
+/*!
+  \page fs_funcs Writing FS functions
+  \ingroup g_fs
+  To make FS as stable and useful as possible, follow these guidelines:
+  - Before adding a new function, think hard if it is actually necessary.
+  - Try to make new funcs as general and useful as possible.
+    Make them do something useful and logical with all possible argument values.
+  - It almost always makes sense for the function to return _something_.
+  - Each FS function starts by setting t_return.type (if any).
+  - Next, set t_return.value to a value appropriate for an error.
+  - Now, check number of arguments. If it's not acceptable, do an informative script_error() and return.
+  - Before succesfully returning from the function, remember to set t_return.value.
+*/
+
 #include <stdio.h>
 #include <math.h>
 
@@ -80,8 +101,6 @@ svalue_t evaluate_expression(int start, int stop);
 int find_operator(int start, int stop, char *value);
 
 // functions. SF_ means Script Function not, well.. heh, me
-
-        /////////// actually running a function /////////////
 
 
 /*******************
@@ -2407,6 +2426,38 @@ void SF_SetCorona()
 #endif // if 0
 
 
+// Exl: Modified by Tox to take a pitch parameter
+// lineattack(sourcemobj, damage=0, yaw=source.yaw, range, pitch)
+void SF_LineAttack()
+{
+  t_return.type = svt_actor;
+  t_return.value.mobj = NULL;
+
+  if (t_argc < 1 || t_argc > 5)
+    {
+      script_error("invalid number of arguments\n");
+      return;
+    }
+
+  Actor *mo = MobjForSvalue(t_argv[0]);
+  int damage  = (t_argc >= 2) ? intvalue(t_argv[1]) : 0;
+  angle_t yaw = (t_argc >= 3) ? intvalue(t_argv[2]) * (ANG45 / 45) : mo->yaw;
+  float dist  = (t_argc >= 4) ? fixedvalue(t_argv[3]).Float() : 32*64;
+  float sine;
+  if (t_argc >= 5)
+    {
+      sine = sinf(fixedvalue(t_argv[4]).Float());
+    }
+  else
+    {
+      // use autoaim
+      if (!mo->AimLineAttack(yaw, dist, &sine) && !damage)
+	return; // no target to be found, and no damage means no activation effects either
+    }
+
+  PuffType = MT_PUFF;
+  t_return.value.mobj = mo->LineAttack(yaw, dist, sine, damage, dt_normal);
+}
 
 
 
@@ -2495,6 +2546,8 @@ void FS_init_functions()
   new_function("objmomx", SF_MobjMomx);
   new_function("objmomy", SF_MobjMomy);
   new_function("objmomz", SF_MobjMomz);
+
+  new_function("lineattack", SF_LineAttack);
 
   // sector stuff
   new_function("floorheight", SF_FloorHeight);

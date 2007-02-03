@@ -1551,17 +1551,20 @@ static bool PTR_LineTrace(intercept_t *in)
   \param ang yaw angle for the attack
   \param distance max range for the projectile (including z direction!)
   \param sine sin(pitch) for the attack
-  \param damage damage amount
+  \param damage damage amount, if negative, cause no interactions
   \param dtype damage type
   \return pointer to the target or NULL if none was hit
 */
 Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, int dtype)
 {
   // do the trace
-  LineTrace(ang, distance, sine, true);
+  LineTrace(ang, distance, sine, damage >= 0);
 
   if (hitsky)
     return NULL;
+
+  if (damage < 0)
+    return target_actor;
 
   vec_t<fixed_t> ipoint;
 
