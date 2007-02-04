@@ -5,7 +5,7 @@
 
 actor Arachnotron
 {
-  obituary "%s was killed by a Arachnotron\n"
+  obituary "%s was killed by an Arachnotron\n"
 }
 
 actor Archvile
@@ -20,17 +20,17 @@ actor BaronOfHell
 
 actor HellKnight
 {
-  obituary "%s was slain by a Hell-Knight\n"
+  obituary "%s was slain by a Hell Knight\n"
 }
 
 actor Cacodemon
 {
-  obituary "%s was fried by a Caco-demon\n"
+  obituary "%s was fried by a Cacodemon\n"
 }
 
 actor Cyberdemon
 {
-  obituary "%s was crushed by the Cyber-demon\n"
+  obituary "%s was crushed by the Cyberdemon\n"
 }
 
 actor Demon
@@ -75,12 +75,12 @@ actor Revenant
 
 actor ShotgunGuy
 {
-  obituary "%s was shot down by a shotguy\n"
+  obituary "%s was shot down by a Shotguy\n"
 }
 
 actor SpiderMastermind
 {
-  obituary "%s was killed by The Spider Mastermind\n"
+  obituary "%s was killed by the Spider Mastermind\n"
 }
 
 actor WolfensteinSS
@@ -90,7 +90,7 @@ actor WolfensteinSS
 
 actor ZombieMan
 {
-  obituary "%s was shot by a possessed\n"
+  obituary "%s was shot by a Possessed\n"
 }
 
 actor ExplosiveBarrel
