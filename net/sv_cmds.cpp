@@ -452,10 +452,10 @@ void Command_NewGame_f()
     }
 
   int sk = sk_medium;
-  int epi = 1;
+  int epi = 0;
   if (COM_Argc() >= 4)
     {
-      epi = atoi(COM_Argv(3));
+      epi = atoi(COM_Argv(3))-1;
 
       if (COM_Argc() >= 5)
 	{
@@ -484,22 +484,8 @@ void Command_NewGame_f()
   if (!strcasecmp(COM_Argv(2), "server"))
     game.SV_SetServerState(true);
 
-  if (!game.dedicated)
-    {
-      // add local players
-      int n = 1 + cv_splitscreen.value;
-      for (int i=0; i<n; i++)
-	LocalPlayers[i].info = game.AddPlayer(new PlayerInfo(&LocalPlayers[i]));
-
-      // TODO add bots
-
-      for (int i=0; i < n; i++)
-	ViewPlayers.push_back(LocalPlayers[i].info);
-
-      hud.ST_Start(LocalPlayers[0].info);
-    }
-
-  game.SV_StartGame(skill_t(sk), epi-1);
+  const Episode *temp = game.GetEpisode(epi);
+  game.SV_StartGame(skill_t(sk), temp->minfo->mapnumber, temp->entrypoint);
 }
 
 
@@ -518,11 +504,17 @@ void Command_StartGame_f()
       return;
     }
 
+  if (game.mapinfo.empty())
+    {
+      CONS_Printf("No MAPINFO lump loaded, use newgame instead!\n");
+      return;
+    }
+
   int sk = sk_medium;
-  int epi = 1;
+  int epi = 0;
   if (COM_Argc() >= 2)
     {
-      epi = atoi(COM_Argv(1));
+      epi = atoi(COM_Argv(1))-1;
 
       if (COM_Argc() >= 3)
 	{
@@ -531,8 +523,8 @@ void Command_StartGame_f()
   	}
     }
 
-  if (!game.SV_StartGame(skill_t(sk), epi-1))
-    CONS_Printf("No MAPINFO lump loaded, use newgame instead!\n");
+  const Episode *temp = game.GetEpisode(epi);
+  game.SV_StartGame(skill_t(sk), temp->minfo->mapnumber, temp->entrypoint);
 }
 
 

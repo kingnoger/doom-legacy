@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -90,7 +90,9 @@ GameInfo::GameInfo()
   skill = sk_medium;
   maxplayers = 32;
   maxteams = 4;
-  entrypoint = NULL;
+
+  initial_map = NULL;
+  initial_ep = 0;
   currentcluster = NULL;
 
   server = true;

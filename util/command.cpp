@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -715,14 +715,13 @@ static void COM_Help_f()
 {
   xcommand_t  *cmd;
   consvar_t  *cvar;
-  int i=0;
 
-  if(COM_Argc()>1)
+  if (COM_Argc() > 1)
     {
       cvar = consvar_t::FindVar(COM_Argv(1));
       if (cvar)
         {
-          CONS_Printf("Variable %s:\n",cvar->name);
+          CONS_Printf("Variable %s:\n", cvar->name);
           CONS_Printf("  flags :");
           if( cvar->flags & CV_SAVE )
             CONS_Printf("AUTOSAVE ");
@@ -733,23 +732,17 @@ static void COM_Help_f()
           if( cvar->flags & CV_CALL )
             CONS_Printf("ACTION ");
           CONS_Printf("\n");
-          if( cvar->PossibleValue )
+          if (cvar->PossibleValue)
             {
-              if(strcmp(cvar->PossibleValue[0].strvalue,"MIN")==0)
+              if (!strcmp(cvar->PossibleValue[0].strvalue, "MIN"))
                 {
-                  for(i=1;cvar->PossibleValue[i].strvalue!=NULL;i++)
-                    if(!strcmp(cvar->PossibleValue[i].strvalue,"MAX"))
-                      break;
-                  CONS_Printf("  range from %d to %d\n",cvar->PossibleValue[0].value,cvar->PossibleValue[i].value);
+                  CONS_Printf("  range from %d to %d\n",cvar->PossibleValue[0].value, cvar->PossibleValue[1].value);
                 }
               else
                 {
-                  CONS_Printf("  possible value :\n",cvar->name);
-                  while(cvar->PossibleValue[i].strvalue)
-                    {
-                      CONS_Printf("    %-2d : %s\n",cvar->PossibleValue[i].value,cvar->PossibleValue[i].strvalue);
-                      i++;
-                    }
+                  CONS_Printf("  possible values:\n");
+                  for (int i=0; cvar->PossibleValue[i].strvalue; i++)
+		    CONS_Printf("    %-2d : %s\n",cvar->PossibleValue[i].value, cvar->PossibleValue[i].strvalue);
                 }
             }
         }
@@ -758,6 +751,8 @@ static void COM_Help_f()
     }
   else
     {
+      int i=0;
+
       // commands
       CONS_Printf("\2Commands\n");
       for (cmd=com_commands ; cmd ; cmd=cmd->next)
@@ -766,7 +761,7 @@ static void COM_Help_f()
           i++;
         }
 
-      // varibale
+      // variables
       CONS_Printf("\2\nVariable\n");
       for (cvar = consvar_t::cvar_list; cvar; cvar = cvar->next)
         {
@@ -774,7 +769,7 @@ static void COM_Help_f()
           i++;
         }
 
-      CONS_Printf("\2\nread console.txt for more or type help <command or variable>\n");
+      CONS_Printf("\2\nread docs/console.html for more or type help <command or variable>\n");
 
       if( devparm )
         CONS_Printf("\2Total : %d\n",i);
@@ -833,11 +828,11 @@ consvar_t *consvar_t::FindVar(const char *name)
 
 //  Build a unique Net Variable identifier number, that is used
 //  in network packets instead of the fullname
-unsigned short consvar_t::ComputeNetid(const char *s)
+Uint16 consvar_t::ComputeNetid(const char *s)
 {
   static int premiers[16] = {2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
 
-  unsigned short ret = 0;
+  Uint16 ret = 0;
   int i = 0;
   while (*s)
     {
@@ -859,40 +854,32 @@ consvar_t *consvar_t::FindNetVar(unsigned short netid)
   return NULL;
 }
 
+
 //
 // set value to the variable, no checking, only for internal use
 //
-void consvar_t::Setvalue(const char *s)
+bool consvar_t::Setvalue(const char *s)
 {
-  int i;
-  char temp[100];
-
   if (PossibleValue)
     {
       char *tail;
       int v = strtol(s, &tail, 0);
 
-      if (!strcmp(PossibleValue[0].strvalue,"MIN"))
-        {
+      if (!strcmp(PossibleValue[0].strvalue, "MIN"))
+	{
 	  // bounded cvar
-          // search for maximum
-          for (i=1; PossibleValue[i].strvalue; i++)
-            if (!strcmp(PossibleValue[i].strvalue,"MAX"))
-              break;
-#ifdef PARANOIA
-          if (!PossibleValue[i].strvalue)
-            I_Error("Bounded cvar \"%s\" without Maximum !", name);
-#endif
-          if (v < PossibleValue[0].value)
+	  if (v < PossibleValue[0].value)
 	    v = PossibleValue[0].value;
-          else if (v > PossibleValue[i].value)
-	    v = PossibleValue[i].value;
+	  else if (v > PossibleValue[1].value)
+	    v = PossibleValue[1].value;
 
-	  sprintf(temp, "%d", v);
-	  s = temp;
-        }
+	  value = v;
+	  sprintf(str, "%d", v);
+	}
       else
-        {
+	{
+	  // array of value/name pairs
+	  int i;
 	  if (tail == s)
 	    {
 	      // no succesful number conversion, so it's a string
@@ -911,29 +898,23 @@ void consvar_t::Setvalue(const char *s)
 	  if (!PossibleValue[i].strvalue)
 	    {
 	      CONS_Printf("\"%s\" is not a possible value for \"%s\"\n", s, name);
-	      if (defaultvalue == s)
-		I_Error("Variable %s default value \"%s\" is not a possible value\n", name, defaultvalue);
-	      return;
+	      return false;
 	    }
 
-          value = PossibleValue[i].value;
-          str = PossibleValue[i].strvalue;
-          goto finish; // must not free str!
-        }
+	  value = PossibleValue[i].value;
+	  strncpy(str, PossibleValue[i].strvalue, CV_STRLEN);
+	}
+    }
+  else
+    {
+      strncpy(str, s, CV_STRLEN);
+
+      if (flags & CV_FLOAT)
+	value = int(atof(str) * fixed_t::UNIT); // 16.16 fixed point
+      else
+	value = atoi(str);
     }
 
-  // free the old value string
-  if (str)
-    Z_Free(str);
-
-  str = Z_StrDup(s);
-
-  if (flags & CV_FLOAT)
-    value = int(atof(str) * fixed_t::UNIT);
-  else
-    value = atoi(str);
-
- finish:
   if (flags & CV_ANNOUNCE_ONCE || flags & CV_ANNOUNCE)
     {
       CONS_Printf("%s set to %s\n", name, str);
@@ -944,6 +925,8 @@ void consvar_t::Setvalue(const char *s)
   // raise 'on change' code
   if (flags & CV_CALL)
     func();
+
+  return true;
 }
 
 
@@ -963,7 +946,7 @@ bool consvar_t::Reg()
       // check for overlap with a command
       if (COM_Exists(name))
 	{
-	  CONS_Printf("%s is a command name\n", name);
+	  I_Error("%s is a command name\n", name);
 	  return false;
 	}
 
@@ -987,19 +970,40 @@ bool consvar_t::Reg()
       next = NULL;
     }
 
-  str = NULL;
+  str[0] = '\0';
 
-#ifdef PARANOIA
+  if (flags & CV_HANDLER)
+    {
+      flags &= ~CV_CALL;
+      value = 0;
+      return true;
+    }
+
   if ((flags & CV_NOINIT) && !(flags & CV_CALL))
     I_Error("variable %s has CV_NOINIT without CV_CALL\n", name);
+
   if ((flags & CV_CALL) && !func)
     I_Error("variable %s has CV_CALL without func", name);
-#endif
+
+  // check possible values list
+  // It must either be NULL, a terminated array of value/name combinations, or a MIN/MAX pair.
+  if (PossibleValue)
+    {
+      if (!strcmp(PossibleValue[0].strvalue, "MIN"))
+	{
+	  // MIN/MAX pair
+	  if (strcmp(PossibleValue[1].strvalue, "MAX"))
+            I_Error("Bounded cvar \"%s\" without maximum!", name);
+	  if (PossibleValue[0].value >= PossibleValue[1].value)
+	    I_Error("Bounded cvar \"%s\" has no proper range!", name);
+        }
+    }
 
   if (flags & CV_NOINIT)
     flags &= ~CV_CALL;
 
-  Setvalue(defaultvalue);
+  if (!Setvalue(defaultvalue))
+    I_Error("Variable %s default value \"%s\" is not a possible value\n", name, defaultvalue);
 
   if (flags & CV_NOINIT)
     flags |= CV_CALL;
@@ -1107,7 +1111,10 @@ void consvar_t::Set(const char *s)
           return;
         }
 
-      game.net->SendNetVar(netid, s);
+      if (Setvalue(s))
+	game.net->SendNetVar(netid, str);
+
+      return;
     }
 
   Setvalue(s);
@@ -1125,44 +1132,51 @@ void consvar_t::Set(int newval)
 // increments the cvar
 void consvar_t::AddValue(int increment)
 {
-  int n;
+  if (flags & CV_HANDLER)
+    {
+      reinterpret_cast<void (*)(consvar_t*, int)>(func)(this, increment);
+      return;
+    }
+
   int newvalue = value + increment;
 
   if (PossibleValue)
     {
       if (!strcmp(PossibleValue[0].strvalue, "MIN"))
         {
-          // seach the next to last
-          for (n=0; PossibleValue[n+1].strvalue; n++)
-            ;
+	  // bounded cvar
 	  int minval = PossibleValue[0].value;
-	  int maxval = PossibleValue[n].value;
+	  int maxval = PossibleValue[1].value;
 
+	  // wrap
           if (newvalue < minval)
-            newvalue += maxval - minval + 1; // TODO not safe (increment -1000, for example)
-
-          newvalue = minval + (newvalue - minval) % (maxval - minval + 1);
-          Set(newvalue);
+            newvalue = maxval;
+          else if (newvalue > maxval)
+            newvalue = minval;
         }
       else
         {
+	  int n; // count all possible values
           int i = -1;
 
-          // this code do not support more than same value for differant PossibleValue
+          // values must not be repeated in possiblevalues array
           for (n=0; PossibleValue[n].strvalue; n++)
             if (PossibleValue[n].value == value)
               i = n;
 
 #ifdef PARANOIA
           if (i == -1)
-            I_Error("CV_AddValue : current value %d not found in possible values\n", value);
+            I_Error("consvar_t::AddValue: current value %d not found in possible values!\n", value);
 #endif
           i = (i + increment + n) % n;
+	  if (i < 0)
+	    i = 0; // if increment is -1000 or something
           Set(PossibleValue[i].strvalue);
+	  return;
         }
     }
-  else
-    Set(newvalue);
+
+  Set(newvalue);
 }
 
 

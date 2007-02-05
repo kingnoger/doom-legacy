@@ -136,7 +136,8 @@ public:
   vector<class Episode*>  episodes;  ///< game entrypoints
   //@}
 
-  Episode        *entrypoint;  ///< game entrypoint for players
+  MapInfo       *initial_map;  ///< New players will go into this Map,
+  int             initial_ep;  ///< entering through this entrypoint.
   MapCluster *currentcluster;  ///< currently active MapCluster (contains active Maps)
 
   GameType     *gtype; ///< TEST
@@ -170,7 +171,7 @@ public:
   void SV_Reset(bool clear_mapinfo = true);
   bool SV_SpawnServer(bool force_mapinfo);
   void SV_SetServerState(bool open);
-  bool SV_StartGame(skill_t skill, int cluster = 1);
+  bool SV_StartGame(skill_t skill, int mapnumber, int ep = 0);
   void TryRunTics(tic_t realtics);
 private:
   void ReadResourceLumps();
@@ -182,7 +183,6 @@ public:
   void CL_Reset();
   bool CL_SpawnClient();
   bool CL_StartGame();
-
 
 
   int  Serialize(class LArchive &a);
@@ -199,6 +199,8 @@ public:
   MapCluster *FindCluster(int number);
   MapInfo *FindMapInfo(int number);
   MapInfo *FindMapInfo(const char *name);
+  MapInfo *FindNextMap(int mapnum, int incr = 1);
+  const Episode *GetEpisode(int n);
 
   // in g_state.cpp
   void Ticker(); ///< ticks the game forward in time

@@ -321,7 +321,10 @@ void GameInfo::Ticker()
 	  CONS_Printf("Map request..");
 
 	  if (p->requestmap == 0)
-	    m = entrypoint->minfo; // first map in game
+	    {
+	      m = initial_map; // first map in game
+	      p->entrypoint = initial_ep;
+	    }
 	  else
 	    m = FindMapInfo(p->requestmap);
 

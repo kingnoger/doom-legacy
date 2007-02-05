@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2006 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -346,6 +346,20 @@ bool GameInfo::CL_SpawnClient()
 bool GameInfo::CL_StartGame()
 {
   CONS_Printf("starting client game...\n");
+
+  // add local players
+  int n = 1 + cv_splitscreen.value;
+  for (int i=0; i<n; i++)
+    if (!LocalPlayers[i].info)
+      LocalPlayers[i].info = game.AddPlayer(new PlayerInfo(&LocalPlayers[i]));
+
+  // TODO add bots
+  ViewPlayers.clear();
+  for (int i=0; i < n; i++)
+    ViewPlayers.push_back(LocalPlayers[i].info);
+
+  hud.ST_Start(LocalPlayers[0].info);
+
   if (paused)
     {
       paused = false;

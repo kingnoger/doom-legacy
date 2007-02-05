@@ -191,10 +191,10 @@ consvar_t cv_infighting  = {"infighting", "1", CV_NETVAR, CV_OnOff};
 
 void TeamPlay_OnChange()
 {
+  /*
   int value = cv_teamplay.value;
 
   // Change the name of the teams
-  /*
   game.teams.resize(game.maxteams);
 
   if (cv_teamplay.value == 1)
@@ -446,7 +446,7 @@ void GameInfo::SV_SetServerState(bool open)
 
 
 /// starts or restarts the game. assumes that we have set up the clustermap.
-bool GameInfo::SV_StartGame(skill_t sk, int epi)
+bool GameInfo::SV_StartGame(skill_t sk, int mapnumber, int ep)
 {
   if (clustermap.empty() || mapinfo.empty())
     return false;
@@ -461,13 +461,13 @@ bool GameInfo::SV_StartGame(skill_t sk, int epi)
     i->second->Reset(true, true);
   // TODO need we nuke pawns too?
 
-  if (epi >= episodes.size())
-    epi = 0;
+  initial_map = FindMapInfo(mapnumber);
+  initial_ep = ep;
+  if (!initial_map)
+    initial_map = episodes[0]->minfo;
 
-  entrypoint = episodes[epi];
-
-  if (entrypoint->minfo)
-    currentcluster = FindCluster(entrypoint->minfo->cluster);
+  if (initial_map)
+    currentcluster = FindCluster(initial_map->cluster);
   else
     currentcluster = NULL;
 
@@ -496,10 +496,6 @@ bool GameInfo::SV_StartGame(skill_t sk, int epi)
 
   paused = false;
   state = GS_LEVEL;
-
-#ifdef PARANOIA
-  Z_CheckHeap(-2);
-#endif
 
   return true;
 }

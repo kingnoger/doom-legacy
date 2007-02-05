@@ -47,6 +47,7 @@
 
 #include "g_game.h"
 #include "g_level.h"
+#include "g_mapinfo.h"
 #include "g_player.h"
 #include "g_pawn.h"
 #include "g_input.h"
@@ -1491,55 +1492,39 @@ Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30,
 CV_PossibleValue_t skill_cons_t[] = {{sk_baby, "I'm too young to die"},
                                      {sk_easy, "Hey, not too rough"},
                                      {sk_medium, "Hurt me plenty"},
-                                     {sk_hard, "Ultra violence"},
+                                     {sk_hard, "Ultra-Violence"},
                                      {sk_nightmare, "Nightmare!" },
                                      {0,NULL}};
 
-CV_PossibleValue_t map_cons_t[] = {{ 1,"map01"}, { 2,"map02"}, { 3,"map03"},
-                                   { 4,"map04"}, { 5,"map05"}, { 6,"map06"},
-                                   { 7,"map07"}, { 8,"map08"}, { 9,"map09"},
-                                   {10,"map10"}, {11,"map11"}, {12,"map12"},
-                                   {13,"map13"}, {14,"map14"}, {15,"map15"},
-                                   {16,"map16"}, {17,"map17"}, {18,"map18"},
-                                   {19,"map19"}, {20,"map20"}, {21,"map21"},
-                                   {22,"map22"}, {23,"map23"}, {24,"map24"},
-                                   {25,"map25"}, {26,"map26"}, {27,"map27"},
-                                   {28,"map28"}, {29,"map29"}, {30,"map30"},
-                                   {31,"map31"}, {32,"map32"}, {0,NULL}};
+static void Startmap_Handler(consvar_t *cv, int incr)
+{
+  int n = cv->value;
+  MapInfo *m = game.FindNextMap(n, incr);
+  if (incr)
+    for ( ; !m->found; m = game.FindNextMap(m->mapnumber, incr))
+      ;
 
-CV_PossibleValue_t exmy_cons_t[] ={{1,"e1m1"}, {2,"e1m2"}, {3,"e1m3"},
-                                   {4,"e1m4"}, {5,"e1m5"}, {6,"e1m6"},
-                                   {7,"e1m7"}, {8,"e1m8"}, {9,"e1m9"},
-                                   {11,"e2m1"}, {12,"e2m2"}, {13,"e2m3"},
-                                   {14,"e2m4"}, {15,"e2m5"}, {16,"e2m6"},
-                                   {17,"e2m7"}, {18,"e2m8"}, {19,"e2m9"},
-                                   {21,"e3m1"}, {22,"e3m2"}, {23,"e3m3"},
-                                   {24,"e3m4"}, {25,"e3m5"}, {26,"e3m6"},
-                                   {27,"e3m7"}, {28,"e3m8"}, {29,"e3m9"},
-                                   {31,"e4m1"}, {32,"e4m2"}, {33,"e4m3"},
-                                   {34,"e4m4"}, {35,"e4m5"}, {36,"e4m6"},
-                                   {37,"e4m7"}, {38,"e4m8"}, {39,"e4m9"},
-                                   {41,"e5m1"}, {42,"e5m2"}, {43,"e5m3"},
-                                   {44,"e5m4"}, {45,"e5m5"}, {46,"e5m6"},
-                                   {47,"e5m7"}, {48,"e5m8"}, {49,"e5m9"},
-				   {0,NULL}};
+  cv->value = m->mapnumber;
+  strncpy(cv->str, m->nicename.c_str(), consvar_t::CV_STRLEN);
+}
 
-// TODO replace these using a keyhandler which picks the map names from game.mapinfo
-// ... but first we must choose a mapinfo lump! which one?
 static consvar_t cv_menu_skill     = {"skill"       , "3", CV_HIDDEN, skill_cons_t};
-static consvar_t cv_menu_startmap  = {"starting map", "1", CV_HIDDEN, map_cons_t};
+static consvar_t cv_menu_startmap  = {"starting map", "1", CV_HIDDEN | CV_HANDLER, NULL, reinterpret_cast<void (*)()>(Startmap_Handler)}; // shameful HACK using a cvar, a dedicated menu widget would be better.
+
+
 
 void M_StartServer(int choice)
 {
-  BeginGame(1 + cv_menu_startmap.value / 10, cv_menu_skill.value, true);
-  // TODO starting map...
+  game.SV_SpawnServer(false);   // keep mapinfo
+  game.SV_SetServerState(true); // open server
+  game.SV_StartGame(static_cast<skill_t>(cv_menu_skill.value), cv_menu_startmap.value, 0); // launch game
   Menu::Close(true);
 }
 
 static menuitem_t  Server_MI[] =
 {
-  {IT_CVAR, NULL, "Map",       {&cv_menu_startmap} ,0},
-  {IT_CVAR, NULL, "Skill",     {&cv_menu_skill}, 0},
+  {IT_CVAR, NULL, "Map",   {&cv_menu_startmap}, 0},
+  {IT_CVAR, NULL, "Skill", {&cv_menu_skill}, 0},
   {IT_CVAR, NULL, "Public Server", {&cv_publicserver}, 0},
   {IT_TEXTBOX, NULL, "Server Name",{&cv_servername}, 0},
   {IT_LINK, NULL, "Server Options...",{(consvar_t *)&ServerOptionsDef},0},
@@ -1560,6 +1545,9 @@ void M_StartServerMenu(int choice)
 
   if (choice == 1)
     cv_splitscreen.Set("1");
+
+  // HACK, update map name
+  Startmap_Handler(&cv_menu_startmap, 0);
 
   Menu::SetupNextMenu(&Serverdef);
 }
@@ -2399,25 +2387,43 @@ static bool M_ChangecontrolResponse(event_t* ev)
 
   if (found >= 0)
     {
+      // key already used here
       // replace mouse and joy clicks by double clicks
       if (ch >= KEY_MOUSE1 && ch <= KEY_MOUSE1+MOUSEBUTTONS)
-	ch = ch - KEY_MOUSE1 + KEY_DBLMOUSE1;
+	{
+	  ch = ch - KEY_MOUSE1 + KEY_DBLMOUSE1;
+	  G_CheckDoubleUsage(ch);
+	  setup_gc[control][found] = ch;
+	  return true;
+	}
+
 
       /* FIXME new joystick code ignores double clicks for now.
 	 else
 	 if (ch>=KEY_JOY1 && ch<=KEY_JOY1+JOYBUTTONS)
 	 setup_gc[control][found] = ch-KEY_JOY1+KEY_DBLJOY1;
       */
-    }
-  else
-    {
-      if (setup_gc[control][0] == KEY_NULL)
-	found = 0;
-      else
-	found = 1;
+
+      // not a double click, exchange primary and secondary
+      setup_gc[control][found] = setup_gc[control][!found];
+      setup_gc[control][!found] = ch;
+      return true;
     }
 
+  // key not used here
   G_CheckDoubleUsage(ch);
+
+  if (setup_gc[control][0] == KEY_NULL)
+    found = 0;
+  else if (setup_gc[control][1] == KEY_NULL)
+    found = 1;
+  else
+    {
+      // shift
+      setup_gc[control][0] = setup_gc[control][1];
+      found = 1;
+    }
+
   setup_gc[control][found] = ch;
   return true;
 }
@@ -3189,37 +3195,10 @@ void Menu::Init()
           Control2_MI[i].flags = IT_CONTROLSTR;
     }
 
-  //FIXME change to levelgraph node select!
-  if (fc.FindNumForName("E2M1")<0)
-    {
-      exmy_cons_t[9].value = 0;
-      exmy_cons_t[9].strvalue = NULL;
-    }
-  else if (fc.FindNumForName("E3M1")<0)
-    {
-      exmy_cons_t[18].value = 0;
-      exmy_cons_t[18].strvalue = NULL;
-    }
-  else if (fc.FindNumForName("E4M1")<0)
-    {
-      exmy_cons_t[27].value = 0;
-      exmy_cons_t[27].strvalue = NULL;
-    }
-  else if (fc.FindNumForName("E5M1")<0)
-    {
-      exmy_cons_t[36].value = 0;
-      exmy_cons_t[36].strvalue = NULL;
-    }
-
-
   switch (game.mode)
     {
     case gm_doom1:
-      cv_menu_startmap.PossibleValue = exmy_cons_t;
-      // fallthru
-
     case gm_doom2:
-      // Lack of episodes is handled by MAPINFO
       pointer[0] = tc.GetPtr("M_SKULL1");
       pointer[1] = tc.GetPtr("M_SKULL2");
       MainMenuDef.drawroutine = &Menu::DrawMenu;
@@ -3227,14 +3206,11 @@ void Menu::Init()
       break;
 
     case gm_heretic:
-      cv_menu_startmap.PossibleValue = exmy_cons_t;
-
       MainMenuDef.titlepic = "M_HTIC";
       MainMenuDef.drawroutine = &Menu::HereticMainMenuDrawer;
       SkullBaseLump = fc.GetNumForName("M_SKL00");
       pointer[0] = tc.GetPtr("M_SLCTR1");
       pointer[1] = tc.GetPtr("M_SLCTR2");
-
       SkillDef.items = HereticSkill_MI;
       break;
 

@@ -821,3 +821,37 @@ MapInfo *GameInfo::FindMapInfo(const char *name)
 
   return NULL;
 }
+
+
+MapInfo *GameInfo::FindNextMap(int mapnum, int incr)
+{
+  mapinfo_iter_t i = mapinfo.find(mapnum);
+  if (i == mapinfo.end())
+    i = mapinfo.begin();
+
+  if (incr == -1)
+    {
+      if (i != mapinfo.begin())
+	i--;
+      else
+	return mapinfo.rbegin()->second;
+    }
+  else if (incr == 1)
+    {
+      i++;
+      if (i == mapinfo.end())
+	i = mapinfo.begin();
+    }
+
+  return i->second;
+}
+
+
+const Episode *GameInfo::GetEpisode(int n)
+{
+  int num = episodes.size();
+  if (!num)
+    return NULL;
+  n = (n >= num) ? num-1 : ((n < 0) ? 0 : n);
+  return episodes[n];
+}

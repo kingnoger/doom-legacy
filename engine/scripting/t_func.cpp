@@ -2451,7 +2451,7 @@ void SF_LineAttack()
   else
     {
       // use autoaim
-      if (!mo->AimLineAttack(yaw, dist, &sine) && !damage)
+      if (!mo->AimLineAttack(yaw, dist, sine) && !damage)
 	return; // no target to be found, and no damage means no activation effects either
     }
 

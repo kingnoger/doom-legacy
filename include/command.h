@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,6 +24,7 @@
 #define command_h 1
 
 #include <stdio.h>
+#include "doomtype.h"
 
 //===================================
 // Command buffer & command execution
@@ -74,6 +75,7 @@ enum cvflags_t
   CV_ANNOUNCE   = 0x0080,    ///< print a message to console when modified
   CV_ANNOUNCE_ONCE = 0x0100, ///< same but will be reset when modified, set in toggle
   CV_HIDDEN     = 0x0200,    ///< cannot be accessed by the console (not part of the cvar list) (menu etc.)
+  CV_HANDLER    = 0x0400,    ///< Call a handler function in AddValue. Overrides CV_CALL. HACK for menu.
 };
 
 /// \brief value restriction for consvar_t objects
@@ -99,14 +101,19 @@ namespace TNL { class BitStream; };
 
 struct consvar_t
 {
+  enum
+  {
+    CV_STRLEN = 64
+  };
+
   char      *name;
   char      *defaultvalue;
   int        flags;        ///< flags from cvflags_t
   CV_PossibleValue_t *PossibleValue;  ///< array of possible values
   void     (*func)();      ///< called on change, if CV_CALL is set
   int        value;        ///< int/fixed_t value
-  char      *str;          ///< value in string format
-  unsigned short netid;    ///< unique network id for CV_NETVARs
+  char       str[CV_STRLEN];          ///< value in string format
+  Uint16     netid;        ///< unique network id for CV_NETVARs
 
   consvar_t *next;         ///< linked list
 
@@ -114,13 +121,12 @@ struct consvar_t
 
 protected:
   /// internal setting method
-  void Setvalue(const char *s);
+  bool Setvalue(const char *s);
 
-  static unsigned short ComputeNetid(const char *s);
-  static consvar_t *FindNetVar(unsigned short netid);
+  static Uint16 ComputeNetid(const char *s);
+  static consvar_t *FindNetVar(Uint16 netid);
 
 public:
-
   /// as if "<varname> <value>" was entered at the console
   void Set(const char *value);
 
