@@ -5,7 +5,7 @@
 
 actor Chicken
 {
-  obituary "%s was henpecked to death\n"
+  obituary "%s was henpecked to submission\n"
 }
 
 actor HereticImp
@@ -15,8 +15,8 @@ actor HereticImp
 
 actor HereticImpLeader
 {
-  obituary "%s was scorched by a Gargoyle Leader\n"
-  hitobituary "%s was gored by a Gargoyle Leader\n"
+  obituary "%s was scorched by a Fire Gargoyle\n"
+  hitobituary "%s was gored by a Fire Gargoyle\n"
 }
 
 actor Mummy
@@ -53,7 +53,7 @@ actor Knight
 actor KnightGhost
 {
   obituary "%s was vanquished by an Undead Knight Ghost\n"
-  hitobituary "%s was hacked apart by an Undead Knight\n"
+  hitobituary "%s was hacked apart by an Undead Knight Ghost\n"
 }
 
 actor Beast
@@ -74,8 +74,8 @@ actor Wizard
 
 actor Ironlich
 {
-  obituary "%s was blasted by an Ironlich\n"
-  hitobituary "%s got closer to an Ironlich that was healthy\n"
+  obituary "%s was blasted by an Iron Lich\n"
+  hitobituary "%s got closer to an Iron Lich than was healthy\n"
 }
 
 actor Sorcerer1
