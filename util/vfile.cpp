@@ -90,7 +90,10 @@ void *VFile::CacheItem(int item, int tag)
   else
     {
       //CONS_Printf("cache hit on lump %i\n",lump);
-      Z_ChangeTag(cache[item], tag);
+      /*
+      if (Z_GetTag(cache[item]) != tag)
+	CONS_Printf("Memtag type changed on item %d!\n", item);
+      */
     }
 
   return cache[item];

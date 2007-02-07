@@ -1436,9 +1436,9 @@ static const char *DEH_cmds[DEH_NUM + 1] =
 
 // Parse a DeHackEd lump
 // (there is special trick for converting .deh files into WAD lumps)
-bool dehacked_t::LoadDehackedLump(const char *buf, int len)
+bool dehacked_t::LoadDehackedLump(int lump)
 {
-  if (!p.Open(buf, len))
+  if (!p.Open(lump))
     return false;
 
   p.DeleteChars('\r'); // annoying cr's.
@@ -1601,6 +1601,5 @@ bool dehacked_t::LoadDehackedLump(const char *buf, int len)
 
   // HACK fix for phobia.wad
   mobjinfo[MT_TELEPORTMAN].flags &= ~MF_NOSECTOR; // teleport destinations must have sector links!
-
   return true;
 }

@@ -166,8 +166,7 @@ void P_InitSwitchList()
   // Is Boom SWITCHES lump present?
   if ((i = fc.FindNumForName("SWITCHES")) != -1)
     {
-      // ss is not needed anymore after this function, therefore not PU_STATIC
-      SWITCHES_t *ss = (SWITCHES_t *)fc.CacheLumpNum(i, PU_CACHE);
+      SWITCHES_t *ss = static_cast<SWITCHES_t*>(fc.CacheLumpNum(i, PU_DAVE));
 
       // endian conversion only when loading from extra lump
       for (i=0; ss[i].episode != 0; i++)
@@ -185,6 +184,7 @@ void P_InitSwitchList()
 	  switchlist.push_back(temp);
 	}
 
+      Z_Free(ss);
       return; // nothing else
     }
 

@@ -124,7 +124,7 @@ public:
 
 inline Poly* HWBsp::AllocPoly(int numpts)
 {
-  Poly *p = (Poly *) Z_Malloc(sizeof(Poly) + sizeof(PolyVertex) * numpts, PU_HWRPLANE, NULL);
+  Poly *p = (Poly *) Z_Malloc(sizeof(Poly) + sizeof(PolyVertex) * numpts, PU_OPENGL_GEOMETRY, NULL);
   p->numpts = numpts;
   return p;
 }
@@ -137,7 +137,7 @@ inline void HWBsp::FreePoly(Poly* poly)
 
 inline PolyVertex* HWBsp::AllocVertex()
 {
-  PolyVertex *p = (PolyVertex *) Z_Malloc(sizeof(PolyVertex), PU_HWRPLANE, NULL);
+  PolyVertex *p = (PolyVertex *) Z_Malloc(sizeof(PolyVertex), PU_OPENGL_GEOMETRY, NULL);
   return p;
 }
 

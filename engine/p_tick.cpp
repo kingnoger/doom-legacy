@@ -59,8 +59,6 @@ void Map::DetachThinker(Thinker *t)
   t->prev->next = t->next;
   t->prev = t->next = NULL;
 
-  Z_ChangeTag(t, PU_STATIC);
-
   force_pointercheck = true;
 }
 

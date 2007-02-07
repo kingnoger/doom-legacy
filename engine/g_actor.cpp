@@ -363,10 +363,6 @@ void Actor::Detach()
   // stop any playing sound
   S.Stop3DSound(this);
 
-  // save the presentation too
-  if (pres)
-    Z_ChangeTag(pres, PU_STATIC);
-
   eflags |= MFE_REMOVE; // so that pointers to it will be NULLed
   mp->DetachThinker(this);
 }

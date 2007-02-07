@@ -327,7 +327,7 @@ void Wad::LoadDehackedLumps()
 	break;
       CONS_Printf("Loading DEHACKED lump %d from %s\n", clump, filename.c_str());
 
-      DEH.LoadDehackedLump((char *)CacheItem(clump, PU_CACHE), GetItemSize(clump));
+      DEH.LoadDehackedLump(clump);
       clump++;
     }
 }

@@ -107,7 +107,7 @@ sounditem_t::sounditem_t(const char *n)
 sounditem_t::~sounditem_t()
 {
   if (data)
-    Z_ChangeTag(data, PU_CACHE);
+    Z_Free(data);
 }
 
 
@@ -507,7 +507,7 @@ bool SoundSystem::StartMusic(const char *name, bool loop)
   musicinfo_t *m = &mu;
   m->name = name;
   m->lumpnum = musiclump;
-  m->data = (void *)fc.CacheLumpNum(musiclump, PU_MUSIC);
+  m->data = fc.CacheLumpNum(musiclump, PU_MUSIC);
   m->length = fc.LumpLength(musiclump);
 
   mus_playing = m;
@@ -547,8 +547,7 @@ void SoundSystem::StopMusic()
 
       I_StopSong(mus_playing->handle);
       I_UnRegisterSong(mus_playing->handle);
-      Z_ChangeTag(mus_playing->data, PU_CACHE);
-
+      Z_Free(mus_playing->data);
       mus_playing->data = NULL;
       mus_playing = NULL;
     }

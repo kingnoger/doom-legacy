@@ -18,14 +18,13 @@
 
 void ShowEndTxt()
 {
-  int i, j;
-
   /* if option -noendtxt is set, don't print the text */
   if (M_CheckParm("-noendtxt"))
     return;
 
   /* get the lump with the text */
-  unsigned short *text = (unsigned short *)fc.CacheLumpNum(fc.GetNumForName("ENDOOM"), PU_CACHE);
+  unsigned short *base = static_cast<unsigned short*>(fc.CacheLumpNum(fc.GetNumForName("ENDOOM"), PU_DAVE));
+  unsigned short *text = base;
 
   /* if the xterm has more then 80 columns we need to add nl's */
   char *col = getenv("COLUMNS");
@@ -35,7 +34,7 @@ void ShowEndTxt()
 
 #if 1
   // just the text, no colors
-  for (i=1; i<=80*25; i++)
+  for (int i=1; i<=80*25; i++)
     {
       putchar(*text++ & 0xff);
       if (!(i % 80))
@@ -46,10 +45,10 @@ void ShowEndTxt()
   int att = 0;
 
   /* print 80x25 text and deal with the attributes too */
-  for (i=1; i<=80*25; i++) {
+  for (int i=1; i<=80*25; i++) {
     /* attribute first */
     /* attribute changed? */
-    if ((j = *text >> 8) != att) {
+    if ((int j = *text >> 8) != att) {
       /* save current attribute */
       att = j;
       /* set new attribute, forground color first */
@@ -178,4 +177,6 @@ void ShowEndTxt()
   if (nlflag)
     printf("\n");
 #endif
+
+  Z_Free(base);
 }

@@ -188,43 +188,39 @@ byte *graymap;
 
 static void CON_SetupColormaps()
 {
-  int i, j, k;
+  int i, k;
 
-  //
   //  setup the green translucent background colormap
-  //
+  //  setup the white and gray text colormap
+
   greenmap = (byte *) Z_Malloc(256,PU_STATIC,NULL);
   whitemap = (byte *) Z_Malloc(256,PU_STATIC,NULL);
   graymap  = (byte *) Z_Malloc(256,PU_STATIC,NULL);
 
-  byte *pal = (byte *)fc.CacheLumpName("PLAYPAL",PU_CACHE);
+  byte *pal = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
 
-  for (i=0,k=0; i<768; i+=3,k++)
+  if (game.mode >= gm_heretic)
     {
-      j = pal[i] + pal[i+1] + pal[i+2];
+      for (i=0, k=0; i<768; i+=3, k++)
+	{
+	  int j = pal[i] + pal[i+1] + pal[i+2];
 
-      if (game.mode == gm_heretic)
-        {
           greenmap[k] = 209 + (byte)((float)j*15/(3*255));   //remaps to greens(209-224)
           graymap[k]  =       (byte)((float)j*35/(3*255));   //remaps to grays(0-35)
           whitemap[k] = 145 + (byte)((float)j*15/(3*255));   //remaps to reds(145-168)
-        }
-      else
-        greenmap[k] = 127 - (j>>6);
+	}
     }
-
-  //
-  //  setup the white and gray text colormap
-  //
-  if (game.mode != gm_heretic)
+  else
     {
-      for (i=0; i<256; i++)
-        {
-          whitemap[i] = i;        //remap each color to itself...
-          graymap[i]  = i;
-        }
+      for (i=0, k=0; k<256; i+=3, k++)
+	{
+	  int j = pal[i] + pal[i+1] + pal[i+2];
+	  greenmap[k] = 127 - (j>>6);
+          graymap[k]  = k; // remap each color to itself...
+          whitemap[k] = k;
+	}
 
-      for (i=168;i<192;i++)
+      for (i=168; i<192; i++)
         {
           whitemap[i] = i-88;     //remaps reds(168-192) to whites(80-104)
           graymap[i]  = i-80;      //remaps reds(168-192) to gray(88-...)
@@ -234,6 +230,8 @@ static void CON_SetupColormaps()
       whitemap[47] = 191-88; // the color[47]=color[191] !
       graymap [47] = 191-80;
     }
+
+  Z_Free(pal);
 }
 
 

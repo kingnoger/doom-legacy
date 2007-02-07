@@ -57,7 +57,8 @@ OGLRenderer::OGLRenderer()
   screen = NULL;
   workinggl = false;
   curssec = NULL;
-  palette = NULL;
+
+  palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_STATIC));
 
   mp = NULL;
   //  l.glvertexes = NULL;
@@ -149,7 +150,6 @@ void OGLRenderer::StartFrame()
 void OGLRenderer::FinishFrame()
 {
     SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
-    palette = NULL;       // It might have gotten uncached.
 }
 
 
@@ -483,9 +483,6 @@ void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
   
   if(!consolemode)
     I_Error("Trying to draw level map while in 3D mode.\n");
-
-  if(!palette)
-    palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
 
   // Set color.
   c[0] = palette[3*color]/255.0;

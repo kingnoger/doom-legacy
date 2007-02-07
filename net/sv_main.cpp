@@ -364,8 +364,6 @@ void GameInfo::SV_Reset(bool clear_mapinfo)
   // clear teams?
   SV_ResetScripting();
 
-  Z_FreeTags(PU_LEVEL, MAXINT);
-
   // reset gamestate?
   state = GS_NULL;
   server = true;

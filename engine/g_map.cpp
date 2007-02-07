@@ -718,9 +718,6 @@ void Map::AddPlayer(PlayerInfo *p)
   if (p->pawn)
     {
       p->pawn->eflags &= ~MFE_REMOVE;
-      Z_ChangeTag(p->pawn, PU_LEVSPEC);
-      if (p->pawn->pres)
-	Z_ChangeTag(p->pawn->pres, PU_LEVSPEC);
 
       // save the playerpawns as they enter the map
       if (info->hub)

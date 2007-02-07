@@ -51,7 +51,7 @@ public:
   bool loaded;
 
   dehacked_t();
-  bool LoadDehackedLump(const char *buf, int len);
+  bool LoadDehackedLump(int lump);
   void error(char *first, ...);
 
   int   idfa_armor;

@@ -221,7 +221,7 @@ void Texture::GLGetData()
       byte *index_in = pixels;
 
       RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*width*height, PU_TEXTURE, NULL));
-      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
+      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
 
       for (int i=0; i<width; i++)
 	for (int j=0; j<height; j++)
@@ -238,6 +238,7 @@ void Texture::GLGetData()
 	      rgba_out->alpha = 255;
 	  }
 
+      Z_Free(palette);
       // replace pixels by the RGBA row-major version
       Z_Free(pixels);
       pixels = reinterpret_cast<byte*>(result);
@@ -339,7 +340,7 @@ void LumpTexture::GLGetData()
 
       // convert to RGBA
       byte   *index_in = temp;
-      RGB_t  *palette  = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_CACHE));
+      RGB_t  *palette  = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
       RGBA_t *rgba_out = reinterpret_cast<RGBA_t*>(pixels);
 
       for (int i=0; i<width; i++)
@@ -358,6 +359,7 @@ void LumpTexture::GLGetData()
 	    rgba_out++;
 	  }
 
+      Z_Free(palette);
       Z_Free(temp); // free indexed data
       format = GL_RGBA;
     }
@@ -665,7 +667,6 @@ byte *DoomTexture::GetData()
         }
 
       // TODO do a palette conversion if needed
-      //Z_ChangeTag(pixels, PU_CACHE);
     }
 
   return pixels;
@@ -1758,7 +1759,7 @@ static int makecol15(int r, int g, int b)
 void R_Init8to16()
 {
   int i;
-  byte *palette = (byte *)fc.CacheLumpName("PLAYPAL", PU_CACHE);
+  byte *palette = (byte *)fc.CacheLumpName("PLAYPAL", PU_DAVE);
 
   for (i=0;i<256;i++)
     {
@@ -1766,6 +1767,7 @@ void R_Init8to16()
       color8to16[i] = makecol15(palette[0],palette[1],palette[2]);
       palette += 3;
     }
+  Z_Free(palette);
 
   // test a big colormap
   hicolormaps = (short int *)Z_Malloc(32768 /**34*/, PU_STATIC, 0);

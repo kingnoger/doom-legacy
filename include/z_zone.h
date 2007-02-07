@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,7 +16,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //---------------------------------------------------------------------
 
 /// \file
@@ -25,69 +24,49 @@
 /// Perhaps NeXT ObjectiveC inspired.
 /// Remark: this was the only stuff that, according
 /// to John Carmack, might have been useful for Quake.
+///
+/// However, now it has been rendered obsolete by OS memory management. Sic transit gloria mundi.
 
 #ifndef z_zone_h
 #define z_zone_h 1
 
 #include <stdio.h>
 
-/// \brief Zone Memory purge tags.
+/// \brief Zone Memory tags.
 enum memtag_t
 {
-  // Tags < PU_PURGELEVEL are not overwritten until freed.
-  PU_STATIC = 1,      ///< static entire execution time
-  PU_SOUND  = 2,      ///< sound effects
-  PU_MUSIC  = 3,      ///< music
-  PU_DAVE   = 4,      ///< anything else Dave wants static
-
-  PU_HWRPATCHINFO      = 5,   ///< Hardware GlidePatch_t struct for OpenGl/Glide texture cache
-  PU_HWRPATCHCOLMIPMAP = 6,   ///< Hardware GlideMipmap_t struct colromap variation of patch
-  PU_SPRITE,          ///< sprite structures
-  PU_MODEL,           ///< 3D models
-  PU_TEXTURE,         ///< 2D bitmaps (most graphics)
-
-  // Tags >= PU_LEVEL are made purgable when a level is exited
-  PU_LEVEL    = 50,   ///< static until level is exited
-  PU_LEVSPEC  = 51,   ///< special thinkers in a level
-  PU_HWRPLANE = 52,
-
-  // Tags >= PU_PURGELEVEL are automatically purgable whenever needed.
-  PU_PURGELEVEL = 100,
-  PU_CACHE      = 101,
-  PU_HWRCACHE   = 102  // 'second-level' cache for graphics
-                       // stored in hardware format and downloaded as needed
-  // TODO: remove PU_HWRCACHE, make a real 2nd level cache
+  PU_STATIC = 0, ///< static entire execution time
+  PU_SOUND,      ///< sound effects
+  PU_MUSIC,      ///< music
+  PU_DAVE,       ///< anything else Dave wants static
+  PU_SPRITE,     ///< sprite structures
+  PU_MODEL,      ///< 3D models
+  PU_TEXTURE,    ///< 2D bitmaps (most graphics)
+  PU_LEVEL,      ///< map data
+  PU_LEVSPEC,    ///< special thinkers in a level
+  PU_OPENGL_GEOMETRY,
+  PU_NUMTAGS
 };
 
 
-void    Z_Init();
-void    Z_FreeTags (int lowtag, int hightag);
-void    Z_DumpHeap (int lowtag, int hightag);
-void    Z_FileDumpHeap (FILE *f);
-void    Z_CheckHeap (int i);
-//void    Z_ChangeTag2 (void *ptr, int tag);
-void    Z_ChangeTag(void *ptr, int tag);
+/// Initialize the memory subsystem.
+void Z_Init();
 
-// returns number of bytes allocated for one tag type
-int     Z_TagUsage (int tagnum);
-void    Z_FreeMemory (int *realfree,int *cachemem,int *usedmem,int *largefreeblock);
+/// Number of bytes allocated for given tag type.
+unsigned Z_TagUsage(unsigned tagnum);
 
-//#define ZDEBUG
+/// Tag used by ptr. ptr MUST be allocated using Z_Malloc.
+int Z_GetTag(void *ptr);
 
-#ifdef ZDEBUG
-void *Z_Malloc2(int size, int tag, void **user, int alignbits, char *file, int line);
-void  Z_Free2(void *ptr,char *file,int line);
-# define Z_Free(p) Z_Free2(p,__FILE__,__LINE__)
-# define Z_Malloc(s,t,p) Z_Malloc2(s,t,p,0,__FILE__,__LINE__)
-# define Z_MallocAlign(s,t,p,a) Z_Malloc2(s,t,p,a,__FILE__,__LINE__)
-#else
-void *Z_MallocAlign(int size, int tag, void **user, int alignbits);
-void  Z_Free(void *ptr);
-# define Z_Malloc(s,t,p) Z_MallocAlign(s,t,p,0)
-#endif
-
+/// Allocate memory.
+void *Z_Malloc(int size, int tag, void **user);
+#define Z_MallocAlign(s,t,p,a) Z_Malloc((s),(t),(p))
 #define ZZ_Alloc(x) Z_Malloc((x), PU_STATIC, NULL)
 
+/// Free memory.
+void Z_Free(void *ptr);
+
+/// Duplicate a string into newly allocated memory.
 char *Z_Strdup(const char *s, int tag, void **user);
 
 #endif

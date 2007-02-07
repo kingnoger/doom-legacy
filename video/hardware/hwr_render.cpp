@@ -618,9 +618,11 @@ static void CV_grMonsterDL_OnChange ()
 }
 static void Command_GrStats_f()
 {
+  /*
   CONS_Printf("Patch info headers : %7d kb\n", Z_TagUsage(PU_HWRPATCHINFO)>>10);
   CONS_Printf("3D Texture cache   : %7d kb\n", Z_TagUsage(PU_HWRCACHE)>>10);
-  CONS_Printf("Plane polygone     : %7d kb\n", Z_TagUsage(PU_HWRPLANE)>>10);
+  CONS_Printf("Plane polygone     : %7d kb\n", Z_TagUsage(PU_OPENGL_GEOMETRY)>>10);
+  */
 }
 static void CV_grPolygonSmooth_OnChange()
 {

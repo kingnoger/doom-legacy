@@ -864,13 +864,11 @@ int svariable_t::Serialize(LArchive &a)
 int svariable_t::Unserialize(LArchive &a)
 {
   a << name;
-  Z_ChangeTag(name, PU_LEVEL);
   a << type;
   switch (type)
     {
     case svt_string:
       a << value.s;
-      Z_ChangeTag(value.s, PU_LEVEL);
       break;
     case svt_int:
     case svt_fixed:
@@ -1015,17 +1013,28 @@ int Map::Serialize(LArchive &a)
   a << kills << items << secrets; // conceivably scripts could change these
 
   //----------------------------------------------
+  {
   // record the changes in static geometry (as compared to wad)
   // "reload" the map to check for differences
   // TODO helluvalot of unneeded stuff is saved because of linedef/sector special mappings...
   // Perhaps we should really fake-setup the comparison map... or perhaps we'll just live with it.
-  int statsec = 0, statline = 0;
 
+  int statsec = 0, statline = 0;
   byte diff, diff2;
 
-  mapsector_t *ms = (mapsector_t *)fc.CacheLumpNum(lumpnum + LUMP_SECTORS, PU_CACHE);
-  sector_t    *ss = sectors;
+  struct
+  {
+    mapsector_t  *sectors;
+    mapsidedef_t *sides;
+    union
+    {
+      doom_maplinedef_t *dlines;
+      hex_maplinedef_t  *hlines;
+    };
+  } comp;
 
+  mapsector_t *ms = comp.sectors = static_cast<mapsector_t*>(fc.CacheLumpNum(lumpnum + LUMP_SECTORS, PU_DAVE));
+  sector_t    *ss = sectors;
   for (i = 0; i<numsectors ; i++, ss++, ms++)
     {
       diff = diff2 = 0;
@@ -1087,11 +1096,13 @@ int Map::Serialize(LArchive &a)
         }
     }
   a << (temp = MARK_END);
+  Z_Free(comp.sectors);
 
-  doom_maplinedef_t *mld = (doom_maplinedef_t *)fc.CacheLumpNum(lumpnum + LUMP_LINEDEFS, PU_CACHE);
-  hex_maplinedef_t *hld = (hex_maplinedef_t *)mld;
-  mapsidedef_t *msd = (mapsidedef_t *)fc.CacheLumpNum(lumpnum + LUMP_SIDEDEFS, PU_CACHE);
+  doom_maplinedef_t *mld = comp.dlines = static_cast<doom_maplinedef_t*>(fc.CacheLumpNum(lumpnum + LUMP_LINEDEFS, PU_DAVE));
+  hex_maplinedef_t  *hld = comp.hlines;
   line_t *li = lines;
+
+  mapsidedef_t *msd = comp.sides = static_cast<mapsidedef_t*>(fc.CacheLumpNum(lumpnum + LUMP_SIDEDEFS, PU_DAVE));
   side_t *si;
 
   // do lines
@@ -1182,8 +1193,10 @@ int Map::Serialize(LArchive &a)
         }
     }
   a << (temp = MARK_END);
+  Z_Free(comp.dlines);
+  Z_Free(comp.sides);
   CONS_Printf("%d/%d sectors, %d/%d lines saved\n", statsec, numsectors, statline, numlines);
-
+  }
   //----------------------------------------------
   // polyobjs
   a.Marker(MARK_POLYOBJ);

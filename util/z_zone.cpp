@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,12 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Zone Memory Allocation. Neat.
+/// \brief Zone Memory Allocation. Neat. Obsolete.
 
 #include <vector>
 
@@ -32,6 +30,119 @@
 
 
 using namespace std;
+
+struct mem_extra_t
+{
+  int    size;
+  int    tag;
+  void **user;
+};
+
+static unsigned int mem_usage[PU_NUMTAGS];
+
+void Z_Init()
+{
+  CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
+  for (int i=0; i<PU_NUMTAGS; i++)
+    mem_usage[i] = 0;
+}
+
+
+unsigned Z_TagUsage(unsigned tagnum)
+{
+  if (tagnum >= PU_NUMTAGS)
+    return 0;
+
+  return mem_usage[tagnum];
+}
+
+
+int Z_GetTag(void *ptr)
+{
+  if (!ptr)
+    {
+      I_Error("Z_GetTag: NULL given!\n");
+      return -1;
+    }
+
+  mem_extra_t *p = reinterpret_cast<mem_extra_t*>(static_cast<byte*>(ptr) - sizeof(mem_extra_t));
+  return p->tag;
+}
+
+
+void *Z_Malloc(int size, int tag, void **user)
+{
+  mem_extra_t *p = static_cast<mem_extra_t*>(malloc(sizeof(mem_extra_t) + size));
+  p->size = size;
+  p->tag = tag;
+  p->user = user;
+
+  if (tag < PU_NUMTAGS)
+    mem_usage[tag] += size;
+
+  byte *ret = reinterpret_cast<byte*>(p) + sizeof(mem_extra_t);
+  if (user)
+    *user = ret;
+  return ret;
+}
+
+
+void Z_Free(void *ptr)
+{
+  if (!ptr)
+    {
+      I_Error("Z_Free: NULL given!\n");
+      return;
+    }
+
+  mem_extra_t *p = reinterpret_cast<mem_extra_t*>(static_cast<byte*>(ptr) - sizeof(mem_extra_t));
+
+  if (p->tag < PU_NUMTAGS)
+    mem_usage[p->tag] -= p->size;
+
+  if (p->user)
+    *p->user = NULL;
+  free(p);
+}
+
+
+char *Z_Strdup(const char *s, int tag, void **user)
+{
+  return strcpy(static_cast<char*>(Z_Malloc(strlen(s)+1, tag, user)), s);
+}
+
+
+void Command_Meminfo_f()
+{
+  CONS_Printf("\2Memory Info\n");
+
+  CONS_Printf("Unspecified:  %8d kB\n", Z_TagUsage(PU_STATIC) >> 10);
+  CONS_Printf("Sounds:       %8d kB\n", Z_TagUsage(PU_SOUND) >> 10);
+  CONS_Printf("Music:        %8d kB\n", Z_TagUsage(PU_MUSIC) >> 10);
+  CONS_Printf("Textures:     %8d kB\n", Z_TagUsage(PU_TEXTURE) >> 10);
+  CONS_Printf("Sprites:      %8d kB\n", Z_TagUsage(PU_SPRITE) >> 10);
+  CONS_Printf("3D models:    %8d kB\n", Z_TagUsage(PU_MODEL) >> 10);
+  CONS_Printf("\nMap data:     %8d kB\n", Z_TagUsage(PU_LEVEL) >> 10);
+  CONS_Printf("Thinkers:     %8d kB\n", Z_TagUsage(PU_LEVSPEC) >> 10);
+  CONS_Printf("Dave demands: %8d kB\n", Z_TagUsage(PU_DAVE) >> 10);
+  //CONS_Printf("OpenGL stuff: %8d kB\n", Z_TagUsage(PU_OPENGL_GEOMETRY) >> 10);
+
+  int total = 0;
+  for (int i=0; i<PU_NUMTAGS; i++)
+    total += mem_usage[i];
+  CONS_Printf("\nTotal:        %8d kB\n", total >> 10);
+
+  CONS_Printf("\2\nSystem Memory Info\n");
+  Uint32 freebytes, totalbytes;
+  freebytes = I_GetFreeMem(&totalbytes);
+  CONS_Printf("Total     physical memory: %8d kB\n", totalbytes>>10);
+  CONS_Printf("Available physical memory: %8d kB\n", freebytes>>10);
+}
+
+
+
+#if 0 // the rest is obsolete
+
 
 // Use malloc instead of zone memory to detect leaks. This way we always get a SIGSEGV.
 #define MEMDEBUG 1
@@ -621,7 +732,7 @@ void Z_FileDumpHeap(FILE *f)
 
   for (unsigned int i=0; i < zones.size(); i++)
     {
-      fprintf(f, "Z_FileDumpHeap info for zone %d/%d.\n", i, zones.size());
+      fprintf(f, "Z_FileDumpHeap info for zone %d/%ld.\n", i, zones.size());
       zones[i]->FileDumpHeap(f);
     }
 }
@@ -851,9 +962,4 @@ void Command_Meminfo_f()
   CONS_Printf("Available physical memory: %6d kB\n", freebytes>>10);
 }
 
-
-
-char *Z_Strdup(const char *s, int tag, void **user)
-{
-  return strcpy((char *)Z_Malloc(strlen(s)+1, tag, user), s);
-}
+#endif

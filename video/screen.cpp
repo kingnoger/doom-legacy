@@ -440,27 +440,26 @@ void SCR_SetDefaultMode()
 // value for a color index at any time.
 void Video::LoadPalette(const char *lumpname)
 {
-  int i, palsize;
-  byte* usegamma = gammatable[cv_usegamma.value];
-
-  i = fc.GetNumForName(lumpname);
-  palsize = fc.LumpLength(i)/3;
+  int i = fc.GetNumForName(lumpname);
+  int palsize = fc.LumpLength(i)/3;
   if (palette)
     Z_Free(palette);
+  palette = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*palsize, PU_STATIC, NULL));
 
-  palette = (RGBA_t *)Z_Malloc(sizeof(RGBA_t)*palsize, PU_STATIC, NULL);
-
-  byte* pal = (byte *)fc.CacheLumpNum(i, PU_CACHE);
-  for(i=0; i<palsize; i++)
+  RGB_t *pal = static_cast<RGB_t*>(fc.CacheLumpNum(i, PU_DAVE));
+  byte *usegamma = gammatable[cv_usegamma.value];
+  for (i=0; i<palsize; i++)
     {
-      palette[i].red   = usegamma[*pal++];
-      palette[i].green = usegamma[*pal++];
-      palette[i].blue  = usegamma[*pal++];
+      palette[i].red   = usegamma[pal[i].r];
+      palette[i].green = usegamma[pal[i].g];
+      palette[i].blue  = usegamma[pal[i].b];
       //        if ((i&0xff) == HWR_PATCHES_CHROMAKEY_COLORINDEX)
       //            palette[i].s.alpha = 0;
       //        else
       palette[i].alpha = 0xff;
     }
+
+  Z_Free(pal);
 }
 
 
