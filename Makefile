@@ -48,8 +48,7 @@ ifdef LINUX
  platform  = -DLINUX
  interface = -DSDL #-DNO_MIXER
 # linker
- LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -lz -L. -ltnl -ltomcrypt
-# LIBS	= -lSDLmain -lSDL -lpng -lz -L. -ltnl32 -ltomcrypt32
+ LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
 # CF += -m32
  LDFLAGS = -Wall #-m32
@@ -68,7 +67,7 @@ else # assume WIN32 is defined
  interface = -DSDL -DNO_MIXER
  CF += -mwindows
 # linker
- LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lz -lpng -L. -ltnl -ltomcrypt -lwsock32
+ LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lpng -jpeg -lz -L. -ltnl -ltomcrypt -lwsock32
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable
@@ -219,6 +218,7 @@ export audio_objects = \
 export video_objects = \
 	$(objdir)/md3.o \
 	$(objdir)/png.o \
+	$(objdir)/jpeg.o \
 	$(objdir)/screen.o \
 	$(objdir)/v_video.o \
 	$(objdir)/r_render.o \

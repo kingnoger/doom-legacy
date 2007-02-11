@@ -24,6 +24,7 @@
 #include "doomdef.h"
 #include "g_game.h"
 #include "g_actor.h"
+#include "g_map.h"
 #include "g_decorate.h"
 #include "dehacked.h" // flags are shared with BEX
 #include "sounds.h"
@@ -48,33 +49,19 @@ ActorInfo::~ActorInfo()
 }
 
 
-// copy constructor, tricky
-ActorInfo::ActorInfo(const ActorInfo& a)
-{
-  *this = a; // first use auto-generated assignment op
-  // then fix dynamically allocated stuff
-  int n = labels.size();
-  for (int i=0; i<n; i++)
-    if (labels[i].dyn_states && labels[i].label_states)
-      {
-	int size = labels[i].num_states * sizeof(state_t);
-	labels[i].label_states = static_cast<state_t*>(malloc(size));
-	memcpy(labels[i].label_states, a.labels[i].label_states, size);
-      }
-}
-
-
 // fill fields with default values
-ActorInfo::ActorInfo(const string& n)
+ActorInfo::ActorInfo(const string& n, int en)
 {
-  strncpy(classname, n.c_str(), 63);
+  strncpy(classname, n.c_str(), CLASSNAME_LEN);
+  classname[CLASSNAME_LEN] = '\0';
+
   mobjtype = MT_NONE;
 
   game = gm_doom2;
   obituary = string("%s got killed by an instance of ") + classname;
   spawn_always = false;
 
-  doomednum = -1;
+  doomednum = en;
   spawnhealth = 1000;
   reactiontime = 8;
   painchance = 0;
@@ -93,7 +80,7 @@ ActorInfo::ActorInfo(const string& n)
   deathsound  = sfx_None;
   activesound = sfx_None;
 
-  spawnstate   = NULL;
+  spawnstate   = &states[S_NULL];
   seestate     = NULL;
   meleestate   = NULL;
   missilestate = NULL;
@@ -113,9 +100,10 @@ ActorInfo::ActorInfo(const mobjinfo_t& m, int gm)
   mobjtype = mobjtype_t(&m - mobjinfo);
 
   if (m.classname)
-    strncpy(classname, m.classname, 63);
+    strncpy(classname, m.classname, CLASSNAME_LEN);
   else
     sprintf(classname, "class_%d", mobjtype);
+  classname[CLASSNAME_LEN] = '\0';
 
   game = gm;
   obituary = string("%s got killed by an instance of ") + classname;
@@ -174,9 +162,26 @@ ActorInfo::ActorInfo(const mobjinfo_t& m, int gm)
 }
 
 
+// copy constructor, tricky
+ActorInfo::ActorInfo(const ActorInfo& a)
+{
+  *this = a; // first use auto-generated assignment op
+  // then fix dynamically allocated stuff
+  int n = labels.size();
+  for (int i=0; i<n; i++)
+    if (labels[i].dyn_states && labels[i].label_states)
+      {
+	int size = labels[i].num_states * sizeof(state_t);
+	labels[i].label_states = static_cast<state_t*>(malloc(size));
+	memcpy(labels[i].label_states, a.labels[i].label_states, size);
+      }
+}
+
+
 void ActorInfo::SetName(const char *n)
 {
-  strncpy(classname, n, 63);
+  strncpy(classname, n, CLASSNAME_LEN);
+  classname[CLASSNAME_LEN] = '\0';
 }
 
 
@@ -452,6 +457,7 @@ bool ActorInfo::UpdateSequences()
   if (!spawnstate)
     {
       Error("Actor '%d' has no spawnstate!\n", classname);
+      spawnstate = &states[S_NULL];
       return false;
     }
 
@@ -518,21 +524,63 @@ void ActorInfo::PrintDECORATEclass()
 }
 
 
+
+
+
+class SkyboxCameraAI : public ActorInfo
+{
+public:
+  SkyboxCameraAI(const string& n, int en)
+    : ActorInfo(n, en)
+  {
+    spawn_always = true;
+    flags  |= MF_NOGRAVITY|MF_NOSECTOR|MF_NOBLOCKMAP;
+    flags2 |= MF2_DONTDRAW;
+  }
+
+  virtual Actor *Spawn(Map *m, mapthing_t *mt, bool initial = true)
+  {
+    Actor *a = ActorInfo::Spawn(m, mt, initial);
+    m->skybox_pov = a;
+    return a;
+  }
+};
+
+
+class TeamStartSecAI : public ActorInfo
+{
+public:
+  TeamStartSecAI(const string& n, int en) : ActorInfo(n, en) {}
+
+  virtual Actor *Spawn(Map *m, mapthing_t *mt, bool initial = true)
+  {
+    subsector_t *ss = m->R_PointInSubsector(mt->x, mt->y);
+    if (ss)
+      ss->sector->teamstartsec = mt->angle & 0xff; // high byte is free
+
+    return NULL; // not spawned
+  }
+};
+
+
+
 void ConvertMobjInfo()
 {
   int i;
-  /*
+  ActorInfo *ai;
+
+#if 1
   printf("Named DECORATE classes:\n");
   for (i=0; i<NUMMOBJTYPES; i++)
     {
       if (mobjinfo[i].classname)
 	printf(" +%s\n", mobjinfo[i].classname);
     }
-  */
+#endif
 
-  for (i = MT_LEGACY; i <= MT_LEGACY_END; i++)
+  for (i = MT_LEGACY; i <= MT_LEGACY_S_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_none);
+      ai = new ActorInfo(mobjinfo[i], gm_none);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, true);
 
@@ -542,23 +590,38 @@ void ConvertMobjInfo()
 
   for (i = MT_DOOM; i <= MT_DOOM_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_doom2);
+      ai = new ActorInfo(mobjinfo[i], gm_doom2);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode <= gm_doom2);
     }
 
   for (i = MT_HERETIC; i <= MT_HERETIC_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_heretic);
+      ai = new ActorInfo(mobjinfo[i], gm_heretic);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode == gm_heretic);
     }
 
   for (i = MT_HEXEN; i <= MT_HEXEN_END; i++)
     {
-      ActorInfo *ai = new ActorInfo(mobjinfo[i], gm_hexen);
+      ai = new ActorInfo(mobjinfo[i], gm_hexen);
       aid.Insert(ai);
       aid.InsertDoomEd(ai, game.mode == gm_hexen);
+    }
+
+
+  static ActorInfo *NativeAIs[3] =
+  {
+    new SkyboxCameraAI("SkyViewpoint", 9080),
+    new ActorInfo("SkyPicker", 9081),
+    new TeamStartSecAI("TeamStartSec", 5005), // TEST teamstartsec thing
+  };
+
+  for (i=0; i<3; i++)
+    {
+      ai = NativeAIs[i];
+      aid.Insert(ai);
+      aid.InsertDoomEd(ai, true);
     }
 
   CONS_Printf("Reading DECORATE definitions...\n");
@@ -567,8 +630,13 @@ void ConvertMobjInfo()
   for (int i = 0; i < n; i++)
     {
       // cumulative reading
-      Read_DECORATE(fc.FindNumForNameFile("DECORATE", i));
+      int lump = -1;
+      while ((lump = fc.FindNumForNameFile("DECORATE", i, lump+1)) >= 0)
+	Read_DECORATE(lump);
     }
 
   CONS_Printf(" %d Actor types defined.\n", aid.Size());
+
+  extern void MakePawnAIs();
+  MakePawnAIs();
 }

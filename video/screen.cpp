@@ -444,19 +444,19 @@ void Video::LoadPalette(const char *lumpname)
   int palsize = fc.LumpLength(i)/3;
   if (palette)
     Z_Free(palette);
-  palette = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*palsize, PU_STATIC, NULL));
+  palette = static_cast<RGB_t*>(Z_Malloc(sizeof(RGB_t)*palsize, PU_STATIC, NULL));
 
   RGB_t *pal = static_cast<RGB_t*>(fc.CacheLumpNum(i, PU_DAVE));
   byte *usegamma = gammatable[cv_usegamma.value];
   for (i=0; i<palsize; i++)
     {
-      palette[i].red   = usegamma[pal[i].r];
-      palette[i].green = usegamma[pal[i].g];
-      palette[i].blue  = usegamma[pal[i].b];
+      palette[i].r = usegamma[pal[i].r];
+      palette[i].g = usegamma[pal[i].g];
+      palette[i].b = usegamma[pal[i].b];
       //        if ((i&0xff) == HWR_PATCHES_CHROMAKEY_COLORINDEX)
       //            palette[i].s.alpha = 0;
       //        else
-      palette[i].alpha = 0xff;
+      //palette[i].alpha = 0xff;
     }
 
   Z_Free(pal);
@@ -504,7 +504,7 @@ void Video::SetPaletteLump(const char *pal)
 
 
 // returns the current palette
-RGBA_t *Video::GetCurrentPalette()
+RGB_t *Video::GetCurrentPalette()
 {
   if (!palette)
     return NULL;

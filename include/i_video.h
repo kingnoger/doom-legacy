@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,7 +45,7 @@ bool I_StartupGraphics();    //setup video mode
 void I_ShutdownGraphics();   //restore old video mode
 
 // Takes full 8 bit values.
-void I_SetPalette (RGBA_t* palette);
+void I_SetPalette(RGB_t* palette);
 
 #ifdef __MACOS__
 /* void macConfigureInput(); */

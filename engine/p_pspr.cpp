@@ -495,11 +495,13 @@ void A_Punch(PlayerPawn *p, pspdef_t *psp)
       S_StartAttackSound(p, sfx_punch);
       p->yaw = R_PointToAngle2(p->pos, targ->pos);
     }
-  else if (p->pinfo->nproj != MT_NONE)
+  /*
+  else if (p->info->nproj != MT_NONE)
     {
       // this way e.g. revenants can both hit and shoot...
-      p->SpawnPlayerMissile(p->pinfo->nproj);
+      p->SpawnPlayerMissile(p->info->nproj);
     }
+  */
 }
 
 

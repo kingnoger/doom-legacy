@@ -79,6 +79,7 @@ construction ::= str(A).
     if (!t)
     {
       t = new ActorInfo(A);
+      t->SetMobjType(aid.GetFreeMT());
       aid.Insert(t);
     }
   }

@@ -62,6 +62,8 @@ public:
 
   int max_health;
   int max_soul_health;
+
+  int initial_bullets;
 };
 
 extern dehacked_t DEH;

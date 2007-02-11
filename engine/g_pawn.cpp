@@ -60,11 +60,50 @@ int ArmorIncrement[NUMCLASSES][NUMARMOR] =
 
 int MaxArmor[NUMCLASSES] = { 200, 100, 90, 80, 5 };
 
+vector<PawnAI*> pawn_aid;
 
+
+PawnAI::PawnAI(const ActorInfo& base, pclass_t cls, weapontype_t bw)
+  : ActorInfo(base)
+{
+  pclass = cls;
+  bweapon = bw;
+  bammo = 50;
+
+  gruntsound     = sfx_grunt;
+  puzzfailsound  = sfx_grunt;
+  burndeathsound = sfx_hedat1;
+  /*
+    // TODO, proper sounds
+    SFX_PLAYER_FIGHTER_GRUNT
+    SFX_PLAYER_CLERIC_GRUNT
+    SFX_PLAYER_MAGE_GRUNT
+
+    SFX_PUZZLE_FAIL_FIGHTER
+    SFX_PUZZLE_FAIL_CLERIC
+    SFX_PUZZLE_FAIL_MAGE
+
+    SFX_PLAYER_FIGHTER_BURN_DEATH
+    SFX_PLAYER_CLERIC_BURN_DEATH
+    SFX_PLAYER_MAGE_BURN_DEATH
+    sfx_hedat1 // Burn sound
+  */
+
+
+}
+
+#warning TODO temp solution, we should use DECORATE instead.
 // lists of mobjtypes that can be played by humans!
 // TODO nproj should be replaced with a function pointer.
 // Somebody should then write these shooting functions...
-pawn_info_t pawndata[] = 
+struct pawn_info_t
+{
+  mobjtype_t   mt;
+  pclass_t     pclass;
+  weapontype_t bweapon; // beginning weapon (besides fist/staff)
+  int          bammo;   // ammo for bweapon
+  mobjtype_t   nproj;   // natural projectile, if any
+} pawndata[] = 
 {
   {MT_PLAYER,   PCLASS_NONE, wp_pistol,  50, MT_NONE}, // 0
   {MT_POSSESSED, PCLASS_NONE, wp_pistol,  20, MT_NONE},
@@ -113,6 +152,17 @@ pawn_info_t pawndata[] =
 };
 
 
+void MakePawnAIs()
+{
+  for (int i=0; i<=40; i++)
+    {
+      pawn_info_t *x = &pawndata[i];
+      ActorInfo *ai = aid[x->mt];
+      pawn_aid.push_back(new PawnAI(*ai, x->pclass, x->bweapon));
+    }
+}
+
+
 //=====================================
 //  Pawn and PlayerPawn classes
 //=====================================
@@ -126,10 +176,13 @@ TNL_IMPLEMENT_NETOBJECT(PlayerPawn);
 Pawn::Pawn()
   : Actor()
 {
-  color = 0;
+  info = NULL;
+
+  pclass = PCLASS_NONE;
   maxhealth = 0;
   speed = 0;
-  pinfo = NULL;
+  toughness = 0;
+
   attackphase = 0;
   attacker = NULL;
 }
@@ -160,7 +213,6 @@ PlayerPawn::PlayerPawn()
 // Pawn methods
 //=====================================
 
-void Pawn::Think() {}
 
 void Pawn::Detach()
 {
@@ -181,9 +233,6 @@ void Pawn::CheckPointers()
 }
 
 
-bool Pawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
-{ return false; }
-
 
 // creates a pawn based on a Doom/Heretic mobj
 Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
@@ -200,14 +249,16 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
 	type = 0;
     }
 
-  pinfo = &pawndata[type];
-  const ActorInfo *info = aid[pinfo->mt];
+  info = pawn_aid[type];
+  pclass = info->pclass;
+
+  const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
+  toughness = AutoArmorSave[pclass];
 
   mass   = info->mass;
   radius = info->radius;
   height = info->height;
   maxhealth = health = info->spawnhealth;
-
   speed  = info->speed;
 
   flags  = info->flags;
@@ -215,9 +266,9 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
   eflags = 0;
 
   reactiontime = info->reactiontime;
+  attackphase = 0;
   attacker = NULL;
 
-  color = 0;
   if (!info->modelname.empty())
     pres = new modelpres_t(info->modelname.c_str());
   else
@@ -229,14 +280,9 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
 // PlayerPawn methods
 //=====================================
 
-PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
+PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type)
   : Pawn(nx, ny, nz, type)
 {
-  // TODO fix this kludge when you feel like adding toughness to pawndata array...
-  const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
-  pclass = pcl; //pinfo->pclass;
-  toughness = AutoArmorSave[pclass];
-
   // note! here Map *mp is not yet set! This means you can't call functions such as
   // SetPosition that have something to do with a map.
   flags |= (MF_PLAYER | MF_PICKUP | MF_SHOOTABLE | MF_DROPOFF);
@@ -278,7 +324,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
   else
     weaponowned[wp_fist] = true;
 
-  weapontype_t w = pinfo->bweapon;
+  weapontype_t w = info->bweapon;
   readyweapon = pendingweapon = w;
 
   if (w != wp_none)
@@ -286,7 +332,7 @@ PlayerPawn::PlayerPawn(fixed_t nx, fixed_t ny, fixed_t nz, int type, int pcl)
       weaponowned[w] = true;
       ammotype_t a = wpnlev1info[w].ammo;
       if (a != am_noammo)
-	ammo[a] = pinfo->bammo;
+	ammo[a] = info->bammo;
     }
 
   // armor
@@ -797,31 +843,14 @@ void PlayerPawn::ZMovement()
 	  // and utter appropriate sound.
 	  player->deltaviewheight = oldvz >> 3;
 
-	  if (oldvz < -12 && !morphTics)
+	  if (oldvz < -12)
 	    {
 	      S_StartSound(this, sfx_land);
-	      /* TODO
-	       switch (pclass)
-		{
-		case PCLASS_FIGHTER:
-		  S_StartSound(mo, SFX_PLAYER_FIGHTER_GRUNT);
-		  break;
-		case PCLASS_CLERIC:
-		  S_StartSound(mo, SFX_PLAYER_CLERIC_GRUNT);
-		  break;
-		case PCLASS_MAGE:
-		  S_StartSound(mo, SFX_PLAYER_MAGE_GRUNT);
-		  break;
-		default:
-		  break;
-		}
-	      */
+	      S_StartSound(this, info->gruntsound);
 	    }
-	  else if ((subsector->sector->floortype < FLOOR_LIQUID) && 
-		   !morphTics)
+	  else if (subsector->sector->floortype < FLOOR_LIQUID)
 	    {
 	      S_StartSound(this, sfx_land);
-	      S_StartSound(this, sfx_grunt);
 	    }
 	}
     }

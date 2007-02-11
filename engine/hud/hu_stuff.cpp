@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -94,7 +94,7 @@ static char hu_tick;
 
 
 #define HU_CROSSHAIRS 3
-static Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 static Texture* PatchRankings;
 
 
@@ -455,8 +455,8 @@ void HUD::Draw(bool redrawsbar)
     HU_drawDeathmatchRankings();
 
   // draw the crosshair, not with chasecam
-#warning  FIXME: Hurdler, must be replaced by something compatible with the new renderer
-  if (!automap.active)
+  if (rendermode == render_soft &&
+      !automap.active)
     {
       // (cv_splitscreen.value) FIXME viewports!
       int y = viewwindowy + (viewheight>>1);
@@ -465,14 +465,7 @@ void HUD::Draw(bool redrawsbar)
 	  if (LocalPlayers[i].crosshair) // && !LocalPlayers[i].chasecam)
 	    {
 	      int c = LocalPlayers[i].crosshair & 3;
-	      if(rendermode == render_opengl)
-		{
-		  oglrenderer->DrawCrosshairs(crosshair[c-1]);
-		}
-	      else
-		{
-		  crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
-		}
+	      crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
 	    }
 	  y += viewheight;
 	}

@@ -1194,54 +1194,28 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source, int dtype)
   // So change this if corpse objects
   // are meant to be obstacles.
 
-  // TODO Player flame and ice death
-  // SetState(S_PLAY_FDTH1);
-  //S_StartSound(this, sfx_hedat1); // Burn sound
+  // TODO Player flame and ice death, use DECORATE
 
   if ((dtype & dt_TYPEMASK) == dt_heat)
     {
       // Player flame death
-      switch (pclass)
-	{
-	case PCLASS_FIGHTER:
-	  S_StartSound(this, SFX_PLAYER_FIGHTER_BURN_DEATH);
-	  //P_SetMobjState(this, S_PLAY_F_FDTH1);
-	  return;
-	case PCLASS_CLERIC:
-	  S_StartSound(this, SFX_PLAYER_CLERIC_BURN_DEATH);
-	  //P_SetMobjState(this, S_PLAY_C_FDTH1);
-	  return;
-	case PCLASS_MAGE:
-	  S_StartSound(this, SFX_PLAYER_MAGE_BURN_DEATH);
-	  //P_SetMobjState(this, S_PLAY_M_FDTH1);
-	  return;
-	default:
-	  break;
-	}
+      S_StartSound(this, info->burndeathsound);
+      //pres->SetAnim(presentation_t::Burn);
+      // SetState(S_PLAY_FDTH1);
+      // SetState(S_PLAY_F_FDTH1);
+      // SetState(S_PLAY_C_FDTH1);
+      // SetState(S_PLAY_M_FDTH1);
+      return;
     }
   else if ((dtype & dt_TYPEMASK) == dt_cold)
     {
       // Player ice death
       // TODO flags |= MF_ICECORPSE;
-      /*
-      switch (pclass)
-	{
-	case PCLASS_FIGHTER:
-	  P_SetMobjState(this, S_FPLAY_ICE);
-	  return;
-	case PCLASS_CLERIC:
-	  P_SetMobjState(this, S_CPLAY_ICE);
-	  return;
-	case PCLASS_MAGE:
-	  P_SetMobjState(this, S_MPLAY_ICE);
-	  return;
-	case PCLASS_PIG:
-	  P_SetMobjState(this, S_PIG_ICE);
-	  return;
-	default:
-	  break;
-	}
-      */
+      // pres->SetAnim(presentation_t::Ice);
+      // SetState(S_FPLAY_ICE);
+      // SetState(S_CPLAY_ICE);
+      // SetState(S_MPLAY_ICE);
+      // SetState(S_PIG_ICE);
     }
 }
 

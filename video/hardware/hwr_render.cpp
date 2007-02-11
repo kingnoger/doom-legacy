@@ -348,7 +348,7 @@ bool HWRend::Screenshot(char *lbmname)
   return true;
 }
 
-void HWRend::SetPalette(RGBA_t *palette)
+void HWRend::SetPalette(RGB_t *palette)
 {
   show_stackframe();
   //R.HWR_SetPalette(palette);

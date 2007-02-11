@@ -23,29 +23,28 @@ E    [Ee][+-]?{D}+
 WHITESP [ \t\v\r\f]
 
 
-%option noyywrap nounput batch outfile="decorate.lexer.c"
-%x comment
-%x str
+%option noyywrap nounput batch stack outfile="decorate.lexer.c"
+%x comment str
 %%
+
 
 %{ // C++ -style comments
 %}
-"//"     { BEGIN(comment); }
+"//"     { yy_push_state(comment); }
 <comment>{
   [^\n]*
-  \n     { col = 0; line++;  BEGIN(INITIAL); }
+  \n     { col = 0; line++; yy_pop_state(); }
 }
 
 %{
   // C string literal parsing
   // no octal escape sequences, no backslash-newline continuation :)
+  // col not updated inside a string literal
 %}
-\"      { temp.clear(); BEGIN(str); }
+\"      { temp.clear(); yy_push_state(str); }
 <str>{
-  \"      { // closing quote
-            BEGIN(INITIAL);
-	    // TODO col update
-            yylval.stype = Z_StrDup(temp.c_str()); return STR; }
+  \"    { // closing quote
+          yy_pop_state(); yylval.stype = Z_StrDup(temp.c_str()); return STR; }
 
   \n       { /* error, unterminated string */ }
   \\[0-9]+ { /* error, unknown escape seq */ }
@@ -71,13 +70,19 @@ model        { return MODEL; }
 
 health       { return HEALTH; }
 reactiontime { return REACTIONTIME; }
-painchance   { return PAINCHANCE; }
-speed        { return SPEED; }
-damage       { return DAMAGE; }
-
 radius       { return RADIUS; }
 height       { return HEIGHT; }
 mass         { return MASS; }
+"+"   { col++; return PLUS; }
+"-"   { col++; return MINUS; }
+monster      { return MONSTER; }
+projectile   { return PROJECTILE; }
+clearflags   { return CLEARFLAGS; }
+
+
+painchance   { return PAINCHANCE; }
+speed        { return SPEED; }
+damage       { return DAMAGE; }
 
 seesound     { return SEESOUND; }
 attacksound  { return ATTACKSOUND; }
@@ -85,14 +90,11 @@ painsound    { return PAINSOUND; }
 deathsound   { return DEATHSOUND; }
 activesound  { return ACTIVESOUND; }
 
-monster      { return MONSTER; }
-projectile   { return PROJECTILE; }
-clearflags   { return CLEARFLAGS; }
-
 states       { return STATES; }
 loop         { return LOOP; }
 stop         { return STOP; }
 goto         { return GOTO; }
+
 
 %{
 // octals? can be confusing...
@@ -116,8 +118,6 @@ goto         { return GOTO; }
 ":"  { col++; return COLON; }
 "{"  { col++; return L_BRACE; }
 "}"  { col++; return R_BRACE; }
-"+"  { col++; return PLUS; }
-"-"  { col++; return MINUS; }
 "\n" { col = 0; line++; return NL; }
 
 

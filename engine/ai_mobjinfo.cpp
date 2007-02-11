@@ -2393,7 +2393,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_HTELEPORTMAN
   {
-    14, 1000, 8, 0, 0, 20, 16, 100, 0,
+    -1, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP | MF_NOSECTOR,
     0,
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
@@ -6044,7 +6044,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_XTELEPORTMAN
   {
-    14, 1000, 8, 0, 0, 20, 16, 100, 0,
+    -1, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOSECTOR,
     0,
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,

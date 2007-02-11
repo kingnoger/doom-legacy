@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2006 by DooM Legacy Team.
+// Copyright (C) 2006-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -77,8 +77,6 @@ OGLRenderer::OGLRenderer()
 
   InitLumLut();
   MD3_InitNormLookup();
-
-  chx = chy = 0.0;
 
   CONS_Printf("New OpenGL renderer created.\n");
 }
@@ -505,27 +503,124 @@ void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
 
 void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 {
+  validcount++;
+
   // Set up the Map to be rendered. Needs to be done separately for each viewport, since the engine
   // can run several Maps at once.
   mp = player->mp;
 
-  x = player->pov->pos.x.Float();
-  y = player->pov->pos.y.Float();
-  z = player->pov->GetViewZ().Float();
+  if (mp->glvertexes == NULL)
+    I_Error("Trying to render level but level geometry is not set.\n");
 
-  curssec = player->pov->subsector;
 
+  if (!mp->skybox_pov)
+    // This simple sky rendering algorithm uses 2D mode. We should
+    // probably do something more fancy in the future.
+    DrawSimpleSky();
+  else
+    {
+      // render skybox
+      // TODO proper sequental rotation so we can do CTF_Face -style maps!
+      theta = Degrees(player->pov->yaw + mp->skybox_pov->yaw);
+      phi = Degrees(player->pov->pitch);
+
+      Render3DView(mp->skybox_pov);
+      glClear(GL_DEPTH_BUFFER_BIT);
+      validcount++; // prepare to render same sectors again if necessary
+    }
+
+  // render main view
   theta = Degrees(player->pov->yaw);
   phi = Degrees(player->pov->pitch);
+  Render3DView(player->pov);
 
-  Render3DView(player);
+  // render crosshair
+  if (player->pawn)
+    {
+      float aimsine = 0.0;
+      if(player->options.autoaim) {
+	player->pawn->AimLineAttack(player->pawn->yaw, 3000, aimsine);
+      } else {
+	aimsine = Sin(player->pawn->pitch).Float();
+      }
+      player->pawn->LineTrace(player->pawn->yaw, 30000, aimsine, false);
 
-  bool drawPsprites = (player->pov == player->pawn);
+      vec_t<fixed_t> target = trace.Point(trace.frac);
+
+      //if (!(player->mp->maptic & 0xF))
+      //  CONS_Printf("targ: %f, %f, %f, dist %f\n", target.x.Float(), target.y.Float(), target.z.Float(), trace.frac);
+
+      GLdouble model[16];
+      GLdouble proj[16];
+      GLint vp[4];
+      GLdouble chx, chy, chz; // Last one is a dummy.
+      glGetDoublev(GL_MODELVIEW_MATRIX, model);
+      glGetDoublev(GL_PROJECTION_MATRIX, proj);
+      glGetIntegerv(GL_VIEWPORT, vp);
+      gluProject(target.x.Float(), target.y.Float(), target.z.Float(),
+		 model, proj, vp,
+		 &chx, &chy, &chz);
+
+      // Draw a red dot there. Used for testing.
+      glDisable(GL_DEPTH_TEST);
+      glBindTexture(GL_TEXTURE_2D, 0);
+      glColor4f(1.0, 0.0, 0.0, 1.0);
+      glBegin(GL_POINTS);
+      glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
+      glEnd();
+
+      Setup2DMode();
+
+      extern Texture* crosshair[];
+      if (LocalPlayers[0].crosshair) // FIXME
+	{
+	  int c = LocalPlayers[0].crosshair & 3;
+	  Texture *t = crosshair[c-1];
+
+	  GLfloat top, left, bottom, right;
+
+	  left   = (chx - t->leftoffs) / viewportw;
+	  right  = left + t->worldwidth / viewportw;
+	  top    = (chy + t->topoffs) / viewporth;
+	  bottom = top - t->worldheight / viewporth;
+
+	  Draw2DGraphic(left, bottom, right, top, t->GLPrepare());
+	}
+    }
+  else
+    // Pretty soon we want to draw HUD graphics and stuff.
+    Setup2DMode();
 
   // Draw weapon sprites.
+  bool drawPsprites = (player->pov == player->pawn);
+
   if (drawPsprites && cv_psprites.value)
     DrawPSprites(player->pawn);
 }
+
+
+/// Set up state and draw a view of the level from the given viewpoint.
+/// It is usually the place where the player is currently located.
+void OGLRenderer::Render3DView(Actor *pov)
+{
+  Setup3DMode();
+  glMatrixMode(GL_PROJECTION);
+
+  x = pov->pos.x.Float();
+  y = pov->pos.y.Float();
+  z = pov->GetViewZ().Float();
+
+  // Set up camera to look through pov's eyes.
+  glRotatef(-90.0-phi,  1.0, 0.0, 0.0);
+  glRotatef(90.0-theta, 0.0, 0.0, 1.0);
+  glTranslatef(-x, -y, -z);
+
+  curssec = pov->subsector;
+
+  RenderBSPNode(mp->numnodes-1);
+}
+
+
 
 
 void OGLRenderer::DrawPSprites(PlayerPawn *p)
@@ -567,97 +662,8 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
       // local light
       */
       // TODO extralight, extra_colormap, planelights
-#warning FIXME NOW
       Draw2DGraphic_Doom(tx, ty, t, V_SCALE);
     }
-}
-
-
-/// Set up state and draw a view of the level from the given viewpoint.
-/// It is usually the place where the player is currently located.
-void OGLRenderer::Render3DView(PlayerInfo *player)
-{
-  // This simple sky rendering algorithm uses 2D mode. We should
-  // probably do something more fancy in the future.
-  DrawSimpleSky();
-
-  Setup3DMode();
-  glMatrixMode(GL_PROJECTION);
-
-  // Set up camera to look through player's eyes.
-  glRotatef(-phi,   1.0, 0.0, 0.0);
-  glRotatef(-90.0,  1.0, 0.0, 0.0);
-  glRotatef(90.0,   0.0, 0.0, 1.0);
-  glRotatef(-theta, 0.0, 0.0, 1.0);
-  glTranslatef(-x, -y, -z);
-
-  if(mp->glvertexes == NULL)
-    I_Error("Trying to render level but level geometry is not set.\n");
-
-  RenderBSPNode(mp->numnodes-1);
-
-  // Find out the point on the screen where the player is aiming.
-  if (player->pawn)
-    {
-      float aimsine = 0.0;
-      if(player->options.autoaim) {
-	player->pawn->AimLineAttack(player->pawn->yaw, 3000, aimsine);
-      } else {
-	aimsine = Sin(player->pawn->pitch).Float();
-      }
-      player->pawn->LineTrace(player->pawn->yaw, 30000, aimsine, false);
-
-      vec_t<fixed_t> target = trace.Point(trace.frac);
-
-      //if (!(player->mp->maptic & 0xF))
-      //  CONS_Printf("targ: %f, %f, %f, dist %f\n", target.x.Float(), target.y.Float(), target.z.Float(), trace.frac);
-
-      GLdouble model[16];
-      GLdouble proj[16];
-      GLint vp[4];
-      GLdouble chz; // This one is useless.
-      glGetDoublev(GL_MODELVIEW_MATRIX, model);
-      glGetDoublev(GL_PROJECTION_MATRIX, proj);
-      glGetIntegerv(GL_VIEWPORT, vp);
-      gluProject(target.x.Float(), target.y.Float(), target.z.Float(),
-		 model, proj, vp,
-		 &chx, &chy, &chz);
-
-      // Draw a red dot there. Used for testing.
-      glDisable(GL_DEPTH_TEST);
-      glBindTexture(GL_TEXTURE_2D, 0);
-      glColor4f(1.0, 0.0, 0.0, 1.0);
-      glBegin(GL_POINTS);
-      glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
-      glEnd();
-      glEnable(GL_DEPTH_TEST);
-      ClearDrawColor();
-    }
-  else
-    {
-      chx = chy = 0.0;
-    }
-
-  // Pretty soon we want to draw HUD graphics and stuff.
-  Setup2DMode();
-
-}
-
-// Draw the given crosshair graphics at the location determined
-// earlier.
-
-void OGLRenderer::DrawCrosshairs(Texture *t)
-{
-  //  printf("%f %f\n", chx, chy);
-  // chx, chy origin is at left bottom corner
-  GLfloat top, left, bottom, right;
-
-  left   = (chx - t->leftoffs) / viewportw;
-  right  = left + t->worldwidth / viewportw;
-  top    = (chy + t->topoffs) / viewporth;
-  bottom = top - t->worldheight / viewporth;
-
-  Draw2DGraphic(left, bottom, right, top, t->GLPrepare());
 }
 
 
@@ -981,10 +987,8 @@ void OGLRenderer::RenderActors(sector_t *sec)
 
   // Handle all things in sector.
   for (Actor *thing = sec->thinglist; thing; thing = thing->snext)
-    if (!(thing->flags2 & MF2_DONTDRAW))
+    if (!(thing->flags2 & MF2_DONTDRAW) && thing->pres)
       {
-	if (!thing->pres)
-	  continue;
         thing->pres->Draw(thing); // does both sprites and 3d models
       }
 }

@@ -20,6 +20,9 @@
 /// \file
 /// \brief ActorInfo class definition.
 
+#ifndef g_decorate_h
+#define g_decorate_h
+
 #include <string>
 #include <map>
 #include "dictionary.h"
@@ -27,33 +30,25 @@
 
 using namespace std;
 
-/// \brief DActor type definition. Defines a DECORATE class. Replaces mobjinfo_t.
+
+/// \brief Actor type definition. Each instant defines a DECORATE class.
 /// \ingroup g_thing
 /*!
+  Stores static data that is shared between all Actor instances of the same type.
+
   The only reason we still have mobjinfo_t is the mobjinfo table, which is converted into
   a pair of std::maps at program start. Later it could (along with the state table) be replaced
   using DECORATE files, but it is a huge effort and I have better things to do.
  */
 class ActorInfo
 {
-public:
-  /// State labels are retained indefinitely.
-  struct statelabel_t
+  enum
   {
-#define SL_LEN 16
-    char label[SL_LEN]; ///< Label string, NUL-terminated.
-    int  num_states;    ///< Number of states in the sequence.
-    state_t *label_states;  ///< DActor states owned by this label.
-    bool dyn_states;    ///< Are the states dynamically allocated?
-    char jumplabel[SL_LEN]; ///< Label to jump to after the sequence.
-    int  jumplabelnum;  ///< Number of label to jump to after the sequence, or -1 for S_NULL.
-    int  jumpoffset;    ///< Additional offset for the jump.
+    CLASSNAME_LEN = 63
   };
-
 protected:
-  mobjtype_t   mobjtype; ///< Old mobjtype_t number.
-  char    classname[64]; ///< Name of the DECORATE class, identical to the ZDoom equivalents if possible.
-  vector<statelabel_t> labels; ///< All known state labels for this class.
+  char classname[CLASSNAME_LEN+1]; ///< NUL-terminated name of the DECORATE class, identical to the ZDoom equivalents if possible.
+  mobjtype_t   mobjtype; ///< Old mobjtype_t number, TODO maybe remove it eventually and use only classname.
 
 public:
   int              game; ///< To which game does it belong? Uses the gamemode_t enum.
@@ -63,19 +58,20 @@ public:
   bool     spawn_always; ///< Do not care about mapthing "when-to-spawn" flags.
 
 public:
-  // Old mobjinfo_t members, so that this class is semantically identical to mobjinfo_t and can replace it.
+  // Actor part of mobjinfo_t members. ActorInfo must be semantically equivalent to mobjinfo_t so it can replace it.
   int     doomednum;     ///< Editor number for this thing type or -1 if none.
   int     spawnhealth;   ///< Initial health.
   int     reactiontime;  ///< How soon (in tics) will the thing do something again.
-  int     painchance;    ///< Probability of going into painstate when hurt.
-  float   speed;         ///< Max. movement speed.
   fixed_t radius;        ///< Thing radius.
   fixed_t height;        ///< Thing height.
   float   mass;          ///< Just take a guess.
-  Uint32  damage;        ///< Low 16 bits: damage for missiles, high 16 bits: see damage_t.
-
   Uint32  flags;         ///< mobjflag_t flags.
   Uint32  flags2;        ///< mobjflag2_t flags.
+
+  // DActor part of mobjinfo_t members.
+  int     painchance;    ///< Probability of going into painstate when hurt.  
+  float   speed;         ///< Max. movement speed.
+  Uint32  damage;        ///< Low 16 bits: damage for missiles, high 16 bits: see damage_t.
 
   int seesound;          ///< Played when thing sees an enemy.
   int attacksound;       ///< Played when attacking.
@@ -96,22 +92,46 @@ public:
   touchfunc_t touchf;    ///< If MF_TOUCHFUNC is set, this function is to be called when touching another Actor.
 
 public:
+  /// State labels are retained indefinitely.
+  struct statelabel_t
+  {
+#define SL_LEN 16
+    char label[SL_LEN]; ///< Label string, NUL-terminated.
+    int  num_states;    ///< Number of states in the sequence.
+    state_t *label_states;  ///< DActor states owned by this label.
+    bool dyn_states;    ///< Are the states dynamically allocated?
+    char jumplabel[SL_LEN]; ///< Label to jump to after the sequence.
+    int  jumplabelnum;  ///< Number of label to jump to after the sequence, or -1 for S_NULL.
+    int  jumpoffset;    ///< Additional offset for the jump.
+  };
+
+protected:
+  vector<statelabel_t> labels; ///< All known state labels for this DActor type.
+
+public:
   /// constructors
-  ActorInfo(const string& n);
-  ActorInfo(const mobjinfo_t& m, int game);
+  ActorInfo(const string& n, int en = -1);
+  /// copy constructor
   ActorInfo(const ActorInfo& a);
+  /// Convert mobjinfo_t into an ActorInfo
+  ActorInfo(const mobjinfo_t& m, int game);
 
   /// destructor
-  ~ActorInfo();
+  virtual ~ActorInfo();
 
-  /// Returns the DECORATE class name.
-  inline const char *GetName() const { return classname; }
-  /// Returns the mobjtype number.
-  inline mobjtype_t  GetMobjType() const { return mobjtype; }
+  /// Creates an Actor of the type described by this ActorInfo instance.
+  virtual class Actor *Spawn(class Map *m, struct mapthing_t *mt, bool initial = true);
+
   /// Sets the DECORATE class name.
   void SetName(const char *n);
+  /// Returns the DECORATE class name.
+  inline const char *GetName() const { return classname; }
+
   /// Sets the mobjtype.
   inline void SetMobjType(mobjtype_t t) { mobjtype = t; }
+  /// Returns the mobjtype number.
+  inline mobjtype_t GetMobjType() const { return mobjtype; }
+
   /// Sets or resets one or more Actor flags depending on the mnemonic 'flag'.
   void SetFlag(const char *flag, bool on);
 
@@ -133,12 +153,14 @@ public:
   /// Associates the labels with the various state_t pointers.
   bool UpdateSequences();
   //@}
+  
+  /// Prints the DECORATE definition for this class to stdout.
+  void PrintDECORATEclass();
 
   /// Utility for printing error messages during DECORATE parsing.
   static void Error(const char *format, ...);
-  /// Prints the DECORATE definition for this class to stdout.
-  void PrintDECORATEclass();
 };
+
 
 
 /// \brief Stores all known DActor type definitions.
@@ -188,10 +210,7 @@ public:
   ActorInfo *operator[](mobjtype_t mt)
   {
     mt_iter_t t = mt_map.find(mt);
-    if (t == mt_map.end())
-      return NULL;
-    else
-      return t->second;
+    return (t == mt_map.end()) ? NULL : t->second;
   }
 
   /// Inserts p into DoomEd map, possibly replacing original.
@@ -223,3 +242,5 @@ public:
 
 
 extern ActorInfoDictionary aid;
+
+#endif

@@ -25,7 +25,6 @@
 ///  The menu is scaled to the screen size. The scaling is always an
 ///  integer multiple of the original size, so that the graphics look good.
 
-
 #include <unistd.h>
 #include <fcntl.h>
 #include <ctype.h>
@@ -1063,8 +1062,6 @@ void M_Class(int choice)
     }
 
   LocalPlayers[0].ptype = choice + 37;
-  LocalPlayers[0].pclass = choice + PCLASS_FIGHTER;
-
   Menu::SetupNextMenu(&SkillDef);
 }
 
@@ -1852,7 +1849,7 @@ void Menu::DrawSetupPlayer()
   if (!multi_pres)
     {
       // if the presentation does not exist (or needed to be changed), create it anew
-      multi_pres = new spritepres_t(aid[pawndata[p.ptype].mt]);
+      multi_pres = new spritepres_t(pawn_aid[p.ptype]);
       multi_pres->color = cv_menu_playercolor.value;
       multi_pres->SetAnim(presentation_t::Run);
     }

@@ -262,11 +262,15 @@ void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
 }
 
 
-
-/// adds a DActor to a Map
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
-  DActor *p = new DActor(nx, ny, nz, aid[t]);
+  return SpawnDActor(nx, ny, nz, aid[t]);
+}
+
+/// Spawns and adds a DActor to a Map.
+DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
+{
+  DActor *p = new DActor(nx, ny, nz, ai);
   AddThinker(p);
 
   //p->TestLocation(nx, ny); // TODO sets tmfloorz, tmceilingz. Wrong, since for missiles owner is not yet set => collides
@@ -325,7 +329,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      p = new PlayerPawn(nx, ny, nz, pi->options.ptype, pi->options.pclass);
+      p = new PlayerPawn(nx, ny, nz, pi->options.ptype);
       p->player = pi;
       p->team = pi->team;
       pi->pawn  = p;
@@ -348,7 +352,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   // FIXME set skin sprite here
   // set color translations for player sprites
-  p->color = pi->options.color;
 
   p->yaw = ANG45 * (mthing->angle/45);
 
@@ -361,7 +364,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   p->spawnpoint = mthing;
   mthing->mobj = p;
-  mthing->type = short((maptic + 20) & 0xFFFF); // set the timer
+  mthing->tid = short((maptic + 20) & 0xFFFF); // set the timer
 
   // TODO spawn a teleport fog?
   /*
@@ -378,99 +381,6 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 }
 
 
-
-// The fields of the mapthing are already in host byte order.
-DActor *Map::SpawnMapThing(mapthing_t *mt, bool initial)
-{
-  mobjtype_t t = mobjtype_t(mt->type);
-  ActorInfo *ai = aid[t];
-
-  // don't spawn keycards in deathmatch
-  if (cv_deathmatch.value && ai->flags & MF_NOTDMATCH)
-    return NULL;
-
-  // don't spawn any monsters if -nomonsters
-  if (cv_nomonsters.value && (ai->flags & MF_MONSTER))
-    return NULL;
-
-  // spawn it
-  fixed_t nx = mt->x;
-  fixed_t ny = mt->y;
-  fixed_t nz;
-
-  if (ai->flags & MF_SPAWNCEILING)
-    nz = ONCEILINGZ;
-  else if (ai->flags & MF_SPAWNFLOAT)
-    nz = FLOATRANDZ;
-  else
-    {
-      //nz = mt->z << FRACBITS + R_PointInSubsector(nx, ny)->sector->floorheight;
-      nz = ONFLOORZ;
-    }
-
-  DActor *p = SpawnDActor(nx, ny, nz, t);
-  if (nz == ONFLOORZ)
-    p->pos.z += mt->z;
-  else if (nz == ONCEILINGZ)
-    p->pos.z -= mt->z;
-
-  p->spawnpoint = mt;
-  p->tid = mt->tid;
-  p->special = mt->special;
-  p->args[0] = mt->args[0];
-  p->args[1] = mt->args[1];
-  p->args[2] = mt->args[2];
-  p->args[3] = mt->args[3];
-  p->args[4] = mt->args[4];
-
-  if (p->tid)
-    InsertIntoTIDmap(p, p->tid);
-
-  // Seed random starting index for bobbing motion
-  if (p->flags2 & MF2_FLOATBOB)
-    {
-      p->reactiontime = P_Random();
-      p->special1 = mt->z; // floating height (integer, NOT fixed_t)
-    }
-
-  if (p->tics > 0)
-    p->tics = 1 + (P_Random () % p->tics);
-
-  if (initial)
-    {
-      if (p->flags & MF_COUNTKILL)
-	kills++;
-      if (p->flags & MF_COUNTITEM)
-	items++;
-    }
-  else
-    {
-      // spawn teleport fog (not in Heretic?)
-      Actor *fog = SpawnDActor(nx, ny, nz, MT_IFOG);
-      S_StartSound(fog, sfx_itemrespawn);
-    }
-
-  // yaw
-  if (p->flags & MF_MONSTER)
-    p->yaw = ANG45 * (mt->angle/45);
-  else
-    p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
-
-  if (mt->flags & MTF_AMBUSH)
-    p->flags |= MF_AMBUSH;
-
-  if (hexen_format && mt->flags & MTF_DORMANT)
-    {
-      p->flags2 |= MF2_DORMANT;
-      if (t == MT_ICEGUY)
-	p->SetState(S_ICEGUY_DORMANT, true);
-      p->tics = -1;
-    }
-
-  mt->mobj = p;
-
-  return p;
-}
 
 
 //
@@ -489,7 +399,7 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
   // has the spawn spot been used just recently?
   // (less stupid telefrag this way!)
   // damn short int! it's just 16 bits long! and signed too!
-  if ((maptic & 0xFFFF) < (unsigned short)mthing->type)
+  if ((maptic & 0xFFFF) < static_cast<unsigned short>(mthing->tid))
     return false;
 
   fixed_t x = mthing->x;
@@ -1064,6 +974,101 @@ void Map::BossDeath(const DActor *mo)
 }
 
 
+
+// The fields of the mapthing are already in host byte order.
+Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
+{
+  // don't spawn keycards in deathmatch
+  if (cv_deathmatch.value && (flags & MF_NOTDMATCH))
+    return NULL;
+
+  // don't spawn any monsters if -nomonsters
+  if (cv_nomonsters.value && (flags & MF_MONSTER))
+    return NULL;
+
+  // spawn it
+  fixed_t nx = mt->x;
+  fixed_t ny = mt->y;
+  fixed_t nz;
+
+  if (flags & MF_SPAWNCEILING)
+    nz = ONCEILINGZ;
+  else if (flags & MF_SPAWNFLOAT)
+    nz = FLOATRANDZ;
+  else
+    nz = ONFLOORZ;
+
+  DActor *p = m->SpawnDActor(nx, ny, nz, this);
+  mt->mobj = p;
+
+  if (nz == ONFLOORZ)
+    p->pos.z += mt->z;
+  else if (nz == ONCEILINGZ)
+    p->pos.z -= mt->z;
+
+  // yaw
+  if (p->flags & MF_MONSTER)
+    p->yaw = ANG45 * (mt->angle/45);
+  else
+    p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
+
+  p->spawnpoint = mt;
+  p->tid = mt->tid;
+  p->special = mt->special;
+  p->args[0] = mt->args[0];
+  p->args[1] = mt->args[1];
+  p->args[2] = mt->args[2];
+  p->args[3] = mt->args[3];
+  p->args[4] = mt->args[4];
+
+  // do the flags
+  if (mt->flags & MTF_AMBUSH)
+    p->flags |= MF_AMBUSH;
+
+  if (m->hexen_format && (mt->flags & MTF_DORMANT))
+    {
+      p->flags2 |= MF2_DORMANT;
+      if (GetMobjType() == MT_ICEGUY)
+	p->SetState(S_ICEGUY_DORMANT, true);
+      p->tics = -1;
+    }
+
+  // Seed random starting index for bobbing motion
+  if (p->flags2 & MF2_FLOATBOB)
+    {
+      p->reactiontime = P_Random();
+      p->special1 = mt->z; // floating height (integer, NOT fixed_t)
+    }
+
+  // randomize initial tics
+  if (p->tics > 0)
+    p->tics = 1 + (P_Random () % p->tics);
+
+
+  // the rest could be done within Map
+
+  if (p->tid)
+    m->InsertIntoTIDmap(p, p->tid);
+
+  if (initial)
+    {
+      if (p->flags & MF_COUNTKILL)
+	m->kills++;
+      if (p->flags & MF_COUNTITEM)
+	m->items++;
+    }
+  else
+    {
+      // spawn teleport fog (not in Heretic?)
+      Actor *fog = m->SpawnDActor(nx, ny, nz, MT_IFOG);
+      S_StartSound(fog, sfx_itemrespawn);
+    }
+
+  return p;
+}
+
+
+
 // try respawning items from the itemrespawnqueue
 void Map::RespawnSpecials()
 {
@@ -1077,7 +1082,7 @@ void Map::RespawnSpecials()
 
   mapthing_t *mthing = itemrespawnqueue.front();
   if (mthing != NULL)
-    SpawnMapThing(mthing, false);
+    mthing->ai->Spawn(this, mthing, false);
 
   // pull it from the queue anyway
   itemrespawnqueue.pop_front();
@@ -1097,7 +1102,7 @@ void Map::RespawnWeapons()
       if (!mthing)
 	continue;
 
-      switch (mthing->type)
+      switch (mthing->ai->GetMobjType())
 	{
 	case MT_SHAINSAW:
 	case MT_SHOTGUN:
@@ -1129,7 +1134,7 @@ void Map::RespawnWeapons()
 	case MT_MW_STAFF3:
 	  // it's a weapon, remove it from queue and respawn it!
 	  *i = NULL; // stays in sync with itemrespawntime...
-	  SpawnMapThing(mthing, false);
+	  mthing->ai->Spawn(this, mthing, false);
 	  break;
 
 	default:

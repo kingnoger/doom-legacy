@@ -87,14 +87,9 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
       int m = teams.size();
       ft = new fragsort_t[m];
 	  
-	  //FIXME: gcc-4 did not like this kind of dynamic allocation so I changed it to static. Later shall be fixed.
-#if __GNUC__ >= 4
-	  const int cm = m;
-      // int **teamfrags = new int[cm][cm];
-	  int teamfrags[cm][cm];
-#else
-      int **teamfrags = (int **)(new int[m][m]);
-#endif
+      //const int cm = m;
+      int teamfrags[m][m];
+
       for (i=0; i<m; i++)
 	{
 	  ft[i].num   = i; // team 0 are the unteamed
@@ -161,9 +156,7 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
 	default:
 	  break;
 	}
-#if __GNUC__ < 4
-      delete [] teamfrags;
-#endif
+
       ret = m;
     }
   else
@@ -172,9 +165,10 @@ int GameInfo::GetFrags(fragsort_t **fragtab, int type)
       ft = new fragsort_t[n]; 
       for (i = 0, u = Players.begin(); u != Players.end(); i++, u++)
 	{
-	  ft[i].num = (*u).second->number;
-	  ft[i].color = (*u).second->pawn->color;
-	  ft[i].name  = (*u).second->name.c_str();
+	  PlayerInfo *p = u->second;
+	  ft[i].num   = p->number;
+	  ft[i].color = p->options.color;
+	  ft[i].name  = p->name.c_str();
 	}
 
       // type is a magic number telling which fragtable we want

@@ -279,7 +279,7 @@ bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 
 
 
-bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGBA_t *pal)
+bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGB_t *pal)
 {
   int i, j;
 
@@ -314,9 +314,9 @@ bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGBA_t *pal)
   png_color palette[256];
   for (i=0; i<256; i++)
     {
-      palette[i].red   = pal[i].red;
-      palette[i].green = pal[i].green;
-      palette[i].blue  = pal[i].blue;
+      palette[i].red   = pal[i].r;
+      palette[i].green = pal[i].g;
+      palette[i].blue  = pal[i].b;
     }
   png_set_PLTE(png_p, info_p, palette, 256);
 

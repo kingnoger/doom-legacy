@@ -260,54 +260,6 @@ void A_ImpXDeath2(DActor *actor)
     }
 }
 
-
-// Returns true if the monster morphs back.
-#define TELEFOGHEIGHT (32)
-bool DActor::UpdateMorph(int tics)
-{
-  special1 -= tics;
-  if (special1 > 0)
-    return false;  
-
-  // undo the morph
-  mobjtype_t moType = mobjtype_t(special2);
- 
-  switch (moType)
-    {
-    case MT_WRAITHB:	   // These must remain morphed
-    case MT_SERPENT:
-    case MT_SERPENTLEADER:
-    case MT_MINOTAUR:
-      return false;
-    default:
-      break;
-    }
-
-  DActor *mo = mp->SpawnDActor(pos, moType);
-  
-  if (mo->TestLocation() == false)
-    { // Didn't fit
-      mo->Remove();
-      special1 = 5*TICRATE; // Next try in 5 seconds
-      return false;
-    }
-
-  // fits! remove the morph
-  SetState(S_FREETARGMOBJ);
-
-  DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_teleport);
-
-  mo->yaw = yaw;
-  mo->target = target;
-  //memcpy(mo->args, args, 5);
-  //P_InsertMobjIntoTIDList(mo, oldMonster.tid);
-  // mo->tid = tid;
-  // mo->special = special;
-
-  return true;
-}
-
 //----------------------------------------------------------------------------
 //
 // PROC A_ChicAttack

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2006 by DooM Legacy Team.
+// Copyright (C) 2006-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -59,9 +59,6 @@ private:
   double phi;     ///< Up-down rotation angle of camera in degrees.
   subsector_t *curssec; ///< The gl subsector the camera is in.
 
-  GLdouble chx;    ///< X-location of crosshairs on the screen.
-  GLdouble chy;    ///< Y-location of crosshairs on the screen.
-
   double fov;     ///< Field of view in degrees.
 
   bool consolemode; ///< Are we drawing 3D level graphics or 2D console
@@ -113,12 +110,11 @@ public:
   void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
   void ClearAutomap();
   void DrawAutomapLine(const fline_t *line, const int color);
-  void DrawCrosshairs(Texture *t);
 
   void Setup3DMode();
 
   void RenderPlayerView(PlayerInfo *player);
-  void Render3DView(PlayerInfo *player);
+  void Render3DView(Actor *pov);
   void DrawPSprites(class PlayerPawn *p);
   void DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip);
 

@@ -105,9 +105,9 @@ byte NearestColor(byte r, byte g, byte b)
 
   for (int i = 0; i < 256; i++)
     {
-      int dr = r - vid.palette[i].red;
-      int dg = g - vid.palette[i].green;
-      int db = b - vid.palette[i].blue;
+      int dr = r - vid.palette[i].r;
+      int dg = g - vid.palette[i].g;
+      int db = b - vid.palette[i].b;
       int distortion = dr*dr + dg*dg + db*db;
 
       if (distortion < bestdistortion)
@@ -773,6 +773,11 @@ Texture *texturecache_t::Load(const char *name)
     {
       // it's a PNG
       t = new PNGTexture(name, lump);
+    }
+  else if (data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff && data[3] == 0xe0)
+    {
+      // it's JPEG/JFIF
+      t = new JPEGTexture(name, lump);
     } // then try some common sizes for raw picture lumps
   else if (size == 320*200)
     {
@@ -1019,11 +1024,16 @@ bool texturecache_t::BuildLumpTexture(int lump, bool h_start, cachesource_t &sou
 
   Texture *t;
 
-  // some texture formats have magic numbers
+  // good texture formats have magic numbers
   if (!png_sig_cmp(data, 0, sizeof(data)))
     {
       // it's a PNG
       t = new PNGTexture(name, lump);
+    }
+  else if (data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff && data[3] == 0xe0)
+    {
+      // it's JPEG/JFIF
+      t = new JPEGTexture(name, lump);
     }
   else
     {
@@ -1690,9 +1700,9 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
     for (i = 0; i < 256; i++)
     {
       double r, g, b;
-      r = vid.palette[i].red;
-      g = vid.palette[i].green;
-      b = vid.palette[i].blue;
+      r = vid.palette[i].r;
+      g = vid.palette[i].g;
+      b = vid.palette[i].b;
       double cbrightness = sqrt((r*r) + (g*g) + (b*b));
 
       cmap[i][0] = (cbrightness * cmaskr) + (r * othermask);

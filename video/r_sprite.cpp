@@ -665,7 +665,7 @@ void presentation_t::operator delete(void *mem)
 
 void spritepres_t::Pack(BitStream *s)
 {
-  s->writeInt(info->GetMobjType(), 16); // ActorInfo defines the spritepres
+  s->writeInt(info->GetMobjType(), 16); // DActorInfo defines the spritepres
   s->writeInt(color, 8);
   PackAnim(s);
   // flags and lastupdate need not be sent
@@ -704,7 +704,7 @@ spritepres_t::spritepres_t(const ActorInfo *inf, int col)
   color = col;
   animseq = Idle;
 
-  if (info)
+  if (info && info->spawnstate)
     SetFrame(info->spawnstate); // corresponds to Idle animation
   else
     {
@@ -717,7 +717,8 @@ spritepres_t::spritepres_t(const ActorInfo *inf, int col)
 
 spritepres_t::~spritepres_t()
 {
-  spr->Release();
+  if (spr)
+    spr->Release();
 }
 
 
@@ -864,7 +865,27 @@ bool spritepres_t::Draw(const Actor *p)
       flip = sprframe->flip[0];
     }
 
-  // TODO MF_SHADOW, translucency, colormapping etc.
+  /*
+  float alpha;
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // normal
+
+  // TODO color translation maps, TFF_FULLBRIGHT
+  if (state->frame & TFF_TRANSMASK)
+    {
+      const float convert[] = {1, 0.5, 0.2, 0.1, 0.5, 1}; // hack, not perfect
+      int tr_table = (state->frame & TFF_TRANSMASK) >> TFF_TRANSSHIFT;
+      alpha = convert[tr_table];
+
+      if (tr_table == tr_transfir)
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive
+    }
+  else if (state->frame & TFF_SMOKESHADE)
+    alpha = 0.5;
+  else if (p->flags & (MF_SHADOW | MF_ALTSHADOW))
+    alpha = 0.25; // TODO ALTSHADOW reverses src and dest (transposes the transmap)
+  else
+    alpha = 1.0;
+  */
 
   // hardware renderer part
   oglrenderer->DrawSpriteItem(p->pos, t, flip);

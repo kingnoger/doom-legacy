@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -41,6 +39,7 @@
 #include "screen.h"
 #include "r_main.h"
 #include "r_data.h"
+#include "r_sprite.h"
 
 #include "m_random.h"
 
@@ -995,7 +994,7 @@ void HUD::UpdateWidgets()
 
   st_godmode = (st_pawn->cheats & CF_GODMODE);
 
-  st_pawncolor = st_pawn->color;
+  st_pawncolor = st_pawn->pres->color;
   st_health = st_pawn->health;
 
   if (game.mode == gm_heretic || game.mode == gm_hexen)

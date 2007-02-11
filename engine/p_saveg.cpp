@@ -528,7 +528,7 @@ int DActor::Marshal(LArchive &a)
 	      (yaw != unsigned(ANG45 * (spawnpoint->angle/45))) || pitch)
 	    diff |= MD_XY;
 
-	  if (type != spawnpoint->type)
+	  if (type != spawnpoint->ai->GetMobjType())
 	    diff |= MD_TYPE;
 	}
       else
@@ -641,7 +641,7 @@ int DActor::Marshal(LArchive &a)
 	  type = mobjtype_t(stemp);
 	}
       else
-	type = mobjtype_t(spawnpoint->type); // Map::LoadThings() should set it to the correct value
+	type = spawnpoint->ai->GetMobjType();
 
       info = aid[type];
       {
@@ -736,19 +736,15 @@ int DActor::Marshal(LArchive &a)
 int Pawn::Marshal(LArchive & a)
 {
   Actor::Marshal(a);
-
-  a << color;
-  a << maxhealth << speed;
-  a << attackphase;
+  a << pclass << maxhealth << speed << toughness << attackphase;
+  // NOTE info is handled at PlayerInfo::Unserialize()
 
   if (a.IsStoring())
     {
-      ST_PTR(pinfo, pawndata);
       Thinker::Serialize(attacker, a);
     }
   else
     {
-      RE_PTR(pinfo, pawndata);
       attacker = (Actor *)Thinker::Unserialize(a);
     }
 
@@ -763,7 +759,6 @@ int PlayerPawn::Marshal(LArchive &a)
   int i, temp;
 
   // player pointer doesn't need to be stored
-  a << pclass;
   a << attackdown << usedown << jumpdown;
   a << refire << morphTics << fly_zspeed;
 
@@ -772,7 +767,6 @@ int PlayerPawn::Marshal(LArchive &a)
   for (i=0; i<NUMAMMO; i++)
     a << ammo[i] << maxammo[i];
 
-  a << toughness;
   for (i=0; i<NUMARMOR; i++)
     a << armorfactor[i] << armorpoints[i];
 
@@ -1814,6 +1808,7 @@ int PlayerInfo::Unserialize(LArchive &a)
 	I_Error("LoadGame: corrupted PlayerInfo\n");
 
       pawn->player = this;
+      pawn->info = pawn_aid[options.ptype];
     }
 
   return 0;
@@ -1822,7 +1817,7 @@ int PlayerInfo::Unserialize(LArchive &a)
 
 int PlayerOptions::Serialize(LArchive &a)
 {
-  a << ptype << pclass << color << skin;
+  a << ptype << color << skin;
 
   a << autoaim << originalweaponswitch;
   for (int i=0; i<NUMWEAPONS; i++)
@@ -1834,7 +1829,7 @@ int PlayerOptions::Serialize(LArchive &a)
 
 int PlayerOptions::Unserialize(LArchive &a)
 {
-  a << ptype << pclass << color << skin;
+  a << ptype << color << skin;
 
   a << autoaim << originalweaponswitch;
   for (int i=0; i<NUMWEAPONS; i++)

@@ -399,7 +399,7 @@ bool WritePCXfile(const char*   filename,
 //
 void M_ScreenShot()
 {
-  bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGBA_t *pal);
+  bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGB_t *pal);
 
   char lbmname[MAX_CONFIGNAME];
 
@@ -426,7 +426,7 @@ void M_ScreenShot()
     }
   else
     {
-      RGBA_t *pal = vid.GetCurrentPalette();
+      RGB_t *pal = vid.GetCurrentPalette();
       FILE *fp = fopen(lbmname, "wb");
       if (fp)
 	{

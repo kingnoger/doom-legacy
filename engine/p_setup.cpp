@@ -69,6 +69,33 @@
 extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
 
 
+/// Editor numbers for certain special mapthings
+enum
+{
+  EN_START1       =    1, ///< normal playerstarts (1-4)
+  EN_START4       =    4,
+  EN_START5       = 4001, ///< extra playerstarts (5-32)
+  EN_START32      = 4028,
+  EN_DM_START     =   11, ///< deathmatch start
+
+  EN_DOOM_BRAINTARGET     =   87, ///< Boss Brain spawncube target spot
+
+  EN_HERETIC_BOSSSPOT     =   56, ///< D'Sparil teleport spot
+  EN_HERETIC_AMBIENTSND1  = 1200, ///< ambient sound spawners
+  EN_HERETIC_AMBIENTSND10 = 1209,
+  EN_HERETIC_MACESPOT     = 2002, ///< Firemace spot
+
+  EN_HEXEN_SNDSEQ1        = 1400, ///< sector sound sequences
+  EN_HEXEN_SNDSEQ10       = 1409,
+  EN_HEXEN_PO_ANCHOR      = 3000, ///< polyobjects
+  EN_HEXEN_PO_SPAWN       = 3001,
+  EN_HEXEN_PO_SPAWNCRUSH  = 3002,
+  EN_HEXEN_START5         = 9100, ///< extra playerstarts (5-8)
+  EN_HEXEN_START8         = 9103,
+};
+
+
+
 void Map::LoadVertexes(int lump)
 {
   // Determine number of lumps: total lump length / vertex record length.
@@ -313,7 +340,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
       //fclass = (MTF_FIGHTER | MTF_CLERIC | MTF_MAGE);
       fclass = 0;
       for (GameInfo::player_iter_t k = game.Players.begin(); k != game.Players.end(); k++)
-        switch (k->second->options.pclass)
+        switch (pawn_aid[k->second->options.ptype]->pclass)
           {
           case PCLASS_FIGHTER:
             fclass |= MTF_FIGHTER;
@@ -376,7 +403,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
       if (!ednum)
         continue; // Ignore type-0 things as NOPs
 
-      //======== first we spawn common THING types not affected by spawning flags ========
+      //======== first we spawn some common THING types not affected by spawning flags ========
 
       // deathmatch start positions
       if (ednum == EN_DM_START)
@@ -393,35 +420,17 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
             ednum += 5 - EN_START5;
 
           playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
-          // t->type is used as a timer
-          continue;
-        }
-
-      if (ednum == EN_TELEPORTMAN)
-        {
-          // a bit of a hack
-          // same with doom / heretic / hexen, but only one mobjtype_t
-          t->type = MT_TELEPORTMAN;
           continue;
         }
 
       // common polyobjects
       if (ednum == EN_PO_ANCHOR || ednum == EN_PO_SPAWN || ednum == EN_PO_SPAWNCRUSH)
 	{
-	  t->type = ednum; // internally we use the same numbers
+	  t->z = ednum; // internally we use the same numbers
 	  polyspawn.push_back(t);
 	  if (ednum != EN_PO_ANCHOR)
 	    NumPolyobjs++; // a polyobj spawn spot
 	  continue;
-	}
-
-      // find which type to spawn
-      ActorInfo *ai = aid.FindDoomEdNum(ednum);
-      if (ai && ai->spawn_always)
-	{
-	  // cameras etc.
-	  t->type = ai->GetMobjType();
-	  continue; // was found
 	}
 
       //======== then game-specific things not affected by spawning flags ========
@@ -431,13 +440,14 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           // DoomII braintarget list
           if (ednum == EN_DOOM_BRAINTARGET)
             braintargets.push_back(t);
+	  // NOTE: also spawned
         }
       else if (game.mode == gm_heretic) // Heretic
         {
           // Ambient sound sequences
           if (ednum >= EN_HERETIC_AMBIENTSND1 && ednum <= EN_HERETIC_AMBIENTSND10)
             {
-              AmbientSeqs.push_back(ednum - 1200);
+              AmbientSeqs.push_back(ednum - EN_HERETIC_AMBIENTSND1);
               continue;
             }
 
@@ -462,7 +472,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           // from other things  => polyspawn vector
           if (ednum == EN_HEXEN_PO_ANCHOR || ednum == EN_HEXEN_PO_SPAWN || ednum == EN_HEXEN_PO_SPAWNCRUSH)
             {
-              t->type = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR;
+              t->z = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR;
               polyspawn.push_back(t);
               if (ednum != EN_HEXEN_PO_ANCHOR)
                 NumPolyobjs++; // a polyobj spawn spot
@@ -485,30 +495,28 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
             }
         }
 
+      //======== then some more common things not affected by spawning flags ========
+
+      // find which type to spawn
+      ActorInfo *ai = aid.FindDoomEdNum(ednum);
+      if (ai && ai->spawn_always)
+	{
+	  // cameras etc.
+	  t->ai = ai;
+	  continue; // was found
+	}
+
       // NOTE: Spawning flags don't apply to playerstarts, teleport exits or polyobjs! Why, pray, is that?
       // wrong flags?
       if (heed_spawnflags)
 	if ((t->flags & ffail) || !(t->flags & fskill) || !(t->flags & fmode) || !(t->flags & fclass))
 	  continue;
 
-      //======== now common things affected by spawning flags ========
-
-      // TEST teamstartsec thing
-      if (ednum == EN_TEAMSTARTSEC)
-	{
-	  subsector_t *ss = R_PointInSubsector(t->x, t->y);
-	  if (ss)
-	    {
-	      ss->sector->teamstartsec = t->angle & 0xff; // high byte is free
-	    }
-	  continue;
-	}
-
-      //======== finally game-specific things affected by spawning flags ========
+      //======== finally things affected by spawning flags ========
 
       if (ai)
 	{
-	  t->type = ai->GetMobjType();
+	  t->ai = ai;
 	  continue; // was found
 	}
       else
@@ -1312,8 +1320,6 @@ void Map::LoadGLVis(const int lump) {
 
 // Setup sky texture to use for the level
 //
-// - in future, each level may use a different sky.
-// - No, in future we can use a skybox!
 // The sky texture to be used instead of the F_SKY1 dummy.
 void Map::SetupSky()
 {
@@ -1332,6 +1338,7 @@ void Map::SetupSky()
     info->sky2 = "SKY1";
 
   skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall);
+  skybox_pov = NULL;
 
   // scale up the old skies, if needed
   R_SetupSkyDraw(skytexture);
@@ -1465,8 +1472,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (spawnthings && game.server)
     {
       for (int i=0; i<nummapthings; i++)
-        if (mapthings[i].type)
-          SpawnMapThing(&mapthings[i]);
+        if (mapthings[i].ai)
+          mapthings[i].ai->Spawn(this, &mapthings[i], true);
 
       PlaceWeapons(); // Heretic mace
     }

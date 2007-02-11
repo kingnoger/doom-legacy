@@ -101,7 +101,7 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
   mthing->mobj = d;
 
   // set the timer
-  mthing->type = short((m->maptic + 20) & 0xFFFF);
+  mthing->tid = short((m->maptic + 20) & 0xFFFF);
 }
 
 

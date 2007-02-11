@@ -1864,23 +1864,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
 	  line_opening_t *open = line_opening_t::Get(line, PuzzleItemUser);
 	  if (open->Range() <= 0)
 	    {
-	      int sound;
-	      switch (PuzzleItemUser->pclass)
-		{
-		case PCLASS_FIGHTER:
-		  sound = SFX_PUZZLE_FAIL_FIGHTER;
-		  break;
-		case PCLASS_CLERIC:
-		  sound = SFX_PUZZLE_FAIL_CLERIC;
-		  break;
-		case PCLASS_MAGE:
-		  sound = SFX_PUZZLE_FAIL_MAGE;
-		  break;
-		default:
-		  sound = SFX_PUZZLE_FAIL_FIGHTER;
-		  break;
-		}
-	      S_StartSound(PuzzleItemUser, sound);
+	      S_StartSound(PuzzleItemUser, PuzzleItemUser->info->puzzfailsound);
 	      return false; // can't use through a wall
 	    }
 	  return true; // Continue searching

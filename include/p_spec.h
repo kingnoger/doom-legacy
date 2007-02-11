@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -57,36 +57,12 @@ enum linedefspecial_e
   LEGACY_FS             = 128,
 };
 
-/// Editor numbers for certain special mapthings
+/// Editor numbers for certain special mapthings (more are defined in p_setup.cpp)
 enum mapthingspecial_e
 {
-  EN_START1      =    1, ///< normal playerstarts (1-4)
-  EN_START4      =    4,
-  EN_START5      = 4001, ///< extra playerstarts (5-32)
-  EN_START32     = 4028,
-  EN_DM_START    =   11, ///< deathmatch start
-  EN_TELEPORTMAN =   14, ///< teleport destination
-
-  EN_TEAMSTARTSEC    = 5005, ///< TEST FIXME new thing, number will change
-
   EN_PO_ANCHOR       = 9300, ///< ZDoom compatible polyobjects
   EN_PO_SPAWN        = 9301,
   EN_PO_SPAWNCRUSH   = 9302,
-
-  EN_DOOM_BRAINTARGET     =   87, ///< Boss Brain spawncube target spot
-
-  EN_HERETIC_BOSSSPOT     =   56, ///< D'Sparil teleport spot
-  EN_HERETIC_AMBIENTSND1  = 1200, ///< ambient sound spawners
-  EN_HERETIC_AMBIENTSND10 = 1209,
-  EN_HERETIC_MACESPOT     = 2002, ///< Firemace spot
-
-  EN_HEXEN_SNDSEQ1        = 1400, ///< sector sound sequences
-  EN_HEXEN_SNDSEQ10       = 1409,
-  EN_HEXEN_PO_ANCHOR      = 3000, ///< polyobjects
-  EN_HEXEN_PO_SPAWN       = 3001,
-  EN_HEXEN_PO_SPAWNCRUSH  = 3002,
-  EN_HEXEN_START5         = 9100, ///< extra playerstarts (5-8)
-  EN_HEXEN_START8         = 9103,
 };
 
 /// ingame sector special effects

@@ -204,13 +204,13 @@ void I_ReadScreen(byte* scr)
 //
 // I_SetPalette
 //
-void I_SetPalette(RGBA_t* palette)
+void I_SetPalette(RGB_t* palette)
 {
   for (int i=0; i<256; i++)
     {
-      localPalette[i].r = palette[i].red;
-      localPalette[i].g = palette[i].green;
-      localPalette[i].b = palette[i].blue;
+      localPalette[i].r = palette[i].r;
+      localPalette[i].g = palette[i].g;
+      localPalette[i].b = palette[i].b;
     }
 
   SDL_SetColors(vidSurface, localPalette, 0, 256);

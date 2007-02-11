@@ -191,7 +191,6 @@ public:
 
 
 
-
 /// \brief Class for PNG Textures
 class PNGTexture : public LumpTexture
 {
@@ -201,6 +200,20 @@ protected:
 
 public:
   PNGTexture(const char *name, int lump);
+  virtual byte *GetData();
+};
+
+
+
+/// \brief Class for JPEG/JFIF Textures
+class JPEGTexture : public LumpTexture
+{
+protected:
+  bool ReadData(bool read_image, bool col_major);
+  virtual void GLGetData();
+
+public:
+  JPEGTexture(const char *name, int lump);
   virtual byte *GetData();
 };
 

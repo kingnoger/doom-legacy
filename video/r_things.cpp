@@ -662,7 +662,7 @@ void Rend::R_AddSprites(sector_t* sec, int lightlevel)
 
   // Handle all things in sector.
   for (Actor *thing = sec->thinglist; thing; thing = thing->snext)
-    if (!(thing->flags2 & MF2_DONTDRAW))
+    if (!(thing->flags2 & MF2_DONTDRAW) && thing->pres)
       {
         // transform the origin point
         fixed_t  tr_x = thing->pos.x - viewx;

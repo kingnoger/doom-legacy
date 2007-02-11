@@ -1,8 +1,9 @@
 // Emacs style mode select   -*- C++ -*- 
 //-----------------------------------------------------------------------------
+//
 //  $Id$
 //
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -97,7 +98,6 @@ PlayerOptions::PlayerOptions(const string &n)
   name = n;
 
   ptype = -1;
-  pclass = PCLASS_NONE;
   color = 0;
   skin  = 0; // "marine"?
 
@@ -115,7 +115,6 @@ void PlayerOptions::Write(BitStream *stream)
 {
   stream->writeString(name.c_str());
   stream->write(ptype);
-  stream->write(pclass);
   stream->write(color);
   stream->write(skin);
 
@@ -137,7 +136,6 @@ void PlayerOptions::Read(BitStream *stream)
   name = temp;
 
   stream->read(&ptype);
-  stream->read(&pclass);
   stream->read(&color);
   stream->read(&skin);
 
@@ -653,9 +651,8 @@ void PlayerInfo::LoadPawn()
   pawn->player = this;
 
   // and a new presentation
-  const ActorInfo *info = aid[pawn->pinfo->mt];
-  if (!info->modelname.empty())
-    pawn->pres = new modelpres_t(info->modelname.c_str());
+  if (!pawn->info->modelname.empty())
+    pawn->pres = new modelpres_t(pawn->info->modelname.c_str());
   else
-    pawn->pres = new spritepres_t(info, 0);
+    pawn->pres = new spritepres_t(pawn->info, 0);
 }

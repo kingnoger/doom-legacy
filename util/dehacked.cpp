@@ -596,6 +596,7 @@ dehacked_t::dehacked_t()
   // TODO these are not yet used...
   max_health = 200;
   max_soul_health = 200;
+  initial_bullets = 50;
 }
 
 
@@ -1221,7 +1222,7 @@ void dehacked_t::Read_Misc()
       if (!strcasecmp(word1,"Initial"))
 	{
 	  if (!strcasecmp(word2,"Health"))       mobjinfo[MT_PLAYER].spawnhealth = value;
-	  else if (!strcasecmp(word2,"Bullets")) pawndata[0].bammo = value;
+	  else if (!strcasecmp(word2,"Bullets")) initial_bullets = value;
 	}
       else if (!strcasecmp(word1,"Max"))
 	{

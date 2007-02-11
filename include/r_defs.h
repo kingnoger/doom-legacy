@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -549,12 +549,12 @@ struct mapthing_t
   short tid;      ///< Thing ID (from Hexen)
   short x, y, z;  ///< coordinates
   short angle;    ///< orientation
-  short type;     ///< DoomEd number
   short flags;    ///< see mapthing_flags_e
   byte special;   ///< thing action
   byte args[5];   ///< arguments for the thing action
 
-  class Actor *mobj;
+  class ActorInfo *ai; ///< replaces type
+  class Actor *mobj;   ///< last Actor spawned from this mapthing_t
 };
 
 

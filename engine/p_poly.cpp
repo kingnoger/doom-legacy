@@ -1165,6 +1165,8 @@ vector<mapthing_t *> polyspawn; // temporary list of PO mapthings used during ma
 
 void Map::InitPolyobjs()
 {
+  // NOTE: mapthing_t::z stores the polyobj thing type
+
   int i;
   mapthing_t *mt;
 
@@ -1182,11 +1184,11 @@ void Map::InitPolyobjs()
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
-      if (mt->type == EN_PO_SPAWN || mt->type == EN_PO_SPAWNCRUSH)
+      if (mt->z == EN_PO_SPAWN || mt->z == EN_PO_SPAWNCRUSH)
 	{ // Polyobj StartSpot Pt.
 	  polyobjs[index].spawnspot.x = mt->x;
 	  polyobjs[index].spawnspot.y = mt->y;
-	  if (!SpawnPolyobj(&polyobjs[index], mt->angle, mt->type == EN_PO_SPAWNCRUSH))
+	  if (!SpawnPolyobj(&polyobjs[index], mt->angle, mt->z == EN_PO_SPAWNCRUSH))
 	    I_Error("InitPolyobjs:  No lines found for PO %d!\n", mt->angle);
 	  //CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
@@ -1197,7 +1199,7 @@ void Map::InitPolyobjs()
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
-      if (mt->type == EN_PO_ANCHOR)
+      if (mt->z == EN_PO_ANCHOR)
 	{
 	  int tag = mt->angle;
 	  polyobj_t *po = GetPolyobj(tag);
@@ -1207,8 +1209,6 @@ void Map::InitPolyobjs()
 	  else
 	    CONS_Printf("InitPolyobjs:  Unused anchor point (tag: %d)\n", tag);
 	}
-
-      mt->type = 0; // so that it won't interfere with the spawning of the real THINGS
     }
 
   // check for a startspot without an anchor point

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -111,6 +111,7 @@ public:
   bool R_SetFadetable(const char *name);
 
   class Texture *skytexture; ///< current sky texture
+  class Actor   *skybox_pov; ///< default skybox viewpoint
   //@}
 
   /// \name Blockmap
@@ -273,10 +274,10 @@ public:
   void RespawnWeapons();
 
   void SpawnActor(Actor *p);
+  DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const class ActorInfo *ai);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   inline DActor *SpawnDActor(const vec_t<fixed_t>& r, mobjtype_t t) { return SpawnDActor(r.x, r.y, r.z, t); }
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
-  DActor *SpawnMapThing(mapthing_t *mthing, bool initial = true);
   DActor *SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
 		      mobjtype_t chunk = MT_NONE, bool randtics = true); 
   DActor *SpawnBlood(const vec_t<fixed_t>& r, int damage);

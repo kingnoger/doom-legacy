@@ -414,29 +414,11 @@ void PlayerPawn::LandedOnThing(Actor *onmobj)
       return;
     }
 
-  if (morphTics)
-    return;
-
-  if (vel.z < -8)
+  if (vel.z < -8 && mass > 60)
     S_StartSound(this, sfx_land);
 
   if (vel.z < -12)
-    {
-      switch (pclass)
-	{
-	case PCLASS_FIGHTER:
-	  S_StartSound(this, SFX_PLAYER_FIGHTER_GRUNT);
-	  break;
-	case PCLASS_CLERIC:
-	  S_StartSound(this, SFX_PLAYER_CLERIC_GRUNT);
-	  break;
-	case PCLASS_MAGE:
-	  S_StartSound(this, SFX_PLAYER_MAGE_GRUNT);
-	  break;
-	default:
-	  break;
-	}
-    }
+    S_StartSound(this, info->gruntsound);
 }
 
 
@@ -1160,15 +1142,6 @@ DActor::DActor()
 }
 
 
-// trick constructor
-/*
-DActor::DActor(mobjtype_t t)
-  : Actor()
-{
-  type = t;
-}
-*/
-
 // normal constructor
 DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
   : Actor(nx, ny, nz)
@@ -1201,8 +1174,13 @@ DActor::DActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
 
   // do not set the state with SetState,
   // because action routines can not be called yet
-  state = info->spawnstate;
-  tics = state->tics;
+  if (info->spawnstate)
+    {
+      state = info->spawnstate;
+      tics = state->tics;
+    }
+  else
+    I_Error("Actor class %s is missing a spawnstate!\n", info->GetName());
 
   if (!info->modelname.empty())
     pres = new modelpres_t(info->modelname.c_str());

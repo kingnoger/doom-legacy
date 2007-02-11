@@ -62,12 +62,13 @@ bool DActor::Morph(mobjtype_t form)
 {
   if (!(flags & MF_MONSTER))
     return false;
+
+  // TODO replace MF2_BOSS and the switch here with NOMORPH flag
   if (flags2 & MF2_BOSS)
     return false;
 
   switch (type)
     {
-    case MT_POD:
     case MT_CHICKEN:
     case MT_HHEAD:
     case MT_PIG:
@@ -80,33 +81,113 @@ bool DActor::Morph(mobjtype_t form)
       break;
     }
 
-  // remove the old monster
-  int oldtid = tid;
-  Remove(); // zeroes tid
+  const ActorInfo *ai = aid[form];
+  if (!ai)
+    {
+      I_Error("Corrupted morph target!\n");
+      return false;
+    }
 
+  // see if we have room to morph
+  radius = ai->radius;
+  height = ai->height;
+
+  if (!TestLocation())
+    { // Didn't fit
+      radius = info->radius;
+      height = info->height;
+      return false;
+    }
+ 
+  // NOTE: the morphing used to work by Removing the old DActor and
+  // Spawning a new one, but this is simpler and more logical.
+  // Now we can keep all pointers pointing to this DActor.
+  // Also TID, team, targets etc. are retained automatically.
+
+  // spawn some FX
   DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z + TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
-  // create the morphed monster
-  DActor *monster = mp->SpawnDActor(pos, form);
-  monster->special2 = type;
-  monster->special1 = MORPHTICS + P_Random();
-  monster->flags |= (flags & MF_SHADOW);
-  monster->owner = owner;
-  monster->target = target;
-  monster->yaw = yaw;
+  // store old type (NOTE: morphed form must not change these fields!)
+  special2 = type;
+  special1 = MORPHTICS + P_Random();
 
-  monster->tid = oldtid;
-  mp->InsertIntoTIDmap(monster, oldtid);
+  // get info on new type
+  info = ai;
+  type = ai->GetMobjType();
 
-  monster->special = special;
-  memcpy(monster->args, args, 5);
+  // get new properties (radius and height are OK)
+  mass   = info->mass;
+  health = info->spawnhealth;
+
+  flags  = info->flags | (flags & MF_SHADOW); // keep invisibility
+  flags2 = info->flags2;
+
+  if (game.skill != sk_nightmare)
+    reactiontime = info->reactiontime;
+
+  movedir = movecount = threshold = 0;
+  lastlook = -1;
+  special3 = 0;
+
+  // new state
+  if (info->spawnstate)
+    {
+      state = info->spawnstate;
+      tics = state->tics;
+    }
+  else
+    {
+      state = NULL;
+      tics = -1;
+    }
+
+  // new presentation
+  if (pres)
+    delete pres;
+
+  if (!info->modelname.empty())
+    pres = new modelpres_t(info->modelname.c_str());
+  else
+    pres = new spritepres_t(info);
 
   return true;
 }
 
 
-bool Pawn::Morph(mobjtype_t form) { return false; }
+// Returns true if the monster morphs back.
+bool DActor::UpdateMorph(int tics)
+{
+  special1 -= tics;
+  if (special1 > 0)
+    return false;  
+
+  // undo the morph
+  mobjtype_t orig = mobjtype_t(special2);
+ 
+  switch (orig)
+    {
+    case MT_WRAITHB:	   // These must remain morphed
+    case MT_SERPENT:
+    case MT_SERPENTLEADER:
+    case MT_XMINOTAUR:
+      return false;
+    default:
+      break;
+    }
+
+  // FIXME remove nomorph flag!
+  if (!Morph(orig))
+    {
+      special1 = 5*TICRATE; // Next try in 5 seconds
+      return false;
+    }
+
+  // clear morph-related parameters
+  special1 = special2 = 0;
+  return true;
+}
+
 
 
 bool PlayerPawn::Morph(mobjtype_t form)
@@ -121,20 +202,34 @@ bool PlayerPawn::Morph(mobjtype_t form)
   if (powers[pw_invulnerability])
     return false; // Immune when invulnerable
 
+  const ActorInfo *ai = aid[form];
+  if (!ai)
+    {
+      I_Error("Corrupted morph target!\n");
+      return false;
+    }
+
+  // see if we have room to morph
+  radius = ai->radius;
+  height = ai->height;
+
+  if (!TestLocation())
+    { // Didn't fit
+      radius = info->radius;
+      height = info->height;
+      return false;
+    }
+
+  // spawn FX
   DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z+TELEFOGHEIGHT, MT_TFOG);
   S_StartSound(fog, sfx_teleport);
 
-  const ActorInfo *i = aid[form];
-
-  //MT_PIGPLAYER, MT_CHICPLAYER
   morphTics = MORPHTICS;
 
-  //const int MAXMORPHHEALTH = 30;
-  health = maxhealth = i->spawnhealth;
-  speed  = i->speed;
-  radius = i->radius;
-  height = i->height;
-  mass   = i->mass;
+  mass   = ai->mass;
+  health = maxhealth = ai->spawnhealth;
+  speed  = ai->speed;
+  pclass = PCLASS_PIG;
 
   attackphase = readyweapon; // store current weapon
   armorfactor[0] = armorpoints[0] = 0;
@@ -142,7 +237,6 @@ bool PlayerPawn::Morph(mobjtype_t form)
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;
 
-  pclass = PCLASS_PIG;
   ActivateMorphWeapon();
   return true;
 }
@@ -154,37 +248,35 @@ bool PlayerPawn::UndoMorph()
   fixed_t r = radius;
   fixed_t h = height;
 
-  const ActorInfo *i = aid[pinfo->mt];
+  radius = info->radius;
+  height = info->height;
 
-  radius = i->radius;
-  height = i->height;
-
-  if (TestLocation() == false)
+  if (!TestLocation())
     {
-      // Didn't fit, continue morph
-      morphTics = 2*35;
+      // Didn't fit, continue morph for two more seconds
+      morphTics = 2*TICRATE;
       radius = r;
       height = h;
-      // some sound to indicate unsuccesful morph?
+      // TODO some sound to indicate unsuccesful morph?
       return false;
     }
 
+  // spawn FX
+  DActor *fog = mp->SpawnDActor(pos.x+20*Cos(yaw), pos.y+20*Sin(yaw), pos.z+TELEFOGHEIGHT, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+
   morphTics = 0;
 
-  health = maxhealth = i->spawnhealth;
-  speed  = i->speed;
-  mass = i->mass;
+  mass   = info->mass;
+  health = maxhealth = info->spawnhealth;
+  speed  = info->speed;
+  pclass = info->pclass;
 
   reactiontime = 18;
   powers[pw_weaponlevel2] = 0;
   weaponinfo = wpnlev1info;
 
-  int ang = yaw >> ANGLETOFINESHIFT;
-  DActor *fog = mp->SpawnDActor(pos.x+20*finecosine[ang], pos.y+20*finesine[ang],
-				pos.z+TELEFOGHEIGHT, MT_TFOG);
-  S_StartSound(fog, sfx_teleport);
   PostMorphWeapon(weapontype_t(attackphase));
-
   return true;
 }
 
@@ -371,7 +463,7 @@ static bool IT_HealRadius(Thinker *th)
   if (!th->IsOf(PlayerPawn::_type))
     return true;
 	
-  PlayerPawn *t = (PlayerPawn *)th;
+  PlayerPawn *t = reinterpret_cast<PlayerPawn*>(th);
   if (t->health <= 0)
     return true;
 		
@@ -381,7 +473,6 @@ static bool IT_HealRadius(Thinker *th)
   if (dist > HEAL_RADIUS_DIST)
     return true;
 
-  int amount;
   switch (t->pclass)
     {
     case PCLASS_FIGHTER: // armor boost
@@ -399,15 +490,17 @@ static bool IT_HealRadius(Thinker *th)
 	  given = true;
 	  S_StartSound(t, SFX_MYSTICINCANT);
 	}
-	  break;
+      break;
 
     case PCLASS_MAGE: // mana boost
-      amount = 50 + (P_Random()%50);
-      if (t->GiveAmmo(am_mana1, amount) || t->GiveAmmo(am_mana2, amount))
-	{
-	  given = true;
-	  S_StartSound(t, SFX_MYSTICINCANT);
-	}
+      {
+	int amount = 50 + (P_Random()%50);
+	if (t->GiveAmmo(am_mana1, amount) || t->GiveAmmo(am_mana2, amount))
+	  {
+	    given = true;
+	    S_StartSound(t, SFX_MYSTICINCANT);
+	  }
+      }
       break;
 
     default:
@@ -626,18 +719,17 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 
     case arti_poisonbag:
       ang = p->yaw >> ANGLETOFINESHIFT;
-      if (p->pclass == PCLASS_CLERIC)
+      switch (p->pclass)
 	{
+	case PCLASS_CLERIC:
 	  mo = p->mp->SpawnDActor(p->pos.x + 16*finecosine[ang], p->pos.y + 24*finesine[ang],
 				  p->pos.z - p->floorclip + 8, MT_POISONBAG);
-	}
-      else if (p->pclass == PCLASS_MAGE)
-	{
+	  break;
+	case PCLASS_MAGE:
 	  mo = p->mp->SpawnDActor(p->pos.x + 16*finecosine[ang], p->pos.y + 24*finesine[ang],
 				  p->pos.z - p->floorclip + 8, MT_FIREBOMB);
-	}			
-      else // others
-	{
+	  break;
+	default:
 	  mo = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z - p->floorclip + 35, MT_THROWINGBOMB);
 	  if (mo)
 	    {
@@ -653,6 +745,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 	      mo->CheckMissileSpawn();
 	    }
 	}
+
       if (mo)
 	mo->owner = p;
       break;

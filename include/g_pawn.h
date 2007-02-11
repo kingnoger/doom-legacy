@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "g_actor.h" // Actor class
+#include "g_decorate.h"
 #include "d_items.h"
 #include "p_pspr.h" // 1st person weapon sprites
 
@@ -54,47 +55,58 @@ enum pclass_t
 };
 
 
-/// TODO TEST, this is a HACK...
-struct pawn_info_t
+
+/// \brief Pawn type definition. Each instant defines a DECORATE class.
+/// \ingroup g_thing
+/*!
+  We need to inherit ActorInfo because sprite presentations require the state information.
+ */
+class PawnAI : public ActorInfo
 {
-  mobjtype_t   mt;
-  pclass_t     pclass;
-  weapontype_t bweapon; // beginning weapon (besides fist/staff)
-  int          bammo;   // ammo for bweapon
-  mobjtype_t   nproj;   // natural projectile, if any
+public:
+  
+  byte         pclass;  ///< player class, a Hexen kludge
+  weapontype_t bweapon; ///< beginning weapon (besides fist/staff)
+  int          bammo;   ///< ammo for bweapon
+
+  int     gruntsound; ///< hitting ground at high speed
+  int  puzzfailsound; ///< failing to solve a puzzle
+  int burndeathsound; ///< fire death
+
+public:
+  PawnAI(const ActorInfo& base, pclass_t cls, weapontype_t bw);
 };
 
-extern pawn_info_t pawndata[];
+/// All known pawn types.
+extern vector<PawnAI*> pawn_aid;
+
 
 
 /// \brief An Actor that has active AI or human control.
+/*!
+  Currently this is an unnecessary layer between Actor and PlayerPawn, but in future
+  we might want to use this to define monsters with complex AI.
+ */
 class Pawn : public Actor
 {
   TNL_DECLARE_CLASS(Pawn);
   DECLARE_CLASS(Pawn)
-private:
-
-
 public:
-  int color; // stupid extra color value for automap
+  const class PawnAI *info; ///< Pawn type.
 
-  int maxhealth;
-  float speed; ///< walking speed (units/tic), runspeed = 2*speed
-  const struct pawn_info_t *pinfo;
+  byte  pclass;    ///< Current player class, a Hexen kludge. Affects many things.
+  int   maxhealth; ///< Maximum health value.
+  float speed;     ///< Walking speed (units/tic), runspeed = 2*speed.
+  float toughness; ///< Natural armor, depends on pclass.
 
-  int attackphase; ///< counter for the more complex weapons
-
-  Actor *attacker; ///< who damaged the Pawn? (NULL for floors/ceilings).
+  int attackphase; ///< Counter for the more complex weapons.
+  Actor *attacker; ///< Who last damaged the Pawn? (NULL for floors/ceilings).
 
 public:
   Pawn(fixed_t x, fixed_t y, fixed_t z, int type);
 
   virtual void Detach();
-  virtual void Think();
   virtual void CheckPointers();
-
-  virtual bool Morph(mobjtype_t form);
-  virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
 
   bool GiveBody(int num);
   void AdjustPlayerAngle(Actor *t);
@@ -114,9 +126,6 @@ class PlayerPawn : public Pawn
 public:
   /// Controlling player
   class PlayerInfo *player; 
-
-  /// player class, a Hexen kludge
-  byte pclass;
 
   /// \name Controls.
   /// True if the corresponding button was down last tic.
@@ -149,7 +158,6 @@ public:
   int ammo[NUMAMMO];
   int maxammo[NUMAMMO];
 
-  float toughness; ///< Natural armor, depends on class.
   float armorfactor[NUMARMOR];
   int   armorpoints[NUMARMOR];
   //@}
@@ -174,7 +182,7 @@ public:
 
 public:
   // in g_pawn.cpp
-  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type, int pclass = PCLASS_NONE);
+  PlayerPawn(fixed_t x, fixed_t y, fixed_t z, int type);
   ~PlayerPawn();
 
   /// If this actor is used as a pov, at which height are the eyes?

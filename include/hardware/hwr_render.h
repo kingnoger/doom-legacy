@@ -71,7 +71,7 @@ public:
   bool Screenshot(char *lbmname);
 
   /// Change doom palette
-  void SetPalette(RGBA_t *palette);
+  void SetPalette(RGB_t *palette);
 
   /// Fade part of the screen buffer, so that the menu and the console is more readable
   void FadeScreenMenuBack(unsigned long color, int height);
