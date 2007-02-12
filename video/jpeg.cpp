@@ -18,12 +18,15 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief JPEG/JFIF Textures
+/// \brief JPEG/JFIF Textures.
 
 #include <stdio.h>
+// some broken versions of the libjpeg headers are missing the extern "C"
+extern "C"
+{
 #include <jpeglib.h>
 #include <jerror.h>
-
+}
 #include "doomdef.h"
 #include "r_data.h"
 #include "screen.h"
@@ -197,28 +200,49 @@ bool JPEGTexture::ReadData(bool read_image, bool sw_rend)
 	    {
 	      // software: need indexed col-major data
 
+	      // NOTE: libjpeg can quantize RGB images into a palette. It achieves better tone reproduction
+	      // than our humble NearestColor(), but sometimes causes ugly pixel artifacts...
+	      // Probably the Doom palette is to blame.
+//#define USE_LIBJPEG_QUANTIZATION
+#ifdef USE_LIBJPEG_QUANTIZATION
 	      cinfo.quantize_colors = TRUE;
 	      cinfo.actual_number_of_colors = 256; // number of colors in the color map.
 
 	      // ugly HACK to convert our palette to a form libjpeg understands
-	      byte *hack_palette[256];
-	      for (i=0; i<256; i++)
-		hack_palette[i] = &vid.palette[i].r;
+	      byte temp_pal[3][256]; // transpose the palette
+	      for (int k=0; k<256; k++)
+		{
+		  temp_pal[0][k] = vid.palette[k].r;
+		  temp_pal[1][k] = vid.palette[k].g;
+		  temp_pal[2][k] = vid.palette[k].b;
+		}
+
+	      byte *hack_palette[3];
+	      for (i=0; i<3; i++)
+		hack_palette[i] = temp_pal[i];
 
 	      cinfo.colormap = hack_palette; // palette to use
-
-
+#endif
 	      jpeg_start_decompress(&cinfo);
 
+	      // scanline length in bytes as output by libjpeg
 	      int row_stride = cinfo.output_width * cinfo.output_components;
+
+	      /*
 	      if (row_stride != width)
 		I_Error("bug in JPEG handling\n");
+	      */
 
 	      // allocate pixels
-	      Z_Malloc(height * row_stride, PU_TEXTURE, (void **)(&pixels));
+	      Z_Malloc(height * width, PU_TEXTURE, (void **)(&pixels));
 
+#ifdef USE_LIBJPEG_QUANTIZATION
 	      byte *buffer = static_cast<byte *>(alloca(row_stride));
 	      byte **row_pointer = &buffer;
+#else
+	      RGB_t *buffer = static_cast<RGB_t *>(alloca(row_stride));
+	      byte **row_pointer = reinterpret_cast<byte**>(&buffer);
+#endif
 
 	      int row = 0;
 	      while (cinfo.output_scanline < cinfo.output_height)
@@ -228,7 +252,11 @@ bool JPEGTexture::ReadData(bool read_image, bool sw_rend)
 		  byte *dest = pixels + row;
 		  for (i=0; i < width; i++)
 		    {
+#ifdef USE_LIBJPEG_QUANTIZATION
 		      *dest = buffer[i];
+#else
+		      *dest = NearestColor(buffer[i].r, buffer[i].g, buffer[i].b);
+#endif
 		      dest += height;
 		    }
 
@@ -237,7 +265,7 @@ bool JPEGTexture::ReadData(bool read_image, bool sw_rend)
 	    }
 	  else
 	    {
-	      // OpenGL: need RGBA row-major data
+	      // OpenGL: need RGB row-major data
 	      jpeg_start_decompress(&cinfo);
 
 	      unsigned row_stride = cinfo.output_width * cinfo.output_components;
@@ -271,7 +299,8 @@ bool JPEGTexture::ReadData(bool read_image, bool sw_rend)
     {
       CONS_Printf(" in texture %s\n", name);
       jpeg_destroy_decompress(&cinfo);
-      return false; // OK?
+      I_Error("Error reading JPEG texture.\n");
+      return false;
     }
 
   return true;

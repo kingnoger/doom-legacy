@@ -30,21 +30,21 @@ summary.
 <h2>Graphics</h2>
 
 <ul>
- <li>** A brand new OpenGL graphics engine.</li>
- <li>Support for v2 and v5 GL nodes.
- <li>* hi-res sprites/textures/flats, PNG support.</li>
- <li>Generic graphic presentations for game objects. Support for sprites, **MD2s and **MD3s.</li>
+ <li>* A brand new OpenGL graphics engine.</li>
+ <li>Support for v2 and v5 GL nodes and glVIS.
+ <li>Hi-res sprites/textures/flats, PNG and JPEG/JFIF support.</li>
+ <li>Generic graphic presentations for game objects. Support for sprites, **MD2s and MD3s.</li>
 </ul>
 
 
 <h2>Sound and Music</h2>
 
-<p />
+<p>
 The preferred multimedia interface is now SDL, the Simple DirectMedia
 Layer. This makes Legacy easily portable and offers great multimedia
 capabilities. Music is produced using the SDL_mixer
 library. Highlights:
-
+</p>
 <ul>
  <li>Supports MUS, MIDI, MP3 and Ogg Vorbis music, as well as various
  module formats.</li>
@@ -55,12 +55,12 @@ library. Highlights:
 
 <h2>Gameplay</h2>
 
-<p />
+<p>
 Gameplay is nearly the same as in original Doom/Heretic/Hexen. However, if
 required, it can be enhanced with the following features:
-
+</p>
 <ul>
- <li>Completely new netcode using OpenTNL.</li>
+ <li>**Completely new netcode using OpenTNL.</li>
  <li>Advanced teamplay. Deathmatch, co-operative, *** capture the
  flag, *** domination, *** assault.</li>
  <li>Client-side bots (as **DLLs?).</li>
@@ -68,8 +68,8 @@ required, it can be enhanced with the following features:
  <li>Level hubs (it's possible to return to a previously visited map).</li>
  <li>All weapons from Doom/Heretic/Hexen usable in any game type if you
  supply the required graphics and sounds! Weapon groups á la Half-Life.</li>
- <li>Any creature can be played, not just Marines or Heretics.</li>
- <li>Customizable HUD (using HUD widgets).</li>
+ <li>**Any creature can be played, not just Marines or Heretics.</li>
+ <li>**Customizable HUD (using HUD widgets).</li>
 </ul>
 
 
@@ -79,32 +79,30 @@ required, it can be enhanced with the following features:
  <li>LevelInfo lumps.</li>
  <li>Hexen/ZDoom-style MAPINFO support, with extensions. Free level
  ordering, hubs á la Hexen.</li>
+ <li>Partial DECORATE support (Actors).</li>
  <li>SNDINFO and SNDSEQ support, with extensions.</li>
  <li>ANIMDEFS support.</li>
  <li>WAD2/WAD3 support.</li>
  <li>PAK and **PK3 support.</li>
- <li>Use normal directories as resource "files".</li>
+ <li>Normal directories can be used as resource "files".</li>
  <li>Essential DeHackEd and BEX support with extensions.</li>
- <li>*Cross-over games: Doom/Heretic/Hexen entities in the same level,
+ <li>Cross-over games: Doom/Heretic/Hexen entities in the same level,
   players playing Hellspawn instead of Marines...</li>
  <li>Voodoo Dolls finally work.</li>
  <li>*** DLL modifiability.</li>
 </ul>
 
 
-<h2>Other new features</h2>
+<h2>Other new features of interest (mainly for programmers)</h2>
 
 <ul>
- <li>Autoexpanding Zone Memory system. Never run out of memory, until
- you REALLY run out of memory.</li>
- <li>Second level dedicated cache system for sounds, sprites etc.</li>
- <li>zlib compression for savegames.</li>
+ <li>Zone Memory system replaced with malloc/free. No more fiddling with -mb.</li>
+ <li>Second level dedicated cache system for textures, sounds, sprites etc.</li>
  <li>New game objects with custom AI are easy to make through inheritance.</li>
- <li>New save/load system.</li>
+ <li>New save/load system with zlib compression.</li>
  <li>Damage system with different types of damage.</li>
  <li>Beautiful Doxygen documentation of the source code.</li>
 </ul>
-
 
 
 </body>

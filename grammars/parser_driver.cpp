@@ -45,7 +45,7 @@ int  NTEXTURE_lex(yy_t& yylval);
 void NTEXTURE__delete_buffer(YY_BUFFER_STATE);
 
 void *NTEXTURE_ParseAlloc(void *(*mallocProc)(size_t));
-void  NTEXTURE_Parse(void *yyp, int yymajor, yy_t tokenval, ntexture_driver& d);
+void  NTEXTURE_Parse(void *yyp, int yymajor, yy_t tokenval, ntexture_driver *d);
 void  NTEXTURE_ParseTrace(FILE *TraceFILE, char *zTracePrompt);
 void  NTEXTURE_ParseFree(void *p, void (*freeProc)(void*));
 
@@ -116,13 +116,13 @@ bool Read_NTEXTURE(int lump)
   while ((tokentype = NTEXTURE_lex(tokenvalue)))
     { 
       //std::cout << " yylex() " << tokentype << " yylval.dval " << yylval.dval << std::endl;
-      NTEXTURE_Parse(p, tokentype, tokenvalue, d);
+      NTEXTURE_Parse(p, tokentype, tokenvalue, &d);
     }
 
   // free the scanner buffer
   NTEXTURE__delete_buffer(bufstate);
 
-  NTEXTURE_Parse(p, tokentype, tokenvalue, d);
+  NTEXTURE_Parse(p, tokentype, tokenvalue, &d);
   NTEXTURE_ParseFree(p, free);
 
   Z_Free(buffer);
