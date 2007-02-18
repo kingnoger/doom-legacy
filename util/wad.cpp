@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,10 +17,11 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Wad, Wad3 and Pak classes: datafile I/O
+/// \brief Wad, Wad3, Pak and ZipFile classes: datafile I/O
 
 #include <stdio.h>
 #include <sys/stat.h>
+#include <zlib.h>
 
 #include "doomdef.h"
 
@@ -30,67 +31,6 @@
 
 #include "wad.h"
 #include "z_zone.h"
-
-
-struct wadheader_t 
-{
-  char magic[4];   // "IWAD", "PWAD", "WAD2" or "WAD3"
-  int  numentries; // number of entries in WAD
-  int  diroffset;  // offset to WAD directory
-};
-
-// a WAD file directory entry
-struct waddir_file_t
-{
-  int  offset;  // file offset of the resource
-  int  size;    // size of the resource
-  char name[8]; // name of the resource (NUL-padded)
-};
-
-// a runtime WAD directory entry
-struct waddir_t
-{
-  int  offset;  // file offset of the resource
-  int  size;    // size of the resource
-  union
-  {
-    char name[9]; // name of the resource (NUL-terminated)
-    int  iname[2];
-  };
-};
-
-
-// a WAD2 or WAD3 directory entry
-struct wad3dir_t
-{
-  int  offset; // offset of the data lump
-  int  dsize;  // data lump size in file (compressed)
-  int  size;   // data lump size in memory (uncompressed)
-  char type;   // type (data format) of entry. not needed.
-  char compression; // kind of compression used. 0 means none.
-  char padding[2];  // unused
-  union
-  {
-    char name[16]; // name of the entry, padded with '\0'
-    int  iname[4];
-  };
-};
-
-
-struct pakheader_t
-{
-  char magic[4];   // "PACK"
-  int  diroffset;  // offset to directory
-  int  dirsize;    // numentries * sizeof(pakdir_t) == numentries * 64
-};
-
-// PACK directory entry
-struct pakdir_t
-{
-  char name[56]; // item name, NUL-padded
-  int  offset;
-  int  size;
-};
 
 
 static bool TestPadding(char *name, int len)
@@ -115,9 +55,40 @@ static bool TestPadding(char *name, int len)
 }
 
 
+
 //=============================
 //  Wad class implementation
 //=============================
+
+/// WAD file header
+struct wadheader_t 
+{
+  char   magic[4];   ///< "IWAD", "PWAD", "WAD2" or "WAD3"
+  Uint32 numentries; ///< number of entries in WAD
+  Uint32 diroffset;  ///< offset to WAD directory
+} __attribute__((packed));
+
+/// WAD file directory entry
+struct waddir_file_t
+{
+  Uint32 offset;  ///< file offset of the resource
+  Uint32 size;    ///< size of the resource
+  char   name[8]; ///< name of the resource (NUL-padded)
+} __attribute__((packed));
+
+
+// a runtime WAD directory entry
+struct waddir_t
+{
+  unsigned int offset;  // file offset of the resource
+  unsigned int size;    // size of the resource
+  union
+  {
+    char name[9]; // name of the resource (NUL-terminated)
+    Uint32 iname[2];
+  };
+};
+
 
 // constructor
 Wad::Wad()
@@ -127,47 +98,36 @@ Wad::Wad()
 
 Wad::~Wad()
 {
-  Z_Free(directory);
+  if (directory)
+    Z_Free(directory);
 }
 
 
-// trick constructor for .lmp and .deh files
-Wad::Wad(const char *fname, const char *lumpname)
+// Creates a WAD that encapsulates a single .lmp and .deh file
+bool Wad::Create(const char *fname, const char *lumpname)
 {
   // this code emulates a wadfile with one lump
   // at position 0 and size of the whole file
   // this allows deh files to be treated like wad files,
   // copied by network and loaded at the console
 
-  filename = fname;
-  stream = fopen(fname, "rb");
-  if (!stream)
-    {
-      directory = NULL;
-      return;
-    }
+  // common to all files
+  if (!VDataFile::Open(fname))
+    return false;
 
-  // diroffset, md5sum, cache, hwrcache unset
   numitems = 1;
-  directory = (waddir_t *)Z_Malloc(sizeof(waddir_t), PU_STATIC, NULL);
+  directory = static_cast<waddir_t*>(Z_Malloc(sizeof(waddir_t), PU_STATIC, NULL));
   directory->offset = 0;
-
-  // get file system info about the file
-  struct stat bufstat;
-  if (fstat(fileno(stream), &bufstat))
-    {
-      CONS_Printf("Could not stat file '%s'.\n", fname);
-      size = directory->size = 0;
-      return;
-    }
-
-  size = directory->size = bufstat.st_size;
+  directory->size = size;
   strncpy(directory->name, lumpname, 8);
+  directory->name[8] = '\0'; // terminating NUL to be sure
 
-  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  cache = static_cast<lumpcache_t*>(Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL));
   memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   LoadDehackedLumps();
+  CONS_Printf("Added single-lump file %s\n", filename.c_str());
+  return true;
 }
 
 
@@ -187,7 +147,7 @@ bool Wad::Open(const char *fname)
   fread(&h, sizeof(wadheader_t), 1, stream);
   // endianness swapping
   numitems = LONG(h.numentries);
-  diroffset = LONG(h.diroffset);
+  int diroffset = LONG(h.diroffset);
 
   // set up caching
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
@@ -230,7 +190,7 @@ const char *Wad::GetItemName(int i)
 }
 
 
-int Wad::ReadItemHeader(int lump, void *dest, int size)
+int Wad::ReadItemHeader(int lump, void *dest, unsigned int size)
 {
   waddir_t *l = directory + lump;
 
@@ -263,7 +223,7 @@ int Wad::FindNumForName(const char *name, int startlump)
   union
   {
     char s[9];
-    int  x[2];
+    Uint32 x[2];
   };
 
   // make the name into two integers for easy compares
@@ -293,7 +253,7 @@ int Wad::FindNumForName(const char *name, int startlump)
 }
 
 
-int Wad::FindPartialName(int iname, int startlump, const char **fullname)
+int Wad::FindPartialName(Uint32 iname, int startlump, const char **fullname)
 {
   // checks only first 4 characters, returns full name
   // a slower alternative could use strncasecmp()
@@ -339,6 +299,23 @@ void Wad::LoadDehackedLumps()
 //  Wad3 class implementation
 //==============================
 
+/// a WAD2 or WAD3 directory entry
+struct wad3dir_t
+{
+  Uint32  offset; ///< offset of the data lump
+  Uint32  dsize;  ///< data lump size in file (compressed)
+  Uint32  size;   ///< data lump size in memory (uncompressed)
+  char type;      ///< type (data format) of entry. not needed.
+  char compression; ///< kind of compression used. 0 means none.
+  char padding[2];  ///< unused
+  union
+  {
+    char name[16]; // name of the entry, padded with '\0'
+    Uint32 iname[4];
+  };
+} __attribute__((packed));
+
+
 // constructor
 Wad3::Wad3()
 {
@@ -368,7 +345,7 @@ bool Wad3::Open(const char *fname)
   fread(&h, sizeof(wadheader_t), 1, stream);
   // endianness swapping
   numitems = LONG(h.numentries);
-  diroffset = LONG(h.diroffset);
+  int diroffset = LONG(h.diroffset);
 
   // set up caching
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
@@ -413,7 +390,7 @@ void Wad3::ListItems()
 }
 
 
-int Wad3::ReadItemHeader(int lump, void *dest, int size)
+int Wad3::ReadItemHeader(int lump, void *dest, unsigned int size)
 {
   wad3dir_t *l = directory + lump;
 
@@ -442,7 +419,7 @@ int Wad3::FindNumForName(const char *name, int startlump)
   union
   {
     char s[16];
-    int  x[4];
+    Uint32 x[4];
   };
 
   // make the name into 4 integers for easy compares
@@ -469,6 +446,24 @@ int Wad3::FindNumForName(const char *name, int startlump)
 //=============================
 //  Pak class implementation
 //=============================
+
+/// PACK file header
+struct pakheader_t
+{
+  char   magic[4];   ///< "PACK"
+  Uint32 diroffset;  ///< offset to directory
+  Uint32 dirsize;    ///< numentries * sizeof(pakdir_t) == numentries * 64
+} __attribute__((packed));
+
+
+/// PACK directory entry
+struct pakdir_t
+{
+  char   name[56]; ///< item name, NUL-padded
+  Uint32 offset;   ///< file offset for the item
+  Uint32 size;     ///< item size
+} __attribute__((packed));
+
 
 // constructor
 Pak::Pak()
@@ -499,7 +494,7 @@ bool Pak::Open(const char *fname)
   fread(&h, sizeof(pakheader_t), 1, stream);
   // endianness swapping
   numitems = LONG(h.dirsize) / sizeof(pakdir_t);
-  diroffset = LONG(h.diroffset);
+  int diroffset = LONG(h.diroffset);
 
   // set up caching
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
@@ -520,9 +515,7 @@ bool Pak::Open(const char *fname)
       imap.insert(pair<const char *, int>(p->name, i)); // fill the name map
     }
     
-  h.diroffset = 0; // what a great hack!
-
-  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
+  CONS_Printf("Added PACK file %s (%i lumps)\n", filename.c_str(), numitems);
   return true;
 }
 
@@ -545,7 +538,7 @@ void Pak::ListItems()
 }
 
 
-int Pak::ReadItemHeader(int item, void *dest, int size)
+int Pak::ReadItemHeader(int item, void *dest, unsigned int size)
 {
   pakdir_t *l = directory + item;
 
@@ -559,4 +552,366 @@ int Pak::ReadItemHeader(int item, void *dest, int size)
   fseek(stream, l->offset, SEEK_SET);
 
   return fread(dest, 1, size, stream);
+}
+
+
+
+//================================
+//  ZipFile class implementation
+//================================
+
+
+struct zip_central_directory_end_t
+{
+  char   signature[4]; // 0x50, 0x4b, 0x05, 0x06
+  Uint16 disk_number;  // ZIP archives can consist of several files, but we do not support this feature.
+  Uint16 num_of_disk_with_cd_start;
+  Uint16 num_entries_on_this_disk;
+  Uint16 total_num_entries;
+  Uint32 cd_size;
+  Uint32 cd_offset;
+  Uint16 comment_size;
+  //char   comment[0]; // from here to end of file
+} __attribute__((packed));
+
+
+struct zip_file_header_t
+{
+  char   signature[4]; // 0x50, 0x4b, 0x01, 0x02
+  Uint16 version_made_by;
+  Uint16 version_needed;
+  Uint16 flags;
+  Uint16 compression_method;
+  Uint16 last_modified_time;
+  Uint16 last_modified_date;
+  Uint32 crc32;
+  Uint32 compressed_size;
+  Uint32 size;
+  Uint16 filename_size;
+  Uint16 extrafield_size;
+  Uint16 comment_size;
+  Uint16 disk_number;
+  Uint16 internal_attributes;
+  Uint32 external_attributes;
+  Uint32 local_header_offset;
+  char   filename[0];
+  // followed by filename and other variable-length fields
+} __attribute__((packed));
+
+
+struct zip_local_header_t
+{
+  char   signature[4]; // 0x50, 0x4b, 0x03, 0x04
+  Uint16 version_needed;
+  Uint16 flags;
+  Uint16 compression_method;
+  Uint16 last_modified_time;
+  Uint16 last_modified_date;
+  Uint32 crc32;
+  Uint32 compressed_size;
+  Uint32 size;
+  Uint16 filename_size;
+  Uint16 extrafield_size;
+  // file name and other variable length info follows
+} __attribute__((packed));
+
+
+/// Runtime ZipFile directory entry.
+struct zipdir_t
+{
+  unsigned int offset;          ///< offset of the data from the beginning of the file
+  unsigned int compressed_size; ///< data lump size in file (compressed)
+  unsigned int size;            ///< data lump size in memory (uncompressed)
+  bool         deflated;        ///< either uncompressed or DEFLATE-compressed
+
+#define ZIP_NAME_LENGTH 64
+  char name[ZIP_NAME_LENGTH+1]; // name of the entry, NUL-terminated
+};
+
+
+
+ZipFile::ZipFile()
+{
+  directory = NULL;
+}
+
+
+ZipFile::~ZipFile()
+{
+  if (directory)
+    Z_Free(directory);
+}
+
+
+bool ZipFile::Open(const char *fname)
+{
+  // common to all files
+  if (!VDataFile::Open(fname))
+    return false;
+
+  // Find and read the central directory end.
+  // We have to go through this because of the stupidly-placed ZIP comment field...
+  int cd_end_pos = 0;
+  {
+    int max_csize = min(size, 0xFFFF); // max. comment size is 0xFFFF
+    byte *buf = static_cast<byte*>(Z_Malloc(max_csize, PU_STATIC, NULL));
+
+    fseek(stream, size - max_csize, SEEK_SET);
+    fread(buf, max_csize, 1, stream);
+
+    for (int k = max_csize - sizeof(zip_central_directory_end_t); k >= 0; k--)
+      if (buf[k] == 'P' && buf[k+1] == 'K' && buf[k+2] == '\5' && buf[k+3] == '\6')
+	{
+	  cd_end_pos = size - max_csize + k;
+	  break;
+	}
+
+    Z_Free(buf);
+  }
+
+  if (cd_end_pos == 0)
+    {
+      // could not find cd end
+      CONS_Printf("Could not find central directory in ZIP file '%s'.\n", fname);
+      return false;
+    }
+
+  zip_central_directory_end_t cd_end;
+  fseek(stream, cd_end_pos, SEEK_SET);
+  fread(&cd_end, sizeof(zip_central_directory_end_t), 1, stream);
+
+  // ZIP files are little endian, but zeros are zeros...
+  if (cd_end.disk_number != 0 ||
+      cd_end.num_of_disk_with_cd_start != 0 ||
+      cd_end.num_entries_on_this_disk != cd_end.total_num_entries)
+    {
+      // we do not support multi-file ZIPs
+      CONS_Printf("ZIP file '%s' spans several disks, this is not supported.\n", fname);
+      return false;
+    }
+
+  numitems = SHORT(cd_end.total_num_entries);
+  int dir_size   = LONG(cd_end.cd_size);
+  int dir_offset = LONG(cd_end.cd_offset);
+
+  if (cd_end_pos < dir_offset + dir_size)
+    {
+      // corrupt file
+      CONS_Printf("ZIP file '%s' is corrupted.\n", fname);
+      return false;
+    }
+
+  // read central directory
+  directory = static_cast<zipdir_t*>(Z_Malloc(numitems * sizeof(zipdir_t), PU_STATIC, NULL));
+
+  byte *tempdir = static_cast<byte*>(Z_Malloc(dir_size, PU_STATIC, NULL));
+  fseek(stream, dir_offset, SEEK_SET);
+  fread(tempdir, dir_size, 1, stream);
+
+  byte *p = tempdir;
+  int item = 0; // since items may be ignored
+  for (int k=0; k<numitems; k++)
+    {
+      zip_file_header_t *fh = reinterpret_cast<zip_file_header_t*>(p);
+      if (fh->signature[0] != 'P' || fh->signature[1] != 'K' ||
+	  fh->signature[2] != '\1' || fh->signature[3] != '\2')
+	{
+	  // corrupted directory
+	  CONS_Printf("Central directory in ZIP file '%s' is corrupted.\n", fname);
+	  return false;
+	}
+
+      // go to next record
+      int n_size = SHORT(fh->filename_size);
+      p += sizeof(zip_file_header_t) + n_size + SHORT(fh->extrafield_size) + SHORT(fh->comment_size);
+
+      if (p > tempdir + dir_size)
+	{
+	  CONS_Printf("Central directory in ZIP file '%s' is too long.\n", fname);
+	  break;
+	}
+
+      if (fh->filename[n_size-1] == '/')
+	continue; // ignore directories
+
+      // copy the lump name
+      n_size = min(n_size, ZIP_NAME_LENGTH);
+      strncpy(directory[item].name, fh->filename, n_size);
+      directory[item].name[n_size] = '\0'; // NUL-termination
+
+      int flags = SHORT(fh->flags);
+      if (flags & 0x1)
+	{
+	  CONS_Printf("Lump '%s' in ZIP file '%s' is encrypted.\n", directory[item].name, fname);
+	  continue;
+	}
+
+      if (flags & 0x8)
+	{
+	  CONS_Printf("Lump '%s' in ZIP file '%s' has a data descriptor (unsupported).\n", directory[item].name, fname);
+	  continue;
+	}
+
+      if (fh->compression_method != 0 && SHORT(fh->compression_method) != Z_DEFLATED)
+	{
+	  CONS_Printf("Lump '%s' in ZIP file '%s' uses an unsupported compression algorithm.\n",
+		      directory[item].name, fname);
+	  continue;
+	}
+
+      if (fh->compression_method == 0 && fh->size != fh->compressed_size)
+	{
+	  CONS_Printf("Uncompressed lump '%s' in ZIP file '%s' has unequal compressed and uncompressed sizes.\n",
+		      directory[item].name, fname);
+	  continue;
+	}
+
+      // copy relevant fields to our directory
+      directory[item].offset = LONG(fh->local_header_offset);
+      directory[item].size   = LONG(fh->size);
+      directory[item].compressed_size = LONG(fh->compressed_size);
+      directory[item].deflated = fh->compression_method; // boolean
+
+      // check if the local file header matches the central directory entry
+      zip_local_header_t lh;
+      fseek(stream, directory[item].offset, SEEK_SET);
+      fread(&lh, sizeof(zip_local_header_t), 1, stream);
+
+      if (lh.signature[0] != 'P' || lh.signature[1] != 'K' ||
+	  lh.signature[2] != '\3' || lh.signature[3] != '\4')
+	{
+	  CONS_Printf("Could not find local header for lump '%s' in ZIP file '%s'.\n",
+		      directory[item].name, fname);
+	  continue;
+	}
+
+      if (lh.flags              != fh->flags ||
+	  lh.compression_method != fh->compression_method ||
+	  lh.compressed_size    != fh->compressed_size ||
+	  lh.size               != fh->size)
+	{
+	  CONS_Printf("Local header for lump '%s' in ZIP file '%s' does not match the central directory.\n",
+		      directory[item].name, fname);
+	  continue;
+	}
+
+      // make offset point directly to the data
+      directory[item].offset += sizeof(zip_local_header_t) + SHORT(lh.filename_size) + SHORT(lh.extrafield_size);
+
+      // accepted
+      imap.insert(pair<const char *, int>(directory[item].name, item)); // fill the name map
+      item++;
+    }
+  // NOTE: If lumps are ignored, there will be a few empty records at the end of directory. Let them be.
+  numitems = item;
+  Z_Free(tempdir);
+
+  // set up caching
+  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  memset(cache, 0, numitems * sizeof(lumpcache_t));
+    
+  CONS_Printf("Added ZIP file %s (%i lumps)\n", filename.c_str(), numitems);
+  return true;
+}
+
+
+int ZipFile::GetItemSize(int i)
+{
+  return directory[i].size;
+}
+
+
+const char *ZipFile::GetItemName(int i)
+{
+  return directory[i].name;
+}
+
+
+void ZipFile::ListItems()
+{
+  zipdir_t *p = directory;
+  for (int i = 0; i < numitems; i++, p++)
+    printf("%-64s\n", p->name);
+}
+
+
+int ZipFile::ReadItemHeader(int item, void *dest, unsigned int size)
+{
+  zipdir_t *l = directory + item;
+
+  if (l->size == 0)
+    return 0;
+  
+  // 0 size means read all the item
+  unsigned int get_size = (size == 0 || size > l->size) ? l->size : size;
+    
+  fseek(stream, l->offset, SEEK_SET);
+
+  if (!l->deflated)
+    return fread(dest, 1, get_size, stream); // uncompressed lump
+
+  // DEFLATEd lump, uncompress it
+
+  int chunksize = min(max(get_size, 256u), 8192u); // guesstimate
+  byte in[chunksize];
+
+  z_stream zs; // stores the decompressor state
+  zs.zalloc = Z_NULL;
+  zs.zfree = Z_NULL;
+  zs.opaque = Z_NULL;
+  zs.avail_in = 0;
+  zs.next_in = Z_NULL;
+
+  // TODO more informative error messages
+  int ret = inflateInit2(&zs, -MAX_WBITS); // tell zlib not to expect any headers
+  if (ret != Z_OK)
+    I_Error("Fatal zlib error.\n");
+
+  // output buffer
+  zs.avail_out = get_size;
+  zs.next_out  = static_cast<byte*>(dest);
+
+  // decompress until deflate stream ends or we have enough data
+  do
+    {
+      // get some input
+      // NOTE: we may fread past the end of the lump, but that should not be harmful.
+      zs.avail_in = fread(in, 1, chunksize, stream);
+      if (ferror(stream) || zs.avail_in == 0)
+	{
+	  inflateEnd(&zs);
+	  I_Error("Error decompressing a ZIP lump!\n");
+	}
+
+      zs.next_in = in;
+
+      // decompress as much as possible
+      ret = inflate(&zs, Z_SYNC_FLUSH);
+    } while (ret == Z_OK && zs.avail_out != 0); // decompression can continue && not done yet
+
+  inflateEnd(&zs);
+
+  switch (ret)
+    {
+    case Z_STREAM_END:
+      // ran out of input
+      if (zs.avail_out != 0)
+	I_Error("DEFLATE stream ended prematurely.\n");
+
+      // fallthru
+    case Z_OK:
+      break;
+
+    case Z_NEED_DICT:
+    case Z_DATA_ERROR:
+    case Z_STREAM_ERROR:
+    case Z_MEM_ERROR:
+    case Z_BUF_ERROR:
+    default:
+      I_Error("Error while decompressing a ZIP lump!\n");
+      break;
+    }
+
+  // successful
+  return get_size;
 }

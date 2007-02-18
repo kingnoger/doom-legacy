@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 //--------------------------------------------------------------
 
 /// \file
-/// \brief Wad, Wad2, Wad3 and PACK file formats
+/// \brief Wad, Wad2, Wad3, PACK and PK3/ZIPfile formats
 
 #ifndef wad_h
 #define wad_h 1
@@ -49,10 +49,9 @@ public:
   Wad();
   virtual ~Wad();
 
-  Wad(const char *fname, const char *lumpname); // special constructor for single lump files
-
   /// open a new wadfile
   virtual bool Open(const char *fname);
+  virtual bool Create(const char *fname, const char *lumpname); ///< create a single-lump wad from a file
 
   // query data item properties
   virtual const char *GetItemName(int i);
@@ -61,10 +60,10 @@ public:
 
   // search
   virtual int FindNumForName(const char* name, int startlump = 0);
-  virtual int FindPartialName(int iname, int startlump, const char **fullname);
+  virtual int FindPartialName(Uint32 iname, int startlump, const char **fullname);
 
   /// retrieval
-  virtual int ReadItemHeader(int item, void *dest, int size);
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 
   /// process any DeHackEd lumps in this wad
   void LoadDehackedLumps();
@@ -101,7 +100,7 @@ public:
   virtual int FindNumForName(const char* name, int startlump = 0);
 
   /// retrieval
-  virtual int ReadItemHeader(int item, void *dest, int size);
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 
@@ -127,12 +126,37 @@ public:
   virtual int  GetItemSize(int i);
   virtual void ListItems();
 
-  // search
-  //virtual int FindNumForName(const char* name, int startlump = 0);
-
   // retrieval
-  virtual int ReadItemHeader(int item, void *dest, int size);
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
+//========================================================================
+
+/// \brief PK3/ZIP files from Quake3 etc.
+
+class ZipFile : public VDataFile
+{
+private:
+  struct zipdir_t *directory; ///< item directory
+
+public:
+  // constructor and destructor
+  ZipFile();
+  virtual ~ZipFile();
+
+  /// open a new wadfile
+  virtual bool Open(const char *fname);
+
+  // query data item properties
+  virtual const char *GetItemName(int i);
+  virtual int  GetItemSize(int i);
+  virtual void ListItems();
+
+  // search
+  //virtual int FindPartialName(Uint32 iname, int startlump, const char **fullname);
+
+  /// retrieval
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
+};
 
 #endif

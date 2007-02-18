@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,7 +45,6 @@ void VFile::operator delete(void *mem)
 
 VFile::VFile()
 {
-  filename = "";
   numitems = 0;
   cache = NULL;
 }
@@ -109,7 +108,7 @@ void *VFile::CacheItem(int item, int tag)
 
 struct vdiritem_t
 {
-  int  size;  // item size in bytes
+  unsigned int size;  // item size in bytes
   char name[MAX_VDIR_ITEM_NAME+1];  // item name c-string ('\0'-terminated)
 };
 
@@ -158,7 +157,7 @@ bool VDir::Open(const char *fname)
 
   // build the contents table
   rewinddir(dstream);
-  contents = (vdiritem_t *)Z_Malloc(numitems * sizeof(vdiritem_t), PU_STATIC, NULL); 
+  contents = static_cast<vdiritem_t*>(Z_Malloc(numitems * sizeof(vdiritem_t), PU_STATIC, NULL));
   int i = 0;
   while ((d = readdir(dstream)))
     {
@@ -167,6 +166,7 @@ bool VDir::Open(const char *fname)
 	{
 	  string fullname = filename + temp;
 	  strncpy(contents[i].name, fullname.c_str(), MAX_VDIR_ITEM_NAME);
+	  contents[i].name[MAX_VDIR_ITEM_NAME] = '\0'; // NUL-termination to be sure
 
 	  if (stat(fullname.c_str(), &tempstat))
 	    {
@@ -208,7 +208,7 @@ void VDir::ListItems()
 }
 
 // this should not be used directly, CacheItem() is better
-int VDir::ReadItemHeader(int i, void *dest, int size)
+int VDir::ReadItemHeader(int i, void *dest, unsigned int size)
 {
   vdiritem_t *item = contents + i;
 
@@ -243,6 +243,7 @@ int VDir::ReadItemHeader(int i, void *dest, int size)
 VDataFile::VDataFile()
 {
   stream = NULL;
+  size = 0;
 }
 
 VDataFile::~VDataFile()
@@ -259,7 +260,10 @@ bool VDataFile::Open(const char *fname)
   // at this point we have already checked the magic number and opened the file once
   stream = fopen(fname, "rb");
   if (!stream)
-    return false;
+    {
+      CONS_Printf("Could not open file '%s'\n", fname);
+      return false;
+    }
 
   filename = fname;
 

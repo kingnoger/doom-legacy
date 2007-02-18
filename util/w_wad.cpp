@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -158,11 +158,13 @@ int FileCache::AddFile(const char *fname, bool silent)
 
   VFile *vf = NULL;
   int l = strlen(fname);
+  bool ok = false;
 
   if (!strcasecmp(&fname[l - 4], ".deh"))
     {
       // detect dehacked file with the "deh" extension
-      vf = new Wad(name, "DEHACKED");
+      vf = new Wad();
+      ok = vf->Create(name, "DEHACKED");
     }
   else if (!strcasecmp(&fname[l - 4], ".lmp"))
     {
@@ -170,13 +172,14 @@ int FileCache::AddFile(const char *fname, bool silent)
       char lumpname[9];
       strncpy(lumpname, fname, 8);
       lumpname[min(l-4, 8)] = '\0';
-      vf = new Wad(name, lumpname);
+      vf = new Wad();
+      ok = vf->Create(name, lumpname);
     }
   else if (fname[l-1] == '/')
     {
       // directory
       vf = new VDir();
-      vf->Open(name);
+      ok = vf->Open(name);
     }
   else
     {
@@ -208,19 +211,28 @@ int FileCache::AddFile(const char *fname, bool silent)
 	{
 	  vf = new Pak();
 	}
+      else if (imagic == *reinterpret_cast<const int *>("PK\3\4"))
+	{
+	  vf = new ZipFile(); // ZIP/PK3 file
+	}
       else
 	{
-	  // TODO PK3 magic number is recognized by zlib?
 	  CONS_Printf("FileCache::AddFile: Unknown file signature %4c\n", magic);
 	  fclose(str);
 	  return -1;
 	}
       fclose(str);
-      vf->Open(name);
+      ok = vf->Open(name);
     }
 
-  vfiles.push_back(vf);
-  return nfiles;
+  if (ok)
+    {
+      vfiles.push_back(vf);
+      return nfiles;
+    }
+
+  delete vf;
+  return -1;
 }
 
 
@@ -343,7 +355,7 @@ int FileCache::GetNumForName(const char *name, bool scanforward, bool errorifnot
 }
 
 
-int FileCache::FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname)
+int FileCache::FindPartialName(Uint32 iname, unsigned filenum, int startlump, const char **fullname)
 {
   if (filenum >= vfiles.size())
     I_Error("FileCache::FindNumForNamePwad: %i >= numvfiles(%i)\n", filenum, vfiles.size());

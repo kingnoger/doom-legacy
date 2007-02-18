@@ -27,6 +27,7 @@
 #include <string>
 #include <dirent.h>
 
+#include "doomtype.h"
 #include "functors.h"
 
 
@@ -65,6 +66,7 @@ public:
 
   /// open a new file (kinda like a constructor but returns false if not succesful)
   virtual bool Open(const char *fname) = 0;
+  virtual bool Create(const char *fname, const char *lumpname) {return false;}; ///< create a single-lump wad from a file
 
   /// returns true and passes the asked data if the file can be transferred
   virtual bool GetNetworkInfo(int *size, unsigned char *md5) {return false;};
@@ -81,12 +83,12 @@ public:
   /// returns the index of data item 'name', searching from startitem forward, or -1 if not found
   virtual int FindNumForName(const char* name, int startitem = 0);
   /// Same as above, but matches only the first four chars (in iname), and sets fullname to point to the full name.
-  virtual int FindPartialName(int iname, int startlump, const char **fullname) {return -1;};
+  virtual int FindPartialName(Uint32 iname, int startlump, const char **fullname) {return -1;};
 
   /// Caches the requested item, overriding current tag, returns a pointer to the raw data.
   void *CacheItem(int item, int tag);
   /// Tries to write size bytes of data item item into dest, returns the number of bytes actually written.
-  virtual int ReadItemHeader(int item, void *dest, int size) = 0;
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size) = 0;
 };
 
 
@@ -111,11 +113,8 @@ public:
   virtual int  GetItemSize(int i);
   virtual void ListItems();
 
-  // search
-  //virtual int FindNumForName(const char* name, int startlump = 0);
-
   // retrieval
-  virtual int ReadItemHeader(int item, void *dest, int size);
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 
@@ -128,7 +127,6 @@ class VDataFile : public VFile
 protected:
   FILE *stream;    ///< associated stream
   int   size;      ///< file size in bytes
-  int   diroffset; ///< offset to file directory (if needed)
   unsigned char md5sum[16]; ///< MD5 checksum for data integrity checks
 
 public:
@@ -144,11 +142,8 @@ public:
   virtual int  GetItemSize(int i) = 0;
   virtual void ListItems() = 0;
 
-  // search
-  //virtual int FindNumForName(const char* name, int startlump = 0);
-
   // retrieval
-  virtual int ReadItemHeader(int item, void *dest, int size) = 0;
+  virtual int ReadItemHeader(int item, void *dest, unsigned int size) = 0;
 };
 
 

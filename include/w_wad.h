@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2004 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief FileCache, a class for storing VFiles
+/// \brief FileCache, a class for storing VFiles.
 
 #ifndef w_wad_h
 #define w_wad_h 1
@@ -63,7 +63,7 @@ public:
   bool InitMultipleFiles(const char *const*filenames);
 
   // info about open vfiles
-  int Size() { return vfiles.size(); };  ///< number of open VFiles
+  int Size() const { return vfiles.size(); };  ///< number of open VFiles
   const char *Name(int i);               ///< returns the name of the VFile
   unsigned int GetNumLumps(int filenum); ///< returns the number of lumps in the VFile
   void WriteNetInfo(TNL::BitStream &s);
@@ -75,7 +75,7 @@ public:
   int GetNumForName(const char *name, bool scanforward = false, bool errorifnotfound = true);
   int FindNumForNameFile(const char *name, unsigned filenum, int startlump = 0);
   const char *FindNameForNum(int lump);
-  int FindPartialName(int iname, unsigned filenum, int startlump, const char **fullname);
+  int FindPartialName(Uint32 iname, unsigned filenum, int startlump, const char **fullname);
 
   // reading and caching lumps
   int ReadLumpHeader(int lump, void *dest, int size);
