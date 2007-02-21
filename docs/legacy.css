@@ -42,6 +42,11 @@ span.keyword
   font-weight: bold;
 }
 
+span.example
+{
+  background: #203000;
+  padding: 0 1ex;
+}
 
 p.new
 {

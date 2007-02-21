@@ -19,72 +19,131 @@
 <h2>Contents</h2>
 
 <ol>
-<li><a href="#datafiles">Data file formats</a></li>
-<li><a href="#mapformats">Map formats</a></li>
+<li><a href="#basics">Editing Basics</a><ul>
+<li><a href="#datafiles">Legacy data files</a></li>
+</ul></li>
+
+<li><a href="#maps">Maps</a><ul>
 <li><a href="#MAPINFO">The MAPINFO lump</a></li>
 <li><a href="#levelinfo">LevelInfo lumps</a></li>
-<li><a href="#scripting">Scripting</a></li>
+<li><a href="#mapformats">Map formats</a></li>
 <li><a href="#thing">New THING types</a></li>
 <li><a href="#linedef">New LINEDEF types</a></li>
 <li><a href="#3dfloors">3D floors and water</a></li>
-<li><a href="#graphics">Graphics</a></li>
-<li><a href="#anim">Animated textures</a></li>
+</ul></li>
+
+<li><a href="#media">Media</a><ul>
+<li><a href="#textures">Textures</a></li>
+<li><a href="#sprites">Sprites</a></li>
+<li><a href="#models">3D models</a></li>
+<li><a href="#colormaps">Colormaps et al.</a></li>
 <li><a href="#sound">Sound</a></li>
 <li><a href="#music">Music</a></li>
+</ul></li>
+
+<li><a href="#advanced">Advanced topics</a><ul>
+<li><a href="#scripting">Scripting</a></li>
+<li><a href="#DECORATE">DECORATE</a></li>
 <li><a href="#dehacked">DeHackEd and BEX</a></li>
+</ul></li>
+
 <li><a href="#legacy.wad">Legacy.wad contents</a></li>
 </ol>
 
 
 <hr />
-<h2><a name="datafiles">Data file formats</a></h2>
-
+<h1><a name="basics">Editing Basics</a></h1>
 <p>
-The WAD datafile format is somewhat constricting, mainly due to
-the 8 character lumpnames and the lack of internal directory structure
-or compression.
-These shortcomings have been remedied in the WAD2/WAD3 and PAK file formats.
-In Legacy, you can use any of these formats to hold your data.
-However, because most resource names in the Doom/Hexen map format are
-limited to 8 characters, this feature is only of limited use.
+This section explains the basic things you need to know if you want to edit or
+author Doom Legacy maps.
 </p>
 
+<h2><a name="datafiles">Legacy data files</a></h2>
 <p>
-You can also use normal directories to emulate data files.
+The original Doom stores all game data (maps, graphics, sounds) in data
+archives called WAD files.
+The WAD format is somewhat restricting, mainly due to
+the 8 character lumpnames and the lack of internal directory structure
+or compression.
+More recent games have introduced other data archive formats which remedy
+some of these shortcomings.
+In addition to WADs, Legacy understands the WAD2/3, PAK and ZIP/PK3 file formats.
+Data files are included in the game using the commandline switch <b>-file</b>:
+<span class="example">-file &lt;filename1&gt; [filename2...]</span>
+</p>
+<p>
+You can also use normal directories to emulate data files by entering the name of
+a directory after the <b>-file</b> switch. The name must end with a slash (/).
 In this case, each file within the directory emulates a lump. This
 can be very useful while testing new textures, sounds etc.
 Since there is no universally defined ordering
 among the files in a directory, you cannot load maps (which consist of
 several lumps in a very specific order) from them.
 </p>
+<p>
+Finally, the <b>-file</b> switch also accepts files whose name ends with ".lmp".
+They will be treated as single lumps whose name is given by the filename (minus
+the ".lmp").
+</p>
 
+<h3>Which data file format to use?</h3>
+<p>
+The WAD2/3 and PAK formats are only meant to be used if you want to use an
+existing data archive and don't want to repackage it.
+When creating something new from scratch, the question boils down to choosing
+between WAD and ZIP. ZIP archives have three main advantages over WADs:
+</p>
+<ol>
+<li>DEFLATE compression. ZIPs are generally smaller in size than corresponding WADs.</li>
+<li>Almost arbitrarily long lumpnames and directory-like structures.
+However, because most resource names in the Doom/Hexen map format are
+limited to 8 characters, this feature is of limited use.</li>
+<li>One does not need WAD editing tools to make ZIP archives, any ZIP program will do.</li>
+</ol>
+<p>They also have a disadvantage:</p>
+<ol>
+<li>Slight performance penalty due to having to decompress the lumps when they
+are used.</li>
+</ol>
+<p>
+NOTE: Modern data formats such as PNG, JPEG, MP3 or Ogg Vorbis already are
+compressed and you will not get any further benefit by recompressing them.
+Thus, if you only want to do a texture package with PNG and JPEG textures, for
+example, a WAD file is generally a better choice than a ZIP file.
+However, if you can force your zipping program just to "store" already
+compressed files in the ZIP file without compressing ("deflating") them again,
+the ZIP format will be as efficient as a WAD.
+With the UNIX commandline tool <b>zip</b> you do this using the -n switch.
+</p>
 
 <hr />
-<h2><a name="mapformats">Map formats</a></h2>
+<h1><a name="maps">Maps</a></h1>
+<p>
+This section explains how Legacy maps can differ from Vanilla Doom ones.
+</p>
 
+<h2><a name="mapformats">Map formats</a></h2>
 <p>
 Legacy understands both Doom and Hexen map formats.
 If a map has a BEHAVIOR lump (even an empty one), it is assumed to be in Hexen format.
 You can freely mix the formats in a map WAD, i.e. have some of the maps
 in Doom format and others in Hexen format.
 </p>
-
 <p>
 The only difference between Doom and Hexen map formats is in the
 THINGS and LINEDEFS lumps, which have a different structure and
-content in the Hexen format.<br/>
+content in the Hexen format.
 Legacy includes a utility console command
 for converting Doom-format maps to Hexen format:
-<div class="example">
-convertmap &lt;maplumpname&gt;
-</div>
+</p>
+<div class="example">convertmap &lt;maplumpname&gt;</div>
+<p>
 The converted lumps are written on disk with the names
 &lt;maplumpname&gt;_THINGS.lmp and
 &lt;maplumpname&gt;_LINEDEFS.lmp.<br/>
 You can then replace the original THINGS and LINEDEFS lumps in the WAD
 with the converted versions using almost any WAD editor.
 </p>
-
 <p>
 Boom and Heretic maps follow the Doom map format, only some
 THING and LINEDEF numbers have new meanings. Legacy's default
@@ -92,26 +151,21 @@ interpretation of the THING and LINEDEF numbers depends on the IWAD
 used.
 </p>
 
-<hr />
 <h2><a name="MAPINFO">The MAPINFO lump</a></h2>
-
 <p>
 MAPINFO is a special plaintext lump, introduced in Hexen, extended by
 ZDoom and later the JDS group, that fixes many shortcomings of the map
 format and can be used <i>inter alia</i> to create custom map
 orderings and hubs within the WAD.
+Legacy follows the <a href="JDS_MAPINFO.html">JDS MAPINFO standard</a>.
 </p>
-
-<p>Legacy follows the <a href="JDS_MAPINFO.html">JDS MAPINFO standard</a>.</p>
-
 <p>
 There is some overlap in the functionality of the MAPINFO lump and
 the <a href="#levelinfo">LevelInfo</a> lumps. We suggest that you use
 MAPINFO whenever you can, and LevelInfo when you must.
 </p>
-
 <p>
-There should be only one MAPINFO lump per wad, containing entries for
+Usually there should be only one MAPINFO lump per wad, containing entries for
 each map and cluster in the game.<br/>
 For examples of MAPINFO lumps, see the <b>MI_*</b> lumps
 in legacy.wad.
@@ -119,10 +173,9 @@ For instance, <a href="../resources/MAPINFO_Doom.txt">this lump</a>
 recreates the original Doom episodes.
 </p>
 
-<hr />
 <h2><a name="levelinfo">LevelInfo lumps</a></h2>
-
-<p>The LevelInfo lumps are plain text files, stored
+<p>
+The LevelInfo lumps are plain text files, stored
 in the <b>map separator lump</b>, which has the same name as the map
 (e.g. E1M4, MAP21) and is normally empty.
 Each map can have its own LevelInfo. The lump consists of
@@ -147,26 +200,6 @@ It consists of commands, one per line.
 
 <table class="def">
 <tr><th>[level info] command</th><th>effect</th></tr>
-
-<tr><td>doom_thingoffset &lt;min&gt; &lt;max&gt;</td>
-<td>
-Used to cram THINGs from different games into a single map by
-remapping the THING numbers.<br/>
-By default, THING numbers are interpreted according to the game mode,
-inferred from the IWAD.<br/>
-This command means that THING numbers between min and max should have
-min subtracted from them and then be interpreted as Doom THINGs.
-</td></tr>
-
-<tr><td>heretic_thingoffset &lt;min&gt; &lt;max&gt;</td>
-<td>
-Same as above, but for Heretic THINGs.
-</td></tr>
-
-<tr><td>hexen_thingoffset &lt;min&gt; &lt;max&gt;</td>
-<td>
-Guess...
-</td></tr>
 
 <tr><td>consolecmd &lt;expr&gt;</td>
 <td>
@@ -229,26 +262,9 @@ Contains the text to be shown after the map is exited. "\n" is the
 newline character.
 </p>
 
-<hr />
-<h2><a name="scripting">Scripting</a></h2>
-
-<p>
-Legacy supports two scripting languages,
-<a href="fs.html">FraggleScript</a> and
-<a href="">ACS</a>.
-Both languages can be used in all types of maps,
-even simultaneously if needed.
-FraggleScript is stored in the <b>[scripts]</b>
-blocks of the <a name="levelinfo">LevelInfo</a> lumps, whereas ACS
-goes to the BEHAVIOR lumps. FS is an interpreted language and hence
-can be inserted into the wad as plaintext, whereas ACS must first be
-compiled into bytecode using <b>ACC</b>, the ACS compiler.
-</p>
 
 
-<hr />
 <h2><a name="thing">New THING types</a></h2>
-
 <p>
 The Doom (and Hexen) map format refers to different types of THINGs
 (a.k.a. mapthings, map objects, mobjs) by unsigned 16-bit codes,
@@ -258,55 +274,71 @@ places.
 The situation has been made even more complicated by the different
 Doom source ports introducing their own, often conflicting, special THING types.
 </p>
-
 <p>
 Legacy tries to honor the most common "new" thing types, especially
 those introduced by Boom and SMMU.
-<!-- TODO skyboxes (ZDoom uses 9080, 9081, 9082), teamstarts, sound sequences  (ambient/local/sector action) 4000-7999 -->
+<!-- TODO sound sequences  (ambient/local/sector action) 4000-7999 -->
 </p>
 
 <table class="def">
-<tr><th>THING type</th><th>description</th></tr>
+<tr><th>THING type</th><th>description</th><th>origin</th></tr>
 <tr><td>4001-4028</td>
-<td>Playerstarts for players 5-32.</td>
+<td>Playerstarts for players 5-32.</td><td>Boom</td>
 </tr>
 
 <tr><td>5001, 5002</td>
-<td>Point push and pull effects (Boom)</td>
+<td>Point push and pull effects</td><td>Boom</td>
 </tr>
 
 <tr><td>5003</td>
-<td>Camera location (SMMU)</td>
+<td>Camera location</td><td>SMMU</td>
 </tr>
 
 <tr><td>5004</td>
 <td>Path node</td>
 </tr>
 
+<tr><td>500x</td>
+<td>TODO Teamstartsec</td>
+</tr>
+
+
+<tr><td>8090</td>
+<td>Skybox Viewpoint</td><td>ZDoom</td>
+</tr>
+
+<tr><td>8091</td>
+<td>Skybox Picker</td><td>ZDoom</td>
+</tr>
+
+
 <tr><td>9300</td>
-<td>Polyobj anchor</td>
+<td>Polyobj anchor</td><td>ZDoom</td>
 </tr>
 
 <tr><td>9301</td>
-<td>Polyobj spawn spot</td>
+<td>Polyobj spawn spot</td><td>ZDoom</td>
 </tr>
 
 <tr><td>9302</td>
-<td>Crushing polyobj spawn spot</td>
+<td>Crushing polyobj spawn spot</td><td>ZDoom</td>
 </tr>
 </table>
 
 
-
-
-<hr />
 <h2><a name="linedef">New LINEDEF types</a></h2>
-
 <p>
 Legacy supports all Boom linedef types. For the details, see
 the <a href="boomref.html">Boom reference</a>.<br/>
 Additionally, we have introduced a number of our own additions to the
-Doom linedef system.
+Doom linedef system. These additions are also available in Hexen-format
+maps through the Hexen linedef type <b>150</b>, see below.
+</p>
+<p>
+In Doom-format maps, we have introduced a new linedef flag, <span class="keyword">Alltrigger [0x400] (1024)</span>
+This flag, when set, will allow all things to activate a W* line, with
+the exception of flying blood. :) This includes all generalized types
+that are W*.
 </p>
 
 <h3>FraggleScript triggers</h3>
@@ -453,7 +485,7 @@ floor which will conform to the shape of the sector it is in.
 <p>
 The bottom and top heights of the fake floor are determined by the
 floor and ceiling heights of the control sector. Likewise,
-The bottom and top textures of the fake floor are the floor and
+the bottom and top textures of the fake floor are the floor and
 ceiling textures of the control sector.
 The middle texture of the linedef creating the fake floor is used 
 for the texture along the sides.
@@ -466,22 +498,28 @@ Note that the shape of the control sector has no effect on the fake floor.
 <tr><th>LINEDEF type</th><th>effect</th></tr>
 <tr><td>281</td>
 <td>
-Solid opaque 3D floor.
+Opaque solid 3D floor.
 </td></tr>
 
 <tr><td>289</td>
 <td>
-Like 281 except it does not change the lighting conditions below it.
+Opaque solid 3D floor which does not change the lighting conditions below it.
 </td></tr>
 
 <tr><td>300</td>
 <td>
-Translucent solid floor.
+Translucent solid 3D floor. 
+Upper texture field holds the alpha value: [#000..#255] (#000 = transparent, #255 = opaque. Default value is #127)
+</td></tr>
+
+<tr><td>306</td>
+<td>
+Invisible solid 3D floor.
 </td></tr>
 
 <tr><td>301</td>
 <td>
-Translucent swimmable water.
+Translucent swimmable water. Upper texture field holds the alpha value.
 </td></tr>
 
 <tr><td>304</td>
@@ -491,30 +529,19 @@ Opaque swimmable water.
 
 <tr><td>302</td>
 <td>
-Volumetric fog.
+Volumetric fog, uses the control sector's colormap.
 </td></tr>
 
 <tr><td>303</td>
 <td>
-Light effect TODO
+3D light at control sector's ceiling height.
 </td></tr>
 
 <tr><td>305</td>
 <td>
-Double light effect TODO
+3D light at control sector's ceiling and floor height.
 </td></tr>
-
 </table>
-
-
-<h3>New linedef flags</h3>
-
-<h4>Alltrigger [0x400] (1024)</h4>
-<p>
-This flag, when set, will allow all things to activate a W* line, with
-the exception of flying blood. :) This includes all generalized types
-that are W*.
-</p>
 
 
 <h3>Hexen-format maps</h3>
@@ -524,6 +551,7 @@ We have extended the Hexen linedef system by one new type, 150.
 Under this type, the arg1 and arg2 fields determine the subtype of the effect.
 Also, you can use full 16-bit tags with linedeftype 150.
 arg4 holds the low byte and arg5 the high byte of the tag.
+</p>
 <table class="def">
 <tr><th>LINEDEF type</th><th>arg1</th><th>arg2</th><th>effect</th></tr>
 
@@ -545,13 +573,10 @@ arg4 holds the low byte and arg5 the high byte of the tag.
 <tr><td>128: FraggleScript trigger</td><td>onesided</td>
 <td>If onesided is 1, line can only be activated from the first side.</td></tr>
 </table>
-</p>
 
 
 
-<hr />
 <h2><a name="3dfloors">3D floors and water</a></h2>
-
 <p>
 The concept of true 3d in Doom Legacy.
 By Steven McGranahan.
@@ -676,26 +701,9 @@ the shadow it casts.
 </p>
 <p>
 What's left? Nothing! Run j00r map!
-<img src="3dlvl4.png" height="200" width="320" alt="example"/>
 </p>
 
-<h3>Chapter 4: Linedef code summery</h3>
-<p>
-281 - Creates a solid 3D floor in all tagged sectors.
-289 - Creates a solid 3D floor in all tagged sectors, does not cast a shadow.
-300 - Creates a solid translucent 3D floor in all tagged sectors.
-301 - Creates translucent 3D water in all tagged sectors.
-302 - Creates 3D fog (uses control sector's colormap) in all tagged sectors.
-303 - Creates a 3D light (at control sector's ceiling height) in all tagged sectors.
-304 - Creates a 3D light (same as 303 except the 3D light is reset at control sector's floor height)
-
-Expect detailed explanations of each linedef type soon...
-
-Linedefs 300 and 301 support an alpha value in hardware mode:
-uppertexture: [#000..#255] (#000 = transparent, #255 = opaque. If not defined, the default value is #127)
-</p>
-
-<h3>Chapter 5: What causes slowdowns</h3>
+<h3>Chapter 4: What causes slowdowns</h3>
 
 <p>
 Slowdowns are caused mainly by overdraw. Overdraw means that a
@@ -728,15 +736,19 @@ simple will help reduce rendering times.
 
 
 <hr />
-<h2><a name="graphics">Graphics</a></h2>
+<h1><a name="media">Media</a></h1>
+<p>
+This section describes all the non-map data used by Legacy. This includes
+textures, sounds, music, 3D models, sprites, colormaps etc.
+</p>
 
+<h2><a name="textures">Textures</a></h2>
 <p>
 Any and all of the sprites, patches, textures and flats in the IWAD can be replaced
 using PWADs. 
 In the following, we use the word "texture" for all graphics, not just the
 ones defined in the TEXTUREx lumps.
 </p>
-
 <p>
 The Legacy texture system is somewhat involved, which is caused by two main
 reasons: The original Doom graphics formats have no
@@ -749,7 +761,7 @@ standard</a>.</p>
 <h3>Graphics formats</h3>
 <p>
 Doom natively supports two graphics formats: patches and flats. Doom Legacy
-also supports the <b>PNG</b> and (soon, TODO) <b>JPEG</b> image formats.
+also supports the <b>PNG</b> and <b>JPEG</b> image formats.
 </p>
 <p>
 <span class="keyword">Flats</span> are raw paletted images stored in a single lump. In the original Doom
@@ -771,14 +783,21 @@ Each patch is stored in its own lump. They have no magic numbers.
 </p>
 <p>
 <span class="keyword">PNG</span> and <span class="keyword">JPEG</span>
+(more accurately JPEG/JFIF)
 are modern graphics formats that have magic numbers. They require no external
 resources like a palette. They both support high color images and are compressed.
 Moreover, PNG images can have an alpha channel which enables variable
-transparency. In Doom Legacy, each PNG or JPEG image should be stored in its
-own lump.
+transparency.
+In Doom Legacy, each PNG or JPEG image should be stored in its own lump.
+</p>
+<p>
+A good rule of the thumb for choosing between PNG and JPEG is that if you've
+drawn the texture by hand, or it has transparency effects, you should save it
+as PNG.
+If it's based on a scanned image or a digital photo, it may work better as JPEG.
 </p>
 
-<h3>Textures</h3>
+<h3>Texture definitions</h3>
 
 <p>
 Before a graphic can be used in a game, the game engine has to convert it into
@@ -847,6 +866,7 @@ the original. H_START textures are meant for hi-res texture packs.
 are the most advanced and versatile type of textures Doom Legacy has to offer.
 They are defined in a plaintext lump named NTEXTURE. It contains any number of
 texture definitions, which look like this:
+</p>
 <div class="code">// this is a comment
 texture MYNAME1 // the texture name 
 {
@@ -855,6 +875,7 @@ texture MYNAME1 // the texture name
     offset DX DY;  // optional internal offsets for the texture
 }
 </div>
+<p>
 Other texture properties will be added later.
 </p>
 
@@ -865,8 +886,22 @@ NSPRITES. Used exclusively for sprite frames.
 </p>
 
 
-<h3>Sprites</h3>
+<h3>Animated textures</h3>
 
+<h3>ANIMDEFS lump</h3>
+
+<p>
+TODO explain
+</p>
+
+<h3>ANIMATED lump</h3>
+
+<p>
+TODO this too
+</p>
+
+
+<h2><a name="sprites">Sprites</a></h2>
 <p>
 Sprites are the objects used to represent mapthings in Doom. Each sprite
 consists of several frames, each of which is a texture.
@@ -893,29 +928,32 @@ declare the existence of the particular frames.
 </p>
 
 
-<h3>Models</h3>
-
+<h2><a name="models">3D models</a></h2>
 <p>
 3D models are what modern FPS games use to represent nonfixed map objects.
-Legacy will support MD3 models as soon as the new OpenGL renderer is
-done. Yes, the ones from Quake III Arena.
+Legacy knows how to use MD3 models. Yes, the ones from Quake III Arena.
+The MD3s are assigned to different mapthings using
+<a href="#DECORATE">DECORATE</a> lumps.
+MD3 skins are technically textures.
 </p>
 
 
-<h3>Colormaps, fadetables, translation tables and translucency maps</h3>
-
+<h2><a name="colormaps">Colormaps et al.</a></h2>
 <p>
-A <b>colormap</b> is a 256-byte array used to remap the colors inside a palette:<br/>
-newcolor = colormap[oldcolor].
+The Doom software renderer uses many different kinds of color mapping tables to
+simulate lighting and color blending effects. The tables consist of indices
+referring to palette colors.
 </p>
-
+<p>
+A <b>colormap</b> is a 256-byte array used to remap the colors inside a palette:
+<span class="example">newcolor = colormap[oldcolor]</span>.
+</p>
 <p>
 The Doom software renderer uses a set of 34 different colormaps, called a
 <b><a name="fadetable">fadetable</a></b> or a lighttable, to simulate different visibility levels.
 The default fadetable is stored in the confusingly named COLORMAP lump.
 One can also simulate colored lighting and fog using fadetables.
 </p>
-
 <p>
 A <b>translation table</b> is a special kind of colormap which usually
 only remaps a narrow range of colors inside a palette. Translation
@@ -923,12 +961,11 @@ tables are used i.a. to generate differently colored versions of the
 sprites (in the case of the Doom marine, this happens by remapping the
 green color range in the palette to something else).
 </p>
-
 <p>
 A <b><a name="transmap">translucency map</a></b> is a 256-by-256 byte array used for
 selective software translucency, where a background color is seen
-through a translucent foreground:<br/>
-newcolor = transmap[fg_color][bg_color].<br/>
+through a translucent foreground:
+<span class="example">newcolor = transmap[fg_color][bg_color]</span>.
 You can visualize it as a set of 256 colormaps, one for each
 foreground color. Boom (and hence Legacy) uses the lump TRANSMAP as
 the default translucency map.
@@ -937,33 +974,20 @@ the default translucency map.
 <p>TODO, C_START, C_END</p>
 
 
-<hr />
-<h2><a name="anim">Animated textures</a></h2>
 
-<h3>ANIMDEFS lump</h3>
-
-<p>
-TODO explain
-</p>
-
-<h3>ANIMATED lump</h3>
-
-<p>
-TODO this too
-</p>
-
-
-
-<hr />
 <h2><a name="sound">Sound</a></h2>
 
-<h3>SNDINFO lump</h3>
+<h3>Audio formats</h3>
+<p>
+Legacy supports two sound formats: the native Doom one and <b>WAV/RIFF</b>.
+</p>
 
+<h3>SNDINFO lump</h3>
 <p>
 SNDINFO is a plaintext lump which defines the sound effects in
 the game. Unlike normal WAD resources, SNDINFO lumps are
 handled in a <b>cumulative</b>, not overriding, fashion.
-The SNDINFO lump in <b>legacy.wad</b> defines the basic sound effect
+The <a href="../resources/SNDINFO.txt">SNDINFO lump</a> in <b>legacy.wad</b> defines the basic sound effect
 naming in Legacy. You can freely define new sound effects or change
 the existing ones by using your own SNDINFO lumps.
 </p>
@@ -1038,7 +1062,7 @@ doors, moving platforms, ambiance etc. You can think of them as very
 simple scripts. All the SNDSEQ commands refer to logical sound names,
 as defined in SNDINFO.
 Like SNDINFO, SNDSEQ lumps are read in a cumulative fashion.
-See the SNDSEQ lump in <b>legacy.wad</b> for an example.
+See the SNDSEQ lump in <a href="#legacy.wad">legacy.wad</a> for an example.
 </p>
 
 <p>
@@ -1109,23 +1133,50 @@ sound of a door slamming shut).
 <td>
 Ends the sound sequence definition.
 </td></tr>
-
 </table>
 
-<hr />
-<h2><a name="music">Music</a></h2>
 
+<h2><a name="music">Music</a></h2>
 <p>
-Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, using
+Legacy supports the MUS, MIDI, MP3 and Ogg Vorbis music formats, as well as
+several module formats, using
 the SDL_mixer library. The music lump format is detected
 automagically. The names of the music lumps can be
 <b>chosen freely</b>, they do not have to start with "D_".
 </p>
 
 
-<hr />
-<h2><a name="dehacked">DeHackEd and BEX</a></h2>
 
+<hr />
+<h1><a name="advanced">Advanced topics</a></h1>
+<p>
+This section handles some of the more advanced editing topics, such as
+FS and ACS scripting and the DECORATE and DeHackEd data definition languages.
+</p>
+
+<h2><a name="scripting">Scripting</a></h2>
+<p>
+Legacy supports two scripting languages,
+<a href="fs.html">FraggleScript</a> and
+<a href="">ACS</a>.
+Both languages can be used in all types of maps,
+even simultaneously if needed.
+FraggleScript is stored in the <b>[scripts]</b>
+blocks of the <a name="levelinfo">LevelInfo</a> lumps, whereas ACS
+goes to the <b>BEHAVIOR</b> lumps. FS is an interpreted language and hence
+can be inserted into the wad as plaintext, whereas ACS must first be
+compiled into bytecode using <b>ACC</b>, the ACS compiler.
+</p>
+
+
+<h2><a name="DECORATE">DECORATE</a></h2>
+<p>
+DECORATE is a language for defining mapthing properties, introduced by ZDoom.
+TODO
+</p>
+
+
+<h2><a name="dehacked">DeHackEd and BEX</a></h2>
 <p>
 Legacy supports the most important DeHackEd and BEX (Boom EXtensions
 to DeHackEd) features.
@@ -1137,8 +1188,7 @@ We may also stop supporting them in future releases.
 <table class="def">
 <tr><th>Feature</th><th>Support status</th><th>Notes</th></tr>
 <tr><td>Thing</td><td>full</td><td>BEX flag mnemonics are
-supported.<br/>Extension: Heretic and Hexen flags can be set using
-"bits2 &lt;mnemonic1&gt; &lt;mnemonic2&gt;...".</td></tr>
+supported, with extensions.</td></tr>
 <tr><td>Frame</td><td>full</td><td>Extension: Codepointer can be set using "codep &lt;codepointer_mnemonic&gt;".</td></tr>
 <tr><td>Weapon</td><td>full</td></tr>
 <tr><td>Ammo</td><td>full</td></tr>
@@ -1169,7 +1219,7 @@ followed by the corresponding DeHackEd terms (in parentheses).
 
 <p>
 In Doom, the mapthing AI is basically a finite state machine.
-The behavior (and animation) of the things is controlled by a
+The behavior and animation of the things is controlled by a
 <b>state table</b> (frame table), which is an array of <b>states</b>
 (frames). Each state consists of the following data fields:
 <b>sprite</b> number, <b>frame</b> number (sprite subnumber),
@@ -1282,8 +1332,7 @@ clumsy, convoluted and unappealing to novice map authors.
 Since most "oldskool" map authors like it and plenty of WADs with
 DeHackEd content are available, we'll try to support it in future
 releases as well.<br/>
-However, eventually we intend to add support for DECORATE lumps
-or something similar, which will hopefully obsolete DeHackEd altogether.
+However, eventually we intend to add more <a href="#DECORATE">DECORATE</a> support, which will hopefully obsolete DeHackEd altogether.
 </p>
 
 <p>

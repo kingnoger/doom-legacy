@@ -430,8 +430,9 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
 	      break;
 	    else if (c == '\\') // handle escape sequences
 	      {
+		temp++;
 		char r = 0;
-		switch (temp[1])
+		switch (*temp)
 		  {
 		  case '\\': r = '\\'; break;
 		  case 'n':  r = '\n'; break;
@@ -440,7 +441,6 @@ bool Parser::ParseCmd(const parsercmd_t *commands, char *base)
 
 		if (r)
 		  result += r;
-		temp += 2;
 	      }
 	    else
 	      result += c;
