@@ -275,17 +275,17 @@ svalue_t OPplus(int start, int n, int stop)
       if (right.type == svt_string)
 	{
 	  tmp = (char *)Z_Malloc(strlen(left.value.s) + strlen(right.value.s) + 1, PU_LEVEL, 0);
-	  sprintf(tmp, "%s%s\n", left.value.s, right.value.s);
+	  sprintf(tmp, "%s%s", left.value.s, right.value.s);
 	}
       else if (right.type == svt_fixed)
 	{
 	  tmp = (char *)Z_Malloc(strlen(left.value.s) + 12, PU_LEVEL, 0);
-	  sprintf(tmp, "%s%4.4f\n", left.value.s, FIXED_TO_FLOAT(right.value.i));
+	  sprintf(tmp, "%s%4.4f", left.value.s, FIXED_TO_FLOAT(right.value.i));
 	}
       else
 	{
 	  tmp = (char *)Z_Malloc(strlen(left.value.s) + 12, PU_LEVEL, 0);
-	  sprintf(tmp, "%s%i\n", left.value.s, intvalue(right));
+	  sprintf(tmp, "%s%d", left.value.s, intvalue(right));
 	}
       returnvar.type = svt_string;
       returnvar.value.s = tmp;
