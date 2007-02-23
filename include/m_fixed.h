@@ -199,9 +199,14 @@ public:
   /// "conversion operators", must not be implicitly used
   inline float   Float() const { return float(val) / float(UNIT); }
 
-  inline value_t trunc() const { return val >> FBITS; } ///< was erroneously named floor before, usage in code may be wrong...
-  inline value_t floor() const { return (val >= 0) ? val >> FBITS : ((val+1) >> FBITS)-1; }
-  inline value_t ceil() const { return (val > 0) ? ((val-1) >> FBITS)+1 : val >> FBITS; }
+  // NOTE: the rounding funcs assume that right-shifting negative values continues the sign, ie. (-1 >> n) == -1.
+  // In other words we assume a two's complement represenatation for negative numbers...
+  /// round towards zero
+  inline value_t trunc() const { return (val >= 0) ? val >> FBITS : ((val-1) >> FBITS)+1; /* return val >> FBITS; */ }
+  /// round towards -infinity
+  inline value_t floor() const { return val >> FBITS; /* return (val >= 0) ? val >> FBITS : ((val+1) >> FBITS)-1; */ }
+  /// round towards +infinity
+  inline value_t ceil()  const { return ((val-1) >> FBITS)+1; /* return (val > 0) ? ((val-1) >> FBITS)+1 : val >> FBITS; */ }
 
   /// returns the fractional part of _nonnegative_ number
   inline fixed_t frac() const { fixed_t res; res.val = val & FMASK; return res; }
