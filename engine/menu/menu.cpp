@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -98,27 +98,29 @@ static int controltochange;
 /// flags for the menu items
 enum menuflag_t
 {
-  // Group 1, 4 bits: menuitem action (what we do when a key is pressed)
-  IT_NONE           = 0x0, ///< no handling
-  IT_SUBMENU        = 0x1, ///< <enter>: go to submenu
-  IT_CALL           = 0x2, ///< <enter>: call routine with menuitem number as param (usually a complex submenu)
-  IT_CONTROL        = 0x3, ///< <enter>, <backspace>: call specific functions with menuitem number as param
-  IT_ARROWS         = 0x4, ///< <left>, <right>: call routine with 0 or 1 as param
-  IT_KEYHANDLER     = 0x5, ///< <key>: call routine with <key> as param (except <esc>, which always exits)
+  // 2+2 bits, union type + action subtype (what's stored in the union, what to do when a key is pressed)
+  IT_NONE    = 0x0, ///< union is not used (also, no action)
+  IT_CONTROL,       ///< <enter>, <backspace>: call specific functions with menuitem alphaKey as param
 
-  IT_CV_FLAG        = 0x8, ///< all cvar types must have this bit on
-  IT_CV             = 0x8, ///< cv->str is printed next to name, <left>, <right>, <enter> to change
-  IT_CV_NODRAW      = 0x9, ///< <left>, <right>, <enter> to change, nothing is drawn
-  IT_CV_SLIDER      = 0xA, ///< instead of string value, a slider is drawn next to name
-  IT_CV_TEXTBOX     = 0xB, ///< <enter>: opens a textbox
+  IT_SUBMENU = 0x4, ///< union is a submenu (also, <enter>: go to submenu)
+
+  IT_FUNC    = 0x8,   ///< union is a menufunction (also, <enter>: call func with menuitem number as param (usually a complex submenu))
+  IT_KEYHANDLER,      ///< <key>: call func with <key> as param (except menu navigation keys)
+  IT_FULL_KEYHANDLER, ///< <key>: call func with <key> as param (except <esc>, which always exits)
+
+  IT_CV      = 0xC, ///< union is a consvar (also, cv->str is printed next to name, <left>, <right>, <enter> to change)
+  IT_CV_SLIDER,     ///< as above, instead of string value a slider is drawn next to name
+  IT_CV_BIGSLIDER,  ///< as above, but a big slider is drawn under the item
+  IT_CV_TEXTBOX,    ///< <enter>: opens a textbox
+
+  IT_UNION_MASK     = 0xC,
   IT_TYPE_MASK      = 0xF,
 
-  // Group 2, 4 bits: display type
+  // 4 bits: display type (order matters here!)
   IT_SPACE          = 0x00,  ///< big space (a hack, really...)
   IT_PATCH          = 0x10,  ///< a patch or a string with big font
-  IT_BIGSLIDER      = 0x20,  ///< sound volume uses this, can only be used with a consvar
-  IT_STRING         = 0x30,  ///< little string (spaced with 10)
-  IT_CSTRING        = 0x40,  ///< very little string (spaced with 8)
+  IT_STRING         = 0x20,  ///< little string (spaced with 10)
+  IT_CSTRING        = 0x30,  ///< very little string (spaced with 8)
   IT_DISPLAY_MASK   = 0xF0,
 
   // misc. flags
@@ -129,12 +131,13 @@ enum menuflag_t
   IT_GRAY           = 0x1000, ///< use gray colormap
   IT_COLORMAP_MASK  = IT_WHITE | IT_GRAY,
 
-  // in short for some common uses
+  // shorthand for some common uses
   IT_OFF_BIG     = IT_NONE       | IT_PATCH   | IT_DISABLED | IT_GRAY,
   IT_OFF         = IT_NONE       | IT_CSTRING | IT_DISABLED | IT_GRAY,
-  IT_LINK        = IT_SUBMENU    | IT_STRING  | IT_WHITE,
-  IT_ACT         = IT_CALL       | IT_PATCH,
   IT_CONTROLSTR  = IT_CONTROL    | IT_CSTRING,
+  IT_LINK        = IT_SUBMENU    | IT_STRING  | IT_WHITE,
+  IT_ACT         = IT_FUNC       | IT_PATCH,
+  IT_CALL        = IT_FUNC       | IT_STRING,
   IT_CVAR        = IT_CV         | IT_STRING,
   IT_TEXTBOX     = IT_CV_TEXTBOX | IT_STRING,
 };
@@ -146,20 +149,70 @@ typedef void (*menufunc_t)(int choice);
 /// \brief Describes a single menu item
 struct menuitem_t
 {
+  friend class TextBox;
+public:
   short  flags; ///< bit flags
 
   const char  *pic; ///< Texture name or NULL
   const char *text; ///< plain text, used when we have a valid font (e.g. FONTBxx lumps)
 
-  union use_t
-  {
-    struct consvar_t *cvar;    // IT_CV_*
-    class       Menu *submenu; // IT_SUBMENU
-    menufunc_t        routine; // the rest
-  } use;
-
   /// hotkey in menu OR y offset of the item 
   byte alphaKey;
+
+private:
+  union
+  {
+    Menu       *submenu; // IT_SUBMENU
+    menufunc_t  func;    // IT_FUNC
+    consvar_t  *cvar;    // IT_CV
+  };
+
+public:
+  menuitem_t() : flags(0), pic(NULL), text(NULL), alphaKey(0), submenu(NULL) {}
+
+  menuitem_t(short f, const char *p, const char *t, byte a = 0)
+    : flags(f), pic(p), text(t), alphaKey(a), submenu(NULL) {}
+
+  menuitem_t(short f, const char *p, const char *t, Menu *sm, byte a = 0)
+    : flags(f), pic(p), text(t), alphaKey(a), submenu(sm)
+  {
+    if ((flags & IT_UNION_MASK) != IT_SUBMENU || !submenu)
+      I_Error("Bad submenu: %s!\n", text);
+  }
+
+  menuitem_t(short f, const char *p, const char *t, menufunc_t r, byte a = 0)
+    : flags(f), pic(p), text(t), alphaKey(a), func(r)
+  {
+    int x = (flags & IT_UNION_MASK);
+    if ((x != IT_FUNC && x != IT_NONE) || !func)
+      I_Error("Bad menufunc: %s!\n", text);
+  }
+
+  menuitem_t(short f, const char *p, const char *t, consvar_t *cv, byte a = 0)
+    : flags(f), pic(p), text(t), alphaKey(a), cvar(cv)
+  {
+    if ((flags & IT_UNION_MASK) != IT_CV || !cvar)
+      I_Error("Bad menu cvar: %s!\n", text);
+  }
+
+  Menu      *GetMenu() { return ((flags & IT_UNION_MASK) == IT_SUBMENU) ? submenu : NULL;} 
+  menufunc_t GetFunc() { return ((flags & IT_UNION_MASK) == IT_FUNC) ? func : NULL;} 
+  consvar_t *GetCV()   { return ((flags & IT_UNION_MASK) == IT_CV) ? cvar : NULL; }
+
+  void SetFunc(menufunc_t f)
+  {
+    func = f;
+    flags &= ~IT_TYPE_MASK;
+    flags |= IT_FUNC;
+  }
+
+  void SetMenu(Menu *m)
+  {
+    submenu = m;
+    flags &= ~IT_TYPE_MASK;
+    flags |= IT_SUBMENU;
+  }
+
 };
 
 
@@ -277,8 +330,8 @@ void MsgBox::SetText(const char *str)
       return;
     }
 
-  float height = rows * hud_font->height;
-  float width  = (columns + 1) * hud_font->width;
+  int height = int(rows * hud_font->height);
+  int width  = int((columns + 1) * hud_font->width);
 
   x = (BASEVIDWIDTH - width)/2;
   y = (BASEVIDHEIGHT - height)/2;
@@ -302,7 +355,7 @@ void MsgBox::Draw()
 
           *p = '\0';
           hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s, V_SCALE);
-          ytemp += hud_font->height;
+          ytemp += int(hud_font->height);
           s = p+1;
           *p = '\n';
         }
@@ -389,7 +442,7 @@ public:
     active = true;
     item = m;
     item->flags |= IT_TEXTBOX_IN_USE;
-    cv = item->use.cvar;
+    cv = item->GetCV();
     text = cv->str;
     callback = NULL;
   };
@@ -540,7 +593,7 @@ static void M_DrawThermo(int x, int y, consvar_t *cv)
   Texture *p = tc.GetPtr(leftlump);
   p->Draw(xx, y, V_SCALE);
 
-  xx += p->worldwidth - p->leftoffs;
+  xx += int(p->worldwidth - p->leftoffs);
   for (int i=0;i<16;i++)
     {
       tc.GetPtr(centerlump[i & 1])->Draw(xx, y, V_SCALE);
@@ -664,8 +717,8 @@ void Menu::DrawTitle()
 {
   if (font && title)
     {
-      int xtitle = (BASEVIDWIDTH - font->StringWidth(title)) / 2;
-      int ytitle = (y - font->StringHeight(title)) / 2;
+      int xtitle = int((BASEVIDWIDTH - font->StringWidth(title)) / 2);
+      int ytitle = int((y - font->StringHeight(title)) / 2);
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
 
@@ -677,8 +730,8 @@ void Menu::DrawTitle()
 
       //int xtitle = 94;
       //int ytitle = 2;
-      int xtitle = (BASEVIDWIDTH - p->worldwidth)/2;
-      int ytitle = (y - p->worldheight)/2;
+      int xtitle = int((BASEVIDWIDTH - p->worldwidth)/2);
+      int ytitle = int((y - p->worldheight)/2);
 
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
@@ -731,10 +784,6 @@ void Menu::DrawMenu()
 	    tc.GetPtr(items[i].pic)->Draw(x, dy, flags);
           break;
 
-        case IT_BIGSLIDER:
-          M_DrawThermo(x, dy, items[i].use.cvar);
-          break;
-
 	  // then the "short" ones:
         case IT_STRING:
 	  hud_font->DrawString(x, dy, items[i].text, flags);
@@ -748,9 +797,8 @@ void Menu::DrawMenu()
 	}
 
       // CVar item handling (also draw the value)
-      if (items[i].flags & IT_CV_FLAG)
+      if (consvar_t *cv = items[i].GetCV())
 	{
-	  consvar_t *cv = items[i].use.cvar;
 	  switch (items[i].flags & IT_TYPE_MASK)
 	    {
 	    case IT_CV_SLIDER:
@@ -773,7 +821,9 @@ void Menu::DrawMenu()
 	      h = 26;
 	      break;
 
-	    case IT_CV_NODRAW:
+	    case IT_CV_BIGSLIDER:
+	      M_DrawThermo(x, dy+h, items[i].GetCV());
+	      dy += LINEHEIGHT;
 	      break;
 
 	    default:
@@ -887,11 +937,16 @@ void M_SetupPlayer(int choice);
 
 static menuitem_t Main_MI[]=
 {
-  {IT_SUBMENU | IT_PATCH, "M_SINGLE", "SINGLE PLAYER", {(consvar_t *)&SinglePlayerDef}, 's'},
-  {IT_SUBMENU | IT_PATCH, "M_MULTI" , "MULTIPLAYER", {(consvar_t *)&MultiPlayerDef}, 'm'},
-  {IT_ACT, "M_OPTION", "OPTIONS", {(consvar_t *)M_SetupPlayer}, 'o'},
-  {IT_SUBMENU | IT_PATCH, "M_RDTHIS", "INFO", {(consvar_t *)&ReadDef1}, 'r'},
-  {IT_ACT, "M_QUITG" , "QUIT GAME", {(consvar_t *)M_QuitDOOM}, 'q'}
+  menuitem_t(IT_SUBMENU | IT_PATCH, "M_SINGLE", "SINGLE PLAYER", &SinglePlayerDef, 's'),
+  menuitem_t(IT_SUBMENU | IT_PATCH, "M_MULTI" , "MULTIPLAYER", &MultiPlayerDef, 'm'),
+  menuitem_t(IT_ACT, "M_OPTION", "OPTIONS", M_SetupPlayer, 'o'),
+  menuitem_t(IT_SUBMENU | IT_PATCH, "M_RDTHIS", "INFO", &ReadDef1, 'r'),
+  menuitem_t(IT_ACT, "M_QUITG" , "QUIT GAME", M_QuitDOOM, 'q')
+};
+
+enum mainmenu_e
+{
+  MI_main_setup_p1 = 2
 };
 
 // The main menu.
@@ -965,10 +1020,10 @@ void M_SaveGame(int choice);
 
 static menuitem_t SinglePlayer_MI[] =
 {
-  {IT_ACT, "M_NGAME" , "NEW GAME" ,{(consvar_t *)M_NewGame} ,'n'},
-  {IT_ACT, "M_LOADG" , "LOAD GAME",{(consvar_t *)M_LoadGame},'l'},
-  {IT_ACT, "M_SAVEG" , "SAVE GAME",{(consvar_t *)M_SaveGame},'s'},
-  {IT_ACT, "M_ENDGAM", "END GAME" ,{(consvar_t *)M_EndGame},'e'}
+  menuitem_t(IT_ACT, "M_NGAME" , "NEW GAME" , M_NewGame ,'n'),
+  menuitem_t(IT_ACT, "M_LOADG" , "LOAD GAME", M_LoadGame,'l'),
+  menuitem_t(IT_ACT, "M_SAVEG" , "SAVE GAME", M_SaveGame,'s'),
+  menuitem_t(IT_ACT, "M_ENDGAM", "END GAME" , M_EndGame ,'e')
 };
 
 Menu SinglePlayerDef("M_SINGLE", "Single Player", &MainMenuDef, ITEMS(SinglePlayer_MI), 97, 64);
@@ -1067,9 +1122,9 @@ void M_Class(int choice)
 
 static menuitem_t Class_MI[] =
 {
-  {IT_ACT, NULL, "FIGHTER", {(consvar_t *)M_Class}, 'f'},
-  {IT_ACT, NULL, "CLERIC", {(consvar_t *)M_Class}, 'c'},
-  {IT_ACT, NULL, "MAGE", {(consvar_t *)M_Class}, 'm'}
+  menuitem_t(IT_ACT, NULL, "FIGHTER", M_Class, 'f'),
+  menuitem_t(IT_ACT, NULL, "CLERIC", M_Class, 'c'),
+  menuitem_t(IT_ACT, NULL, "MAGE", M_Class, 'm')
 };
 
 Menu ClassDef(NULL, "Choose class:", &SinglePlayerDef, ITEMS(Class_MI), 66, 66,
@@ -1098,25 +1153,25 @@ void M_ChooseSkill(int choice);
 
 enum newgame_e
 {
-  MI_nightmare = 4,
+  MI_skill_nightmare = 4,
 };
 
 menuitem_t Skill_MI[]=
 {
-  {IT_ACT, "M_JKILL", "I'm too young to die.",{(consvar_t *)M_ChooseSkill}, 'i'},
-  {IT_ACT, "M_ROUGH", "Hey, not too rough."  ,{(consvar_t *)M_ChooseSkill}, 'h'},
-  {IT_ACT, "M_HURT" , "Hurt me plenty."      ,{(consvar_t *)M_ChooseSkill}, 'h'},
-  {IT_ACT, "M_ULTRA", "Ultra-Violence"       ,{(consvar_t *)M_ChooseSkill}, 'u'},
-  {IT_ACT, "M_NMARE", "Nightmare!"           ,{(consvar_t *)M_ChooseSkill}, 'n'}
+  menuitem_t(IT_ACT, "M_JKILL", "I'm too young to die.",M_ChooseSkill, 'i'),
+  menuitem_t(IT_ACT, "M_ROUGH", "Hey, not too rough."  ,M_ChooseSkill, 'h'),
+  menuitem_t(IT_ACT, "M_HURT" , "Hurt me plenty."      ,M_ChooseSkill, 'h'),
+  menuitem_t(IT_ACT, "M_ULTRA", "Ultra-Violence"       ,M_ChooseSkill, 'u'),
+  menuitem_t(IT_ACT, "M_NMARE", "Nightmare!"           ,M_ChooseSkill, 'n')
 };
 
 static menuitem_t HereticSkill_MI[]=
 {
-  {IT_ACT, "M_JKILL", "Thou needeth a wet-nurse", {(consvar_t *)M_ChooseSkill}, 't'},
-  {IT_ACT, "M_ROUGH", "Yellowbellies-R-us",       {(consvar_t *)M_ChooseSkill}, 'y'},
-  {IT_ACT, "M_HURT" , "Bringest them oneth",      {(consvar_t *)M_ChooseSkill}, 'b'},
-  {IT_ACT, "M_ULTRA", "Thou art a smite-meister", {(consvar_t *)M_ChooseSkill}, 't'},
-  {IT_ACT, "M_NMARE", "Black plague possesses thee", {(consvar_t *)M_ChooseSkill}, 'b'}
+  menuitem_t(IT_ACT, "M_JKILL", "Thou needeth a wet-nurse", M_ChooseSkill, 't'),
+  menuitem_t(IT_ACT, "M_ROUGH", "Yellowbellies-R-us",       M_ChooseSkill, 'y'),
+  menuitem_t(IT_ACT, "M_HURT" , "Bringest them oneth",      M_ChooseSkill, 'b'),
+  menuitem_t(IT_ACT, "M_ULTRA", "Thou art a smite-meister", M_ChooseSkill, 't'),
+  menuitem_t(IT_ACT, "M_NMARE", "Black plague possesses thee", M_ChooseSkill, 'b')
 };
 
 Menu SkillDef("M_SKILL", //"M_NEWG"
@@ -1139,7 +1194,7 @@ void M_ChooseSkill(int choice)
     if (LocalPlayers[i].ptype < 0)
       LocalPlayers[i].ptype = allowed_pawntypes[0];
 
-  if (choice == MI_nightmare)
+  if (choice == MI_skill_nightmare)
     {
       mbox.Set(NIGHTMARE, M_VerifyNightmare, MsgBox::YESNO);
       return;
@@ -1164,12 +1219,12 @@ void M_LoadSelect(int choice)
 
 static menuitem_t LoadGame_MI[]=
 {
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'1'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'2'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'3'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'4'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'5'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_LoadSelect},'6'}
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'1'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'2'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'3'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'4'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'5'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_LoadSelect,'6')
 };
 
 Menu LoadDef("M_LOADG", "Load Game", &MainMenuDef, ITEMS(LoadGame_MI), 80, 54,
@@ -1235,7 +1290,7 @@ void M_ReadSaveStrings()
 
       read(handle, &savegamestrings[i], SAVEGAME_DESC_SIZE);
       close(handle);
-      LoadGame_MI[i].flags = IT_CALL | IT_SPACE;
+      LoadGame_MI[i].flags = IT_FUNC | IT_SPACE;
     }
 }
 
@@ -1282,12 +1337,12 @@ static void M_SaveSelect(int choice);
 
 static menuitem_t Save_MI[]=
 {
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'1'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'2'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'3'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'4'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'5'},
-  {IT_CALL | IT_SPACE, NULL, "", {(consvar_t *)M_SaveSelect},'6'}
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'1'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'2'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'3'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'4'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'5'),
+  menuitem_t(IT_FUNC | IT_SPACE, NULL, "", M_SaveSelect,'6')
 };
 
 Menu  SaveDef("M_SAVEG", "Save Game", &MainMenuDef, ITEMS(Save_MI), 80, 54,
@@ -1369,20 +1424,20 @@ void M_NetOption(int choice);
 
 enum multiplayer_e
 {
-  MI_setupplayer1 = 3,
-  MI_setupplayer2 = 4,
+  MI_mp_setup_p1 = 3,
+  MI_mp_setup_p2 = 4,
 };
 
 
 static menuitem_t MultiPlayer_MI[] =
 {
-  {IT_ACT, "M_STSERV", "CREATE SERVER", {(consvar_t *)M_StartServerMenu} ,'a'},
-  {IT_ACT, "M_CONNEC", "CONNECT SERVER", {(consvar_t *)M_ConnectMenu} ,'c'},
-  {IT_ACT, "M_2PLAYR", "TWO PLAYER GAME", {(consvar_t *)M_Splitscreen} ,'n'},
-  {IT_ACT, "M_SETUPA", "SETUP PLAYER 1",{(consvar_t *)M_SetupPlayer} ,'s'},
-  {IT_ACT, "M_SETUPB", "SETUP PLAYER 2",{(consvar_t *)M_SetupPlayer} ,'t'},
-  {IT_ACT, "M_OPTION", "OPTIONS",{(consvar_t *)M_NetOption} ,'o'},
-  {IT_ACT, "M_ENDGAM", "END GAME",{(consvar_t *)M_EndGame} ,'e'}
+  menuitem_t(IT_ACT, "M_STSERV", "CREATE SERVER", M_StartServerMenu ,'a'),
+  menuitem_t(IT_ACT, "M_CONNEC", "CONNECT SERVER", M_ConnectMenu ,'c'),
+  menuitem_t(IT_ACT, "M_2PLAYR", "TWO PLAYER GAME", M_Splitscreen ,'n'),
+  menuitem_t(IT_ACT, "M_SETUPA", "SETUP PLAYER 1",M_SetupPlayer ,'s'),
+  menuitem_t(IT_ACT, "M_SETUPB", "SETUP PLAYER 2",M_SetupPlayer ,'t'),
+  menuitem_t(IT_ACT, "M_OPTION", "OPTIONS",M_NetOption ,'o'),
+  menuitem_t(IT_ACT, "M_ENDGAM", "END GAME",M_EndGame ,'e')
 };
 
 Menu MultiPlayerDef("M_MULTI", "Multiplayer", &MainMenuDef, ITEMS(MultiPlayer_MI), 85, 40);
@@ -1399,11 +1454,11 @@ void M_SwitchSplitscreen()
 {
   // activate setup for player 2
   if (cv_splitscreen.value)
-    MultiPlayer_MI[MI_setupplayer2].flags = IT_ACT;
+    MultiPlayer_MI[MI_mp_setup_p2].flags = IT_ACT;
   else
-    MultiPlayer_MI[MI_setupplayer2].flags = IT_OFF_BIG;
+    MultiPlayer_MI[MI_mp_setup_p2].flags = IT_OFF_BIG;
 
-  //if (MultiPlayerDef.lastOn==MI_setupplayer2) MultiPlayerDef.lastOn= MI_setupplayer1;
+  //if (MultiPlayerDef.lastOn==MI_mp_setup_p2) MultiPlayerDef.lastOn= MI_mp_setup_p1;
 }
 
 
@@ -1457,25 +1512,25 @@ static consvar_t cv_menu_cam_speed  = {"cam_speed", "0.25", CV_HIDDEN | CV_FLOAT
 
 static menuitem_t Options_MI[] =
 {
-  {IT_CVAR, NULL, "Messages:"       ,{&cv_menu_showmessages}    ,0},
-  {IT_CVAR, NULL, "Always Run"      ,{&cv_menu_autorun}         ,0},
-  {IT_CVAR, NULL, "Crosshair"       ,{&cv_menu_crosshair}       ,0},
-//{IT_CVAR, NULL, "Crosshair scale" ,{&cv_crosshairscale}  ,0},
-  {IT_CVAR, NULL, "Autoaim"         ,{&cv_menu_autoaim}         ,0},
-  {IT_CVAR, NULL, "Control per key" ,{&cv_controlperkey}   ,0},
+  menuitem_t(IT_CVAR, NULL, "Messages:"       ,&cv_menu_showmessages    ,0),
+  menuitem_t(IT_CVAR, NULL, "Always Run"      ,&cv_menu_autorun         ,0),
+  menuitem_t(IT_CVAR, NULL, "Crosshair"       ,&cv_menu_crosshair       ,0),
+//menuitem_t(IT_CVAR, NULL, "Crosshair scale" ,&cv_crosshairscale  ,0),
+  menuitem_t(IT_CVAR, NULL, "Autoaim"         ,&cv_menu_autoaim         ,0),
+  menuitem_t(IT_CVAR, NULL, "Control per key" ,&cv_controlperkey   ,0),
 
-  {IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:" ,{NULL}, 4},
-  {IT_CONTROLSTR, NULL, "Console"        , {NULL}, gk_console},
-  {IT_CONTROLSTR, NULL, "Talk key"       , {NULL}, gk_talk},
-  {IT_CONTROLSTR, NULL, "Rankings/Score",  {NULL}, gk_scores},
+  menuitem_t(IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:", 4),
+  menuitem_t(IT_CONTROLSTR, NULL, "Console"       , gk_console),
+  menuitem_t(IT_CONTROLSTR, NULL, "Talk key"      , gk_talk),
+  menuitem_t(IT_CONTROLSTR, NULL, "Rankings/Score", gk_scores),
 
 
-  {IT_LINK | IT_DY, NULL, "Server Options...",{(consvar_t *)&ServerOptionsDef}, 4},
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Game Options..."  ,{(consvar_t *)M_GameOption}       ,0},
-  {IT_LINK, NULL, "Sound Options..."  ,{(consvar_t *)&SoundDef}          ,0},
-  {IT_LINK, NULL, "Video Options..." ,{(consvar_t *)&VideoOptionsDef}   ,0},
-  {IT_LINK, NULL, "Mouse Options..." ,{(consvar_t *)&MouseOptionsDef}   ,0},
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Setup Controls...",{(consvar_t *)M_SetupControlsMenu},0}
+  menuitem_t(IT_LINK | IT_DY, NULL, "Server Options...",&ServerOptionsDef, 4),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Game Options..."  ,M_GameOption, 0),
+  menuitem_t(IT_LINK, NULL, "Sound Options..."  ,&SoundDef          ,0),
+  menuitem_t(IT_LINK, NULL, "Video Options..." ,&VideoOptionsDef   ,0),
+  menuitem_t(IT_LINK, NULL, "Mouse Options..." ,&MouseOptionsDef   ,0),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Setup Controls...",M_SetupControlsMenu, 0)
 };
 
 Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30,
@@ -1520,13 +1575,13 @@ void M_StartServer(int choice)
 
 static menuitem_t  Server_MI[] =
 {
-  {IT_CVAR, NULL, "Map",   {&cv_menu_startmap}, 0},
-  {IT_CVAR, NULL, "Skill", {&cv_menu_skill}, 0},
-  {IT_CVAR, NULL, "Public Server", {&cv_publicserver}, 0},
-  {IT_TEXTBOX, NULL, "Server Name",{&cv_servername}, 0},
-  {IT_LINK, NULL, "Server Options...",{(consvar_t *)&ServerOptionsDef},0},
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Game Options..." ,{(consvar_t *)M_GameOption},0},
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Start", {(consvar_t *)M_StartServer},120}
+  menuitem_t(IT_CVAR, NULL, "Map",   &cv_menu_startmap, 0),
+  menuitem_t(IT_CVAR, NULL, "Skill", &cv_menu_skill, 0),
+  menuitem_t(IT_CVAR, NULL, "Public Server", &cv_publicserver, 0),
+  menuitem_t(IT_TEXTBOX, NULL, "Server Name",&cv_servername, 0),
+  menuitem_t(IT_LINK, NULL, "Server Options...",&ServerOptionsDef,0),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Game Options..." ,M_GameOption,0),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Start", M_StartServer,120)
 };
 
 Menu Serverdef("M_STSERV", "Start Server", &MultiPlayerDef, ITEMS(Server_MI), 27, 40);
@@ -1572,22 +1627,22 @@ void M_Refresh(int choice)
 
 static menuitem_t Connect_MI[] =
 {
-  {IT_CVAR , NULL, "Search the",{(consvar_t *)&cv_menu_serversearch}, 0},
-  {IT_CALL | IT_STRING, NULL, "Refresh",  {(consvar_t *)M_Refresh}, 0},
-  {IT_NONE | IT_STRING | IT_WHITE, NULL, "Server Name                    ping   plys type", {NULL}, 0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
-  {IT_NONE | IT_STRING, NULL, "",{(consvar_t *)M_Connect}   ,0},
+  menuitem_t(IT_CVAR , NULL, "Search the",&cv_menu_serversearch, 0),
+  menuitem_t(IT_CALL, NULL, "Refresh",  M_Refresh, 0),
+  menuitem_t(IT_NONE | IT_STRING | IT_WHITE, NULL, "Server Name                    ping   plys type"),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
+  menuitem_t(IT_NONE | IT_STRING, NULL, "",M_Connect   ,0),
 };
 
 
@@ -1615,7 +1670,7 @@ void Menu::DrawConnect()
   else for (; i<n; i++)
     {
       game.net->serverlist[i]->Draw(x, cy + i*STRINGHEIGHT);
-      Connect_MI[i+3].flags =  IT_CALL | IT_STRING;
+      Connect_MI[i+3].flags =  IT_CALL;
     }
 
   for (; i<m; i++)
@@ -1659,10 +1714,12 @@ static bool setupcontrols_player2 = false;
 
 static void M_HandleSetupPlayerClass(int val)
 {
+  S_StartLocalAmbSound(sfx_menu_adjust);
+
   static int i = 0;
   int n = allowed_pawntypes.size();
 
-  if (val == 0)
+  if (val == KEY_LEFTARROW)
     {
       if (--i < 0)
         i = n-1;
@@ -1686,9 +1743,10 @@ static void M_HandleSetupPlayerClass(int val)
 /*
 static void M_HandleSetupPlayerSkin(int val)
 {
+  S_StartLocalAmbSound(sfx_menu_adjust);
   int myskin  = setupm_cvskin->value;
 
-  if (val == 0)
+  if (val == KEY_LEFTARROW)
     myskin--;
   else
     myskin++;
@@ -1748,25 +1806,25 @@ static bool M_QuitSetupPlayerMenu()
 
 static menuitem_t SetupPlayer_MI[] =
 {
-  {IT_TEXTBOX, NULL, "Your name",  {&cv_menu_playername}, 0},
-  {IT_ARROWS | IT_STRING, NULL, "Your species" , {(consvar_t *)M_HandleSetupPlayerClass}},
-  {IT_CVAR, NULL, "Your color",    {&cv_menu_playercolor}, 0},
-  //{IT_ARROWS | IT_STRING, NULL, "Your skin" , {(consvar_t *)M_HandleSetupPlayerSkin}},
-  {IT_CVAR, NULL, "Autoaim",              {&cv_menu_autoaim}, 0},
-  {IT_CVAR, NULL, "Orig. weapon switch",  {&cv_menu_owswitch}, 0},
-  //{IT_TEXTBOX, NULL, "Weapon preference", {&cv_menu_weaponpref}, 0},
-  {IT_CVAR, NULL, "Messages:",        {&cv_menu_showmessages}, 0},
-  {IT_CVAR, NULL, "Always Run",      {&cv_menu_autorun}, 0},
-  {IT_CVAR, NULL, "Crosshair",       {&cv_menu_crosshair}, 0},
-  //{IT_CVAR, NULL, "Crosshair scale" ,{&cv_crosshairscale}, 0},
+  menuitem_t(IT_TEXTBOX, NULL, "Your name",  &cv_menu_playername, 0),
+  menuitem_t(IT_KEYHANDLER | IT_STRING, NULL, "Your species" , M_HandleSetupPlayerClass, 0),
+  menuitem_t(IT_CVAR, NULL, "Your color",    &cv_menu_playercolor, 0),
+  //menuitem_t(IT_KEYHANDLER | IT_STRING, NULL, "Your skin" , M_HandleSetupPlayerSkin, 0},
+  menuitem_t(IT_CVAR, NULL, "Autoaim",              &cv_menu_autoaim, 0),
+  menuitem_t(IT_CVAR, NULL, "Orig. weapon switch",  &cv_menu_owswitch, 0),
+  //menuitem_t(IT_TEXTBOX, NULL, "Weapon preference", &cv_menu_weaponpref, 0),
+  menuitem_t(IT_CVAR, NULL, "Messages:",        &cv_menu_showmessages, 0),
+  menuitem_t(IT_CVAR, NULL, "Always Run",      &cv_menu_autorun, 0),
+  menuitem_t(IT_CVAR, NULL, "Crosshair",       &cv_menu_crosshair, 0),
+  //menuitem_t(IT_CVAR, NULL, "Crosshair scale" ,&cv_crosshairscale, 0),
   // TODO chasecam
-  {IT_CALL | IT_STRING | IT_WHITE,    0, "Setup Controls...", {(consvar_t *)M_SetupControlsMenu}, 0},
-  {IT_LINK, NULL, "Mouse config...",  {(consvar_t *)&MouseOptionsDef}, 0}
+  menuitem_t(IT_CALL | IT_WHITE,    0, "Setup Controls...", M_SetupControlsMenu, 0),
+  menuitem_t(IT_LINK, NULL, "Mouse config...",  &MouseOptionsDef, 0)
 };
 
 enum setupplayer_e
 {
-  setupplayer_mouse = 8
+  MI_setupp_mousecfg = 9
 };
 
 
@@ -1778,19 +1836,19 @@ Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlaye
 // setup the local player(s)
 void M_SetupPlayer(int choice)
 {
-  if (choice == MI_setupplayer1 || choice == 2) // First local player
+  if (choice == MI_mp_setup_p1 || choice == MI_main_setup_p1) // First local player
     {
       setup_player = 0;
       setupcontrols_player2 = false;
 
-      SetupPlayer_MI[setupplayer_mouse].use.submenu = &MouseOptionsDef;
+      SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&MouseOptionsDef);
     }
   else
     {
       setup_player = 1;
       setupcontrols_player2 = true;
 
-      SetupPlayer_MI[setupplayer_mouse].use.submenu = &Mouse2OptionsDef;
+      SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&Mouse2OptionsDef);
     }
 
   LocalPlayerInfo &p = LocalPlayers[setup_player];
@@ -1880,9 +1938,9 @@ void Menu::DrawSetupPlayer()
 
 static menuitem_t ServerOptions_MI[] =
 {
-  {IT_CVAR, NULL, "Public server", {&cv_publicserver}, 0},
-  {IT_TEXTBOX, NULL, "Server name", {&cv_servername}, 0},
-  {IT_TEXTBOX, NULL, "Master server", {&cv_masterserver}, 0},
+  menuitem_t(IT_CVAR, NULL, "Public server", &cv_publicserver, 0),
+  menuitem_t(IT_TEXTBOX, NULL, "Server name", &cv_servername, 0),
+  menuitem_t(IT_TEXTBOX, NULL, "Master server", &cv_masterserver, 0),
 };
 
 Menu ServerOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(ServerOptions_MI), 28, 40);
@@ -1894,21 +1952,21 @@ Menu ServerOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(ServerOptions_MI
 
 static menuitem_t NetOptions_MI[]=
 {
-  {IT_CVAR, NULL, "Allow joining",   {&cv_allownewplayers} ,0},
-  {IT_CVAR, NULL, "Max players",     {&cv_maxplayers}      ,0},
-  {IT_CVAR, NULL, "Deathmatch type" ,{&cv_deathmatch}      ,0},
-  {IT_CVAR, NULL, "Teamplay"        ,{&cv_teamplay}        ,0},
-  {IT_CVAR, NULL, "Team damage"     ,{&cv_teamdamage}      ,0},
-  {IT_CVAR, NULL, "Hidden players",  {&cv_hiddenplayers}   ,0},
-  {IT_CVAR, NULL, "Level exit mode", {&cv_exitmode}        ,0},
-  {IT_CVAR, NULL, "Fraglimit"       ,{&cv_fraglimit}       ,0},
-  {IT_CVAR, NULL, "Timelimit"       ,{&cv_timelimit}       ,0},
-  {IT_CVAR, NULL, "Allow autoaim"   ,{&cv_allowautoaim}    ,0},
-  {IT_CVAR, NULL, "Allow freelook"  ,{&cv_allowmlook}      ,0},
-  {IT_CVAR, NULL, "Allow pause"     ,{&cv_allowpause}      ,0},
-  {IT_CVAR, NULL, "Frag's Weapon Falling", {&cv_fragsweaponfalling}, 0},
+  menuitem_t(IT_CVAR, NULL, "Allow joining",   &cv_allownewplayers ,0),
+  menuitem_t(IT_CVAR, NULL, "Max players",     &cv_maxplayers      ,0),
+  menuitem_t(IT_CVAR, NULL, "Deathmatch type" ,&cv_deathmatch      ,0),
+  menuitem_t(IT_CVAR, NULL, "Teamplay"        ,&cv_teamplay        ,0),
+  menuitem_t(IT_CVAR, NULL, "Team damage"     ,&cv_teamdamage      ,0),
+  menuitem_t(IT_CVAR, NULL, "Hidden players",  &cv_hiddenplayers   ,0),
+  menuitem_t(IT_CVAR, NULL, "Level exit mode", &cv_exitmode        ,0),
+  menuitem_t(IT_CVAR, NULL, "Fraglimit"       ,&cv_fraglimit       ,0),
+  menuitem_t(IT_CVAR, NULL, "Timelimit"       ,&cv_timelimit       ,0),
+  menuitem_t(IT_CVAR, NULL, "Allow autoaim"   ,&cv_allowautoaim    ,0),
+  menuitem_t(IT_CVAR, NULL, "Allow freelook"  ,&cv_allowmlook      ,0),
+  menuitem_t(IT_CVAR, NULL, "Allow pause"     ,&cv_allowpause      ,0),
+  menuitem_t(IT_CVAR, NULL, "Frag's Weapon Falling", &cv_fragsweaponfalling, 0),
 
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Game Options..." ,{(consvar_t *)M_GameOption},0},
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Game Options..." ,M_GameOption,0),
 };
 
 Menu  NetOptionDef("M_OPTTTL", "OPTIONS", &MultiPlayerDef, ITEMS(NetOptions_MI), 60, 40);
@@ -1932,18 +1990,18 @@ void M_NetOption(int choice)
 
 static menuitem_t GameOptions_MI[] =
 {
-  {IT_CVAR, NULL, "Item respawn"        ,{&cv_itemrespawn}        ,0},
-  {IT_CVAR, NULL, "Item respawn time"   ,{&cv_itemrespawntime}    ,0},
-  {IT_CVAR, NULL, "Monster respawn"     ,{&cv_respawnmonsters}    ,0},
-  {IT_CVAR, NULL, "Monster respawn time",{&cv_respawnmonsterstime},0},
-  {IT_CVAR, NULL, "Fast monsters"       ,{&cv_fastmonsters}       ,0},
+  menuitem_t(IT_CVAR, NULL, "Item respawn"        ,&cv_itemrespawn        ,0),
+  menuitem_t(IT_CVAR, NULL, "Item respawn time"   ,&cv_itemrespawntime    ,0),
+  menuitem_t(IT_CVAR, NULL, "Monster respawn"     ,&cv_respawnmonsters    ,0),
+  menuitem_t(IT_CVAR, NULL, "Monster respawn time",&cv_respawnmonsterstime,0),
+  menuitem_t(IT_CVAR, NULL, "Fast monsters"       ,&cv_fastmonsters       ,0),
   // TODO cv_nomonsters?
-  {IT_CVAR, NULL, "Gravity"             ,{&cv_gravity}            ,0},
-  {IT_CVAR, NULL, "Jumpspeed",           {&cv_jumpspeed}          ,0},
-  {IT_CVAR, NULL, "Allow rocket jump",   {&cv_allowrocketjump}    ,0},
-  {IT_CVAR, NULL, "Solid corpses"        ,{&cv_solidcorpse}        ,0},
-  {IT_CVAR, NULL, "Voodoo dolls"        ,{&cv_voodoodolls}        ,0},
-  {IT_CALL | IT_STRING | IT_WHITE, NULL, "Network Options..."  ,{(consvar_t *)M_NetOption},110}
+  menuitem_t(IT_CVAR, NULL, "Gravity"             ,&cv_gravity            ,0),
+  menuitem_t(IT_CVAR, NULL, "Jumpspeed",           &cv_jumpspeed          ,0),
+  menuitem_t(IT_CVAR, NULL, "Allow rocket jump",   &cv_allowrocketjump    ,0),
+  menuitem_t(IT_CVAR, NULL, "Solid corpses"        ,&cv_solidcorpse        ,0),
+  menuitem_t(IT_CVAR, NULL, "Voodoo dolls"        ,&cv_voodoodolls        ,0),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Network Options..."  ,M_NetOption,110)
 };
 
 Menu GameOptionDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(GameOptions_MI), 60, 40);
@@ -1964,12 +2022,9 @@ enum sound_e
 
 static menuitem_t Sound_MI[] =
 {
-  {IT_CV_NODRAW | IT_PATCH, "M_SFXVOL", "Sound Volume",{&cv_soundvolume},'s'},
-  {IT_NONE | IT_BIGSLIDER,  NULL      , NULL          ,{&cv_soundvolume}    },
-  {IT_CV_NODRAW | IT_PATCH, "M_MUSVOL", "Music Volume",{&cv_musicvolume},'m'},
-  {IT_NONE | IT_BIGSLIDER,  NULL      , NULL          ,{&cv_musicvolume}    },
-  {IT_CV_NODRAW | IT_PATCH, "M_CDVOL" , "CD Volume"   ,{&cd_volume}     ,'c'},
-  {IT_NONE | IT_BIGSLIDER,  NULL      , NULL          ,{&cd_volume}         }
+  menuitem_t(IT_CV_BIGSLIDER | IT_PATCH, "M_SFXVOL", "Sound Volume",&cv_soundvolume,'s'),
+  menuitem_t(IT_CV_BIGSLIDER | IT_PATCH, "M_MUSVOL", "Music Volume",&cv_musicvolume,'m'),
+  menuitem_t(IT_CV_BIGSLIDER | IT_PATCH, "M_CDVOL" , "CD Volume"   ,&cd_volume     ,'c'),
 };
 
 Menu  SoundDef("M_SVOL", "Sound Volume", &OptionsDef, ITEMS(Sound_MI), 80, 50);
@@ -1989,17 +2044,17 @@ static void M_OpenGLOption(int choice)
 
 static menuitem_t VideoOptions_MI[]=
 {
-  {IT_LINK, NULL, "Video modes..."  , {(consvar_t *)&VidModeDef}, 0},
-  {IT_CVAR, NULL, "Fullscreen"      , {&cv_fullscreen}, 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Brightness" , {&cv_usegamma}, 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Screen size", {&cv_viewsize}, 0},
-  {IT_CVAR, NULL, "Scale status bar", {&cv_scalestatusbar}, 0},
-  {IT_CVAR, NULL, "Translucency"    , {&cv_translucency}  , 0},
-  {IT_CVAR, NULL, "Splats"          , {&cv_splats}        , 0},
-  {IT_CVAR, NULL, "Bloodtime"       , {&cv_bloodtime}     , 0},
-  {IT_CVAR, NULL, "Screenslink effect", {&cv_screenslink}   , 0},
+  menuitem_t(IT_LINK, NULL, "Video modes..."  , &VidModeDef, 0),
+  menuitem_t(IT_CVAR, NULL, "Fullscreen"      , &cv_fullscreen, 0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Brightness" , &cv_usegamma, 0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Screen size", &cv_viewsize, 0),
+  menuitem_t(IT_CVAR, NULL, "Scale status bar", &cv_scalestatusbar, 0),
+  menuitem_t(IT_CVAR, NULL, "Translucency"    , &cv_translucency  , 0),
+  menuitem_t(IT_CVAR, NULL, "Splats"          , &cv_splats        , 0),
+  menuitem_t(IT_CVAR, NULL, "Bloodtime"       , &cv_bloodtime     , 0),
+  menuitem_t(IT_CVAR, NULL, "Screenslink effect", &cv_screenslink , 0),
 #ifndef NO_OPENGL
-  {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "3D Card Options...", {(consvar_t *)M_OpenGLOption}, 20},
+  menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "OpenGL options...", M_OpenGLOption, 20),
 #endif
 };
 
@@ -2014,7 +2069,7 @@ void M_HandleVideoMode(int ch);
 
 static menuitem_t VideoMode_MI[]=
 {
-  {IT_KEYHANDLER | IT_SPACE, NULL, "", {(consvar_t *)M_HandleVideoMode}, '\0'},     // dummy menuitem for the control func
+  menuitem_t(IT_FULL_KEYHANDLER | IT_SPACE, NULL, "", M_HandleVideoMode, 0),     // dummy menuitem for the control func
 };
 
 
@@ -2232,14 +2287,14 @@ void M_HandleVideoMode(int key)
 //added:24-03-00: note: alphaKey member is the y offset
 static menuitem_t MouseOptions_MI[]=
 {
-  {IT_CVAR, NULL, "Use Mouse",        {&cv_usemouse[0]}        ,0},
-  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook[0]}       ,0},
-  {IT_CVAR, NULL, "Mouse Move"      , {&cv_mousemove[0]}       ,0},
-  {IT_CVAR, NULL, "Invert Mouse"    , {&cv_invertmouse[0]}     ,0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx[0]}       ,0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy[0]}       ,0}
+  menuitem_t(IT_CVAR, NULL, "Use Mouse",        &cv_usemouse[0]        ,0),
+  menuitem_t(IT_CVAR, NULL, "Always MouseLook", &cv_automlook[0]       ,0),
+  menuitem_t(IT_CVAR, NULL, "Mouse Move"      , &cv_mousemove[0]       ,0),
+  menuitem_t(IT_CVAR, NULL, "Invert Mouse"    , &cv_invertmouse[0]     ,0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", &cv_mousesensx[0]       ,0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", &cv_mousesensy[0]       ,0)
   // #ifdef __MACOS__
-  //  ,{IT_CALL | IT_STRING | IT_WHITE, NULL, "Configure Input Sprocket..."  , {(consvar_t *)macConfigureInput}, 60}
+  //  ,menuitem_t(IT_CALL | IT_WHITE, NULL, "Configure Input Sprocket..."  , macConfigureInput}, 60)
   //#endif
 };
 
@@ -2252,13 +2307,13 @@ Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(MouseOptions_MI)
 
 static menuitem_t  Mouse2Options_MI[] =
 {
-  {IT_CVAR, NULL, "Second Mouse Serial Port", {&cv_mouse2port}, 0},
-  {IT_CVAR, NULL, "Use Mouse 2"     , {&cv_usemouse[1]}      , 0},
-  {IT_CVAR, NULL, "Always MouseLook", {&cv_automlook[1]}     , 0},
-  {IT_CVAR, NULL, "Mouse Move",       {&cv_mousemove[1]}     , 0},
-  {IT_CVAR, NULL, "Invert Mouse",     {&cv_invertmouse[1]}   , 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", {&cv_mousesensx[1]}, 0},
-  {IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", {&cv_mousesensy[1]}, 0}
+  menuitem_t(IT_CVAR, NULL, "Second Mouse Serial Port", &cv_mouse2port, 0),
+  menuitem_t(IT_CVAR, NULL, "Use Mouse 2"     , &cv_usemouse[1]      , 0),
+  menuitem_t(IT_CVAR, NULL, "Always MouseLook", &cv_automlook[1]     , 0),
+  menuitem_t(IT_CVAR, NULL, "Mouse Move",       &cv_mousemove[1]     , 0),
+  menuitem_t(IT_CVAR, NULL, "Invert Mouse",     &cv_invertmouse[1]   , 0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Mouse x-speed", &cv_mousesensx[1], 0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Mouse y-speed", &cv_mousesensy[1], 0)
 };
 
 Menu  Mouse2OptionsDef("M_OPTTTL", "OPTIONS", &SetupPlayerDef, ITEMS(Mouse2Options_MI), 60, 40);
@@ -2302,22 +2357,22 @@ static void M_SetupControlsMenu2(int choice)
 
 static menuitem_t Control_MI[]=
 {
-  {IT_CONTROLSTR, NULL, "Fire"        , {NULL}, gc_fire       },
-  {IT_CONTROLSTR, NULL, "Use/Open"    , {NULL}, gc_use        },
-  {IT_CONTROLSTR, NULL, "Jump"        , {NULL}, gc_jump       },
-  {IT_CONTROLSTR, NULL, "Forward"     , {NULL}, gc_forward    },
-  {IT_CONTROLSTR, NULL, "Backpedal"   , {NULL}, gc_backward   },
-  {IT_CONTROLSTR, NULL, "Turn Left"   , {NULL}, gc_turnleft   },
-  {IT_CONTROLSTR, NULL, "Turn Right"  , {NULL}, gc_turnright  },
-  {IT_CONTROLSTR, NULL, "Run"         , {NULL}, gc_speed      },
-  {IT_CONTROLSTR, NULL, "Strafe On"   , {NULL}, gc_strafe     },
-  {IT_CONTROLSTR, NULL, "Strafe Left" , {NULL}, gc_strafeleft },
-  {IT_CONTROLSTR, NULL, "Strafe Right", {NULL}, gc_straferight},
-  {IT_CONTROLSTR, NULL, "Look Up"     , {NULL}, gc_lookup     },
-  {IT_CONTROLSTR, NULL, "Look Down"   , {NULL}, gc_lookdown   },
-  {IT_CONTROLSTR, NULL, "Center View" , {NULL}, gc_centerview },
-  {IT_CONTROLSTR, NULL, "Mouselook"   , {NULL}, gc_mouseaiming},
-  {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "next",{(consvar_t *)M_SetupControlsMenu2}, 20}
+  menuitem_t(IT_CONTROLSTR, NULL, "Fire"        , gc_fire       ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Use/Open"    , gc_use        ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Jump"        , gc_jump       ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Forward"     , gc_forward    ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Backpedal"   , gc_backward   ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Turn Left"   , gc_turnleft   ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Turn Right"  , gc_turnright  ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Run"         , gc_speed      ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Strafe On"   , gc_strafe     ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Strafe Left" , gc_strafeleft ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Strafe Right", gc_straferight),
+  menuitem_t(IT_CONTROLSTR, NULL, "Look Up"     , gc_lookup     ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Look Down"   , gc_lookdown   ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Center View" , gc_centerview ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Mouselook"   , gc_mouseaiming),
+  menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "next", M_SetupControlsMenu2, 20)
 };
 
 Menu  ControlDef("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control_MI), 40, 40,
@@ -2326,22 +2381,22 @@ Menu  ControlDef("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control_MI), 4
 
 static menuitem_t Control2_MI[]=
 {
-  {IT_CONTROLSTR, NULL, "Fist/Chainsaw"  , {NULL}, gc_weapon1},
-  {IT_CONTROLSTR, NULL, "Pistol"         , {NULL}, gc_weapon2},
-  {IT_CONTROLSTR, NULL, "Shotgun/Double" , {NULL}, gc_weapon3},
-  {IT_CONTROLSTR, NULL, "Chaingun"       , {NULL}, gc_weapon4},
-  {IT_CONTROLSTR, NULL, "Rocket Launcher", {NULL}, gc_weapon5},
-  {IT_CONTROLSTR, NULL, "Plasma rifle"   , {NULL}, gc_weapon6},
-  {IT_CONTROLSTR, NULL, "BFG"            , {NULL}, gc_weapon7},
-  {IT_CONTROLSTR, NULL, "Chainsaw"       , {NULL}, gc_weapon8},
-  {IT_CONTROLSTR, NULL, "Previous Weapon", {NULL}, gc_prevweapon},
-  {IT_CONTROLSTR, NULL, "Next Weapon"    , {NULL}, gc_nextweapon},
-  {IT_CONTROLSTR, NULL, "Best Weapon"    , {NULL}, gc_bestweapon},
-  {IT_CONTROLSTR, NULL, "Inventory Left" , {NULL}, gc_invprev},
-  {IT_CONTROLSTR, NULL, "Inventory Right", {NULL}, gc_invnext},
-  {IT_CONTROLSTR, NULL, "Inventory Use"  , {NULL}, gc_invuse },
-  {IT_CONTROLSTR, NULL, "Fly down"       , {NULL}, gc_flydown},
-  {IT_CALL | IT_STRING | IT_WHITE | IT_DY, NULL, "next",{(consvar_t *)M_SetupControlsMenu}, 20}
+  menuitem_t(IT_CONTROLSTR, NULL, "Fist/Chainsaw"  , gc_weapon1),
+  menuitem_t(IT_CONTROLSTR, NULL, "Pistol"         , gc_weapon2),
+  menuitem_t(IT_CONTROLSTR, NULL, "Shotgun/Double" , gc_weapon3),
+  menuitem_t(IT_CONTROLSTR, NULL, "Chaingun"       , gc_weapon4),
+  menuitem_t(IT_CONTROLSTR, NULL, "Rocket Launcher", gc_weapon5),
+  menuitem_t(IT_CONTROLSTR, NULL, "Plasma rifle"   , gc_weapon6),
+  menuitem_t(IT_CONTROLSTR, NULL, "BFG"            , gc_weapon7),
+  menuitem_t(IT_CONTROLSTR, NULL, "Chainsaw"       , gc_weapon8),
+  menuitem_t(IT_CONTROLSTR, NULL, "Previous Weapon", gc_prevweapon),
+  menuitem_t(IT_CONTROLSTR, NULL, "Next Weapon"    , gc_nextweapon),
+  menuitem_t(IT_CONTROLSTR, NULL, "Best Weapon"    , gc_bestweapon),
+  menuitem_t(IT_CONTROLSTR, NULL, "Inventory Left" , gc_invprev),
+  menuitem_t(IT_CONTROLSTR, NULL, "Inventory Right", gc_invnext),
+  menuitem_t(IT_CONTROLSTR, NULL, "Inventory Use"  , gc_invuse ),
+  menuitem_t(IT_CONTROLSTR, NULL, "Fly down"       , gc_flydown),
+  menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "next", M_SetupControlsMenu, 20)
 };
 
 
@@ -2444,7 +2499,7 @@ static void M_ChangeControl(const char *str, int key)
 
 static menuitem_t Read1_MI[] =
 {
-  {IT_SUBMENU | IT_SPACE, NULL, "", {(consvar_t *)&ReadDef2}, 0}
+  menuitem_t(IT_SUBMENU | IT_SPACE, NULL, "", &ReadDef2, 0)
 };
 
 Menu  ReadDef1(NULL, "Readme1", &MainMenuDef, ITEMS(Read1_MI), 280, 185,
@@ -2478,7 +2533,7 @@ void Menu::DrawReadThis1()
 
 static menuitem_t Read2_MI[] =
 {
-  {IT_SUBMENU | IT_SPACE, NULL, "", {(consvar_t *)&MainMenuDef},0}
+  menuitem_t(IT_SUBMENU | IT_SPACE, NULL, "", &MainMenuDef, 0)
 };
 
 Menu  ReadDef2(NULL, "Readme2", &ReadDef1, ITEMS(Read2_MI), 330, 175,
@@ -2801,9 +2856,15 @@ bool Menu::Responder(event_t *ev)
       return true;
     }
 
+  // FIXME check
+  return currentMenu->MenuResponder(ch);
+}
 
+
+bool Menu::MenuResponder(int key)
+{
   // esc exits menu
-  if (ch == KEY_ESCAPE)
+  if (key == KEY_ESCAPE)
     {
       if (vidm_testingmode > 0)
         {
@@ -2812,10 +2873,10 @@ bool Menu::Responder(event_t *ev)
           vidm_testingmode = 0;
           return true;
         }
-      currentMenu->lastOn = itemOn;
-      if (currentMenu->parent)
+      lastOn = itemOn;
+      if (parent)
         {
-          SetupNextMenu(currentMenu->parent);
+          SetupNextMenu(parent);
           S_StartLocalAmbSound(sfx_menu_close); // it's a matter of taste which sound to choose
         }
       else
@@ -2826,76 +2887,91 @@ bool Menu::Responder(event_t *ev)
       return true;
     }
 
-  void  (*routine)(int);
-  routine = currentMenu->items[itemOn].use.routine;
-  int type = currentMenu->items[itemOn].flags & IT_TYPE_MASK;
+  int type = items[itemOn].flags & IT_TYPE_MASK;
 
   // full keyhandler (eats anything but esc)
-  if (routine && type == IT_KEYHANDLER)
+  if (type == IT_FULL_KEYHANDLER)
     {
-      routine(ch);
+      items[itemOn].GetFunc()(key);
       return true;
     }
 
-  // TODO debug, remove
-  if (!routine && type != IT_NONE && type != IT_CONTROL)
-    I_Error("menu routine missing!\n");
+  // menu item movement
+  switch (key)
+    {
+    case KEY_DOWNARROW:
+      do
+        {
+          if (++itemOn >= numitems)
+            itemOn = 0;
+        } while ((items[itemOn].flags & IT_TYPE_MASK) == IT_NONE);
+      S_StartLocalAmbSound(sfx_menu_move);
+      return true;
+
+    case KEY_UPARROW:
+      do
+        {
+          if (!itemOn)
+            itemOn = numitems-1;
+          else itemOn--;
+        } while ((items[itemOn].flags & IT_TYPE_MASK) == IT_NONE);
+      S_StartLocalAmbSound(sfx_menu_move);
+      return true;
+
+    default:
+      break;
+    }
+
 
   // response to keypress depends on menuitem type
   switch (type)
     {
-    case IT_SUBMENU:
-      if (ch == KEY_ENTER)
-	{
-	  currentMenu->lastOn = itemOn;
-	  SetupNextMenu(currentMenu->items[itemOn].use.submenu);
-	  S_StartLocalAmbSound(sfx_menu_choose);
-	  return true;
-	}
-      break;
-
-    case IT_CALL:
-      if (ch == KEY_ENTER)
-	{
-	  currentMenu->lastOn = itemOn;
-	  routine(itemOn);
-	  S_StartLocalAmbSound(sfx_menu_choose);
-	  return true;
-	}
-      break;
-
-    case IT_ARROWS:
-      if (ch == KEY_LEFTARROW || ch == KEY_RIGHTARROW)
-	{
-	  routine(ch == KEY_RIGHTARROW);
-	  S_StartLocalAmbSound(sfx_menu_adjust);
-	  return true;
-	}
-      break;
-
     case IT_CONTROL:
-      if (ch == KEY_ENTER)
+      if (key == KEY_ENTER)
 	{
 	  S_StartLocalAmbSound(sfx_menu_choose);
-	  M_ChangeControl(currentMenu->items[itemOn].text, currentMenu->items[itemOn].alphaKey);
+	  M_ChangeControl(items[itemOn].text, items[itemOn].alphaKey);
 	  return true;
 	}
-      else if (ch == KEY_BACKSPACE)
+      else if (key == KEY_BACKSPACE)
         {
           S_StartLocalAmbSound(sfx_menu_adjust);
           // detach any keys associated to the game control
-          G_ClearControlKeys(setup_gc, currentMenu->items[itemOn].alphaKey);
+          G_ClearControlKeys(setup_gc, items[itemOn].alphaKey);
 	  return true;
         }
       break;
 
+    case IT_SUBMENU:
+      if (key == KEY_ENTER)
+	{
+	  lastOn = itemOn;
+	  SetupNextMenu(items[itemOn].GetMenu());
+	  S_StartLocalAmbSound(sfx_menu_choose);
+	  return true;
+	}
+      break;
+
+    case IT_FUNC:
+      if (key == KEY_ENTER)
+	{
+	  lastOn = itemOn;
+	  items[itemOn].GetFunc()(itemOn);
+	  S_StartLocalAmbSound(sfx_menu_choose);
+	  return true;
+	}
+      break;
+
+    case IT_KEYHANDLER:
+      items[itemOn].GetFunc()(key);
+      return true;
+
     case IT_CV:
-    case IT_CV_NODRAW:
+    case IT_CV_BIGSLIDER:
     case IT_CV_SLIDER:
       {
-	consvar_t *cv = currentMenu->items[itemOn].use.cvar;
         char change = 0;
-        switch (ch)
+        switch (key)
           {
           case KEY_LEFTARROW:
             change = -1;
@@ -2908,6 +2984,7 @@ bool Menu::Responder(event_t *ev)
         if (change != 0)
           {
             S_StartLocalAmbSound(sfx_menu_adjust);
+	    consvar_t *cv = items[itemOn].GetCV();
 	    if (cv->flags & CV_FLOAT)
 	      {
 		char s[20];
@@ -2922,9 +2999,9 @@ bool Menu::Responder(event_t *ev)
       break;
 
     case IT_CV_TEXTBOX:
-      if (ch == KEY_ENTER)
+      if (key == KEY_ENTER)
 	{
-	  textbox.Open(&currentMenu->items[itemOn]);
+	  textbox.Open(&items[itemOn]);
 	  return true;
 	}
       break;
@@ -2934,47 +3011,28 @@ bool Menu::Responder(event_t *ev)
     }
 
 
-  // finally, menu navigation (up/down) and some shortcuts
-  switch (ch)
+  // finally, rest of menu navigation
+  switch (key)
     {
-    case KEY_DOWNARROW:
-      do
-        {
-          if (++itemOn >= currentMenu->numitems)
-            itemOn = 0;
-        } while ((currentMenu->items[itemOn].flags & IT_TYPE_MASK) == IT_NONE);
-      S_StartLocalAmbSound(sfx_menu_move);
-      return true;
-
-    case KEY_UPARROW:
-      do
-        {
-          if (!itemOn)
-            itemOn = currentMenu->numitems-1;
-          else itemOn--;
-        } while ((currentMenu->items[itemOn].flags & IT_TYPE_MASK) == IT_NONE);
-      S_StartLocalAmbSound(sfx_menu_move);
-      return true;
-
     case KEY_BACKSPACE:
-      currentMenu->lastOn = itemOn;
-      if (currentMenu->parent)
+      lastOn = itemOn;
+      if (parent)
         {
-          SetupNextMenu(currentMenu->parent);
+          SetupNextMenu(parent);
           S_StartLocalAmbSound(sfx_menu_close);
         }
       return true;
 
     default:
-      for (int i = itemOn+1; i < currentMenu->numitems; i++)
-        if (currentMenu->items[i].alphaKey == ch)
+      for (int i = itemOn+1; i < numitems; i++)
+        if (items[i].alphaKey == key)
           {
             itemOn = i;
             S_StartLocalAmbSound(sfx_menu_move);
             return true;
           }
       for (int i = 0; i <= itemOn; i++)
-        if (currentMenu->items[i].alphaKey == ch)
+        if (items[i].alphaKey == key)
           {
             itemOn = i;
             S_StartLocalAmbSound(sfx_menu_move);
@@ -3042,11 +3100,11 @@ void Menu::Open()
   EpiDef.numitems = n;
   for (int i=0; i<n; i++)
     {
-      Episode_MI[i].flags = game.episodes[i]->active ? IT_ACT : (IT_SPACE | IT_DISABLED);
       Episode_MI[i].pic = game.episodes[i]->namepic.empty() ? NULL : game.episodes[i]->namepic.c_str(); // FIXME dangerous?
       Episode_MI[i].text = game.episodes[i]->name.c_str(); // this too?
-      Episode_MI[i].use.routine = M_Episode;
+      Episode_MI[i].SetFunc(M_Episode);
       Episode_MI[i].alphaKey = Episode_MI[i].text[0];
+      Episode_MI[i].flags = game.episodes[i]->active ? IT_ACT : (IT_SPACE | IT_DISABLED);
     }
 }
 
@@ -3237,47 +3295,47 @@ extern Menu OGL_LightingDef, OGL_FogDef, OGL_ColorDef, OGL_DevDef;
 
 static menuitem_t OpenGLOptions_MI[]=
 {
-  {IT_CVAR, NULL, "Mouse look"          , {&cv_grcrappymlook}     ,  0},
-  {IT_CVAR, NULL, "Field of view"       , {&cv_grfov}             , 10},
-  {IT_CVAR, NULL, "Quality"             , {&cv_scr_depth}         , 20},
-  {IT_CVAR, NULL, "Texture Filter"      , {&cv_grfiltermode}      , 30},
+  //menuitem_t(IT_CVAR, NULL, "Mouse look"          , &cv_grcrappymlook     ,  0),
+  menuitem_t(IT_CVAR, NULL, "Field of view"       , &cv_grfov             , 10),
+  menuitem_t(IT_CVAR, NULL, "Quality"             , &cv_scr_depth         , 20),
+  menuitem_t(IT_CVAR, NULL, "Texture Filter"      , &cv_grfiltermode      , 30),
 
-  {IT_LINK, NULL, "Lighting..."       , {(consvar_t *)&OGL_LightingDef}   , 60},
-  {IT_LINK, NULL, "Fog..."            , {(consvar_t *)&OGL_FogDef}        , 70},
-  {IT_LINK, NULL, "Gamma..."          , {(consvar_t *)&OGL_ColorDef}      , 80},
-  {IT_LINK, NULL, "Development..."    , {(consvar_t *)&OGL_DevDef}        , 90},
+  menuitem_t(IT_LINK, NULL, "Lighting..."       , &OGL_LightingDef   , 60),
+  menuitem_t(IT_LINK, NULL, "Fog..."            , &OGL_FogDef        , 70),
+  menuitem_t(IT_LINK, NULL, "Gamma..."          , &OGL_ColorDef      , 80),
+  menuitem_t(IT_LINK, NULL, "Development..."    , &OGL_DevDef        , 90),
 };
 
 static menuitem_t OGL_Lighting_MI[]=
 {
-  {IT_CVAR, NULL, "Coronas"                 , {&cv_grcoronas}         ,  0},
-  {IT_CVAR, NULL, "Coronas size"            , {&cv_grcoronasize}      , 10},
-  {IT_CVAR, NULL, "Dynamic lighting"        , {&cv_grdynamiclighting} , 20},
-  {IT_CVAR, NULL, "Static lighting"         , {&cv_grstaticlighting}  , 30},
-  {IT_CVAR, NULL, "Monsters' balls lighting", {&cv_grmblighting}      , 40},
+  menuitem_t(IT_CVAR, NULL, "Coronas"                 , &cv_grcoronas         ,  0),
+  menuitem_t(IT_CVAR, NULL, "Coronas size"            , &cv_grcoronasize      , 10),
+  menuitem_t(IT_CVAR, NULL, "Dynamic lighting"        , &cv_grdynamiclighting , 20),
+  menuitem_t(IT_CVAR, NULL, "Static lighting"         , &cv_grstaticlighting  , 30),
+  //menuitem_t(IT_CVAR, NULL, "Monsters' balls lighting", &cv_grmblighting      , 40),
 };
 
 static menuitem_t OGL_Fog_MI[]=
 {
-  {IT_CVAR,    NULL, "Fog",         {&cv_grfog},         0},
-  {IT_TEXTBOX, NULL, "Fog color",   {&cv_grfogcolor},   10},
-  {IT_CVAR,    NULL, "Fog density", {&cv_grfogdensity}, 20},
+  menuitem_t(IT_CVAR,    NULL, "Fog",         &cv_grfog,         0),
+  menuitem_t(IT_TEXTBOX, NULL, "Fog color",   &cv_grfogcolor,   10),
+  menuitem_t(IT_CVAR,    NULL, "Fog density", &cv_grfogdensity, 20),
 };
 
 static menuitem_t OGL_Color_MI[]=
 {
-  //{IT_STRING | NOTHING, "Gamma correction", NULL                   ,  0},
-  {IT_CVAR | IT_CV_SLIDER, NULL, "red"  , {&cv_grgammared}     , 10},
-  {IT_CVAR | IT_CV_SLIDER, NULL, "green", {&cv_grgammagreen}   , 20},
-  {IT_CVAR | IT_CV_SLIDER, NULL, "blue" , {&cv_grgammablue}    , 30},
-  //{IT_CVAR | IT_CV_SLIDER, "Constrast", {&cv_grcontrast} , 50},
+  //menuitem_t(IT_STRING | NOTHING, "Gamma correction", NULL                   ,  0),
+  menuitem_t(IT_CVAR | IT_CV_SLIDER, NULL, "red"  , &cv_grgammared     , 10),
+  menuitem_t(IT_CVAR | IT_CV_SLIDER, NULL, "green", &cv_grgammagreen   , 20),
+  menuitem_t(IT_CVAR | IT_CV_SLIDER, NULL, "blue" , &cv_grgammablue    , 30),
+  //menuitem_t(IT_CVAR | IT_CV_SLIDER, "Constrast", &cv_grcontrast , 50),
 };
 
 static menuitem_t OGL_Dev_MI[]=
 {
-  //    {IT_CVAR, "Polygon smooth"  , {&cv_grpolygonsmooth} ,  0},
-  {IT_CVAR, NULL, "MD2 models"      , {&cv_grmd2}              , 10},
-  {IT_CVAR, NULL, "Translucent walls", {&cv_grtranswall}       , 20},
+  //    menuitem_t(IT_CVAR, "Polygon smooth"  , &cv_grpolygonsmooth ,  0),
+  // menuitem_t(IT_CVAR, NULL, "MD2 models"      , &cv_grmd2              , 10),
+  menuitem_t(IT_CVAR, NULL, "Translucent walls", &cv_grtranswall       , 20),
 };
 
 Menu  OpenGLOptionDef("M_OPTTTL", "OPTIONS", &VideoOptionsDef, ITEMS(OpenGLOptions_MI), 60, 40);

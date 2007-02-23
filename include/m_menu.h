@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -16,12 +16,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Menu widget definitions
+/// \brief Menu system.
 
 #ifndef m_menu_h
 #define m_menu_h 1
@@ -92,6 +90,9 @@ public:
 
   /// changes menu node
   static void SetupNextMenu(Menu *m);
+
+  /// submenu event handler
+  bool MenuResponder(int key);
 
   /// utility
   int GetNumitems() const { return numitems; }
