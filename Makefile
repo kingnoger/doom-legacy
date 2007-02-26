@@ -240,7 +240,9 @@ export video_objects = \
 	$(objdir)/hwr_geometry.o \
 	$(objdir)/hwr_states.o \
 	$(objdir)/oglrenderer.o \
-	$(objdir)/oglhelpers.o 
+	$(objdir)/oglshaders.o \
+	$(objdir)/oglhelpers.o
+
 
 export net_objects = \
 	$(objdir)/n_interface.o \

@@ -30,6 +30,7 @@
 
 #include "hardware/oglrenderer.hpp"
 #include "hardware/oglhelpers.hpp"
+#include "hardware/oglshaders.h"
 
 #include "screen.h"
 #include "v_video.h"
@@ -49,7 +50,6 @@ void MD3_InitNormLookup();
   // TODO ideas
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);  //Texture does NOT blend with object background
 */
-
 
 
 OGLRenderer::OGLRenderer()
@@ -147,7 +147,7 @@ void OGLRenderer::StartFrame()
 /// Done with drawing. Swap buffers.
 void OGLRenderer::FinishFrame()
 {
-    SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
+  SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
 }
 
 
@@ -314,6 +314,11 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   // Clear any old GL errors.
   while (glGetError() != GL_NO_ERROR)
     ;
+
+#ifdef TEST_SHADERS
+  void TestShaders();
+  TestShaders();
+#endif
 
   return true;
 }
@@ -843,6 +848,12 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
 // future render also 3D floors and polyobjs.
 void OGLRenderer::RenderGLSubsector(int num)
 {
+#ifdef TEST_SHADERS
+  extern ShaderProg *sprog;
+  sprog->Use();
+  sprog->SetUniforms(mp->maptic/60.0);
+#endif
+
   int curseg;
   int firstseg;
   int segcount;
@@ -951,6 +962,9 @@ void OGLRenderer::RenderGLSubsector(int num)
 
   }
 
+#ifdef TEST_SHADERS
+  ShaderProg::DisableShaders();
+#endif
   // finally the actors
   RenderActors(s);
 }
