@@ -480,12 +480,8 @@ void I_SysInit()
       I_Quit();
     }
 
-  char title[30];
-  sprintf(title, LEGACY_VERSION_BANNER, LEGACY_VERSION/100, 
-	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
-
   // Window title
-  SDL_WM_SetCaption(title, "Doom Legacy");
+  SDL_WM_SetCaption(LEGACY_VERSION_BANNER, "Doom Legacy");
 
   I_StartupGraphics(); // we need a window for grabbing input!
 }

@@ -243,7 +243,6 @@ export video_objects = \
 	$(objdir)/oglshaders.o \
 	$(objdir)/oglhelpers.o
 
-
 export net_objects = \
 	$(objdir)/n_interface.o \
 	$(objdir)/n_connection.o \
@@ -338,13 +337,17 @@ grammars	:
 	$(MAKE) -C grammars
 
 
+versionstring:
+	$(CC) -c $(CFLAGS) -DSVN_REV=\"`svn info | grep Revision | sed -e 's/Revision: //'`\" engine/d_main.cpp -o objs/d_main.o
+
+
 
 ifdef DYNAMIC
 # main program
-$(exename) : engine util audio video net sdl grammars
+$(exename) : versionstring engine util audio video net sdl grammars
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
 else
 # all in one
-$(exename) : engine util audio video net sdl grammars
+$(exename) : versionstring engine util audio video net sdl grammars
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -o $@
 endif

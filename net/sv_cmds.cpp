@@ -48,9 +48,7 @@
 //  Returns program version.
 void Command_Version_f()
 {
-  CONS_Printf(LEGACY_VERSION_BANNER" "__TIME__" "__DATE__"\n",
-	      LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_SUBVERSION,
-	      LEGACY_VERSIONSTRING);
+  CONS_Printf("%s "__TIME__" "__DATE__"\n", LEGACY_VERSION_BANNER);
 }
 
 

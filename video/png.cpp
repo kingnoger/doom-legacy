@@ -329,12 +329,9 @@ bool WritePNGScreenshot(FILE *fp, byte *lfb, int width, int height, RGB_t *pal)
   text[0].key = "Title";
   text[0].text = "Screenshot";
 
-  char banner[81];
-  sprintf(banner, LEGACY_VERSION_BANNER, LEGACY_VERSION/100,
-	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
   text[1].compression = PNG_TEXT_COMPRESSION_NONE;
   text[1].key = "Author";
-  text[1].text = banner;
+  text[1].text = LEGACY_VERSION_BANNER;
 
   /*
   text[2].compression = PNG_TEXT_COMPRESSION_NONE;

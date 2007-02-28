@@ -57,11 +57,16 @@ void GenerateTables();
 void SV_Init();
 void CL_Init();
 
+#ifndef SVN_REV
+#define SVN_REV "none"
+#endif
 
-// Version number: major.minor.subversion
+// Version number: major.minor.revision
 const int  LEGACY_VERSION = 199;  // major*100 + minor
-const int  LEGACY_SUBVERSION = 0; // for bugfix releases, should not affect compatibility
-const char LEGACY_VERSIONSTRING[] = "alpha5";
+const int  LEGACY_REVISION = 0; // for bugfix releases, should not affect compatibility
+const char LEGACY_VERSIONSTRING[] = "alpha5 (rev " SVN_REV ")";
+char LEGACY_VERSION_BANNER[80];
+
 
 // Name of local directory for config files and savegames
 #ifdef LINUX 
@@ -505,10 +510,8 @@ void D_DoomMain()
   setbuf(stdout, NULL);      // non-buffered output
 
   // start console output by the banner line
-  char banner[81];
-  sprintf(banner, LEGACY_VERSION_BANNER, LEGACY_VERSION/100,
-	  LEGACY_VERSION%100, LEGACY_SUBVERSION, LEGACY_VERSIONSTRING);
-  CONS_Printf("%s\n", D_MakeTitleString(banner));
+  sprintf(LEGACY_VERSION_BANNER, "Doom Legacy %d.%d.%d %s", LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_REVISION, LEGACY_VERSIONSTRING);
+  CONS_Printf("%s\n", D_MakeTitleString(LEGACY_VERSION_BANNER));
 
   // get parameters from a response file (eg: legacy @parms.txt)
   // adds parameters found within file to myargc, myargv.

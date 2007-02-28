@@ -26,14 +26,13 @@
 
 /// version control
 extern const int  LEGACY_VERSION;
-extern const int  LEGACY_SUBVERSION;
+extern const int  LEGACY_REVISION;
 extern const char LEGACY_VERSIONSTRING[];
-#define LEGACY_VERSION_BANNER "Doom Legacy %d.%d.%d %s"
+extern char LEGACY_VERSION_BANNER[];
 
 
 //#define RANGECHECK              // Uncheck this to compile debugging code
 #define PARANOIA                // do some test that never happens but maybe
-//#define OLDWATER                // SoM: Allow old legacy water.
 
 #define MAXPLAYERNAME           21
 #define MAXSKINCOLORS           11
