@@ -19,7 +19,7 @@ all	: ../wad/d2h.exe ../wad/wadtool.exe ../wad/convert_deh.exe
 ../wad/wadtool.exe: $(objdir)/wadtool.o $(objdir)/md5.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
-../wad/convert_deh.exe: $(objdir)/convert_deh.o
+../wad/convert_deh.exe: $(objdir)/convert_deh.o $(objdir)/mnemonics.o
 	$(LD) $(LDFLAGS) $^ -o $@
 
 

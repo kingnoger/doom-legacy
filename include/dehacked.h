@@ -24,8 +24,8 @@
 #define dehacked_h 1
 
 #include "parser.h"
-#include "info.h"
 
+/// \brief DeHackEd patch reader
 class dehacked_t
 {
 private:
@@ -67,36 +67,5 @@ public:
 };
 
 extern dehacked_t DEH;
-
-
-/// [CODEPTR] DActor action function mnemonics
-struct dactor_mnemonic_t
-{
-  char       *name;
-  actionf_p1  ptr;
-};
-
-extern dactor_mnemonic_t BEX_DActorMnemonics[];
-
-
-/// [CODEPTR] Weapon action function mnemonics
-struct weapon_mnemonic_t
-{
-  char       *name;
-  actionf_p2  ptr;
-};
-
-extern weapon_mnemonic_t BEX_WeaponMnemonics[];
-
-
-/// \brief BEX/DECORATE flag mnemonics.
-struct flag_mnemonic_t
-{
-  char *name;
-  int   flag;
-  int   flagword;
-};
-
-extern flag_mnemonic_t BEX_FlagMnemonics[];
 
 #endif

@@ -192,6 +192,7 @@ export util_objects = \
 	$(objdir)/command.o \
 	$(objdir)/console.o \
 	$(objdir)/dehacked.o \
+	$(objdir)/mnemonics.o \
 	$(objdir)/m_argv.o \
 	$(objdir)/m_archive.o \
 	$(objdir)/m_bbox.o \

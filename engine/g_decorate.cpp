@@ -26,7 +26,7 @@
 #include "g_actor.h"
 #include "g_map.h"
 #include "g_decorate.h"
-#include "dehacked.h" // flags are shared with BEX
+#include "mnemonics.h" // flags are shared with BEX
 #include "sounds.h"
 #include "w_wad.h"
 #include "z_zone.h"
