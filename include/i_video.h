@@ -53,8 +53,7 @@ void VID_Pause(int pause);
 #endif
 
 int   I_NumVideoModes();
-char *I_GetVideoModeName(int modenum);
-void I_PrepareVideoModeList();
+const char *I_GetVideoModeName(unsigned modenum);
 
 void I_UpdateNoBlit();
 void I_FinishUpdate();

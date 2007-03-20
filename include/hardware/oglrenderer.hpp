@@ -53,28 +53,26 @@ class OGLRenderer
 {
   friend class spritepres_t;
 private:
+  bool  workinggl;  ///< Do we have a working OpenGL context?
+  float glversion;  ///< Current (runtime) OpenGL version (major.minor).
 
+  SDL_Surface *screen; ///< Main screen turn on.
+  int viewportw; ///< Width of current viewport in pixels.
+  int viewporth; ///< Height of current viewport in pixels.
+
+  bool consolemode; ///< Are we drawing 3D level graphics or 2D console graphics.
+
+  class Map *mp;  ///< Map to be rendered
+  subsector_t *curssec; ///< The gl subsector the camera is in.
   double x, y, z; ///< Location of camera.
   double theta;   ///< Rotation angle of camera in degrees.
   double phi;     ///< Up-down rotation angle of camera in degrees.
-  subsector_t *curssec; ///< The gl subsector the camera is in.
 
   double fov;     ///< Field of view in degrees.
-
-  bool consolemode; ///< Are we drawing 3D level graphics or 2D console
-		    ///< graphics.
 
   double hudar;     ///< HUD aspect ratio.
   double screenar;  ///< Aspect ratio of the physical screen (monitor).
 
-  int viewportw; ///< Width of current viewport in pixels.
-  int viewporth; ///< Height of current viewport in pixels.
-
-  SDL_Surface *screen; ///< Main screen turn on.
-
-  bool workinggl;  ///< Do we have a working OpenGL context?
-
-  class Map *mp;  ///< Map to be rendered
   byte *palette;  ///< Converting palette data to OGL colors.
 
   void RenderBSPNode(int nodenum); ///< Render level using BSP.
@@ -88,7 +86,6 @@ private:
   bool BBoxIntersectsFrustum(const struct bbox_t& bbox); ///< True if bounding box intersects current view frustum.
 
 public:
-
   OGLRenderer();
   ~OGLRenderer();
   bool InitVideoMode(const int w, const int h, const bool fullscreen);

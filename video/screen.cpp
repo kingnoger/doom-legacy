@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,8 +45,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-// allow_fullscreen is set in I_PrepareVideoModeList
-extern bool allow_fullscreen;
 
 // ------------------
 // global video state
@@ -81,7 +79,7 @@ CV_PossibleValue_t scr_depth_cons_t[]={{8,"8 bits"}, {16,"16 bits"}, {24,"24 bit
 consvar_t   cv_scr_width  = {"scr_width",  "320", CV_SAVE, CV_Unsigned};
 consvar_t   cv_scr_height = {"scr_height", "200", CV_SAVE, CV_Unsigned};
 consvar_t   cv_scr_depth =  {"scr_depth",  "16 bits",   CV_SAVE, scr_depth_cons_t};
-consvar_t   cv_fullscreen = {"fullscreen", "Yes", CV_SAVE | CV_CALL, CV_YesNo, CV_Fullscreen_OnChange};
+consvar_t   cv_fullscreen = {"fullscreen", "Yes", CV_SAVE | CV_CALL | CV_NOINIT, CV_YesNo, CV_Fullscreen_OnChange};
 
 // Are invisible things translucent or fuzzy?
 consvar_t   cv_fuzzymode = {"fuzzymode", "Off", CV_SAVE | CV_CALL, CV_OnOff, CV_Fuzzymode_OnChange};
@@ -198,20 +196,7 @@ int I_GetVideoModeForSize(int w, int h);
 // Change fullscreen on/off when cv_fullscreen is changed
 void CV_Fullscreen_OnChange()
 {
-  int modenum;
-  extern byte graphics_started;
-
-  // allow_fullscreen is set by I_PrepareVideoModeList
-  // it is used to prevent switching to fullscreen during startup
-  if (!allow_fullscreen)
-    return;
-
-  if (graphics_started)
-    {
-      I_PrepareVideoModeList();
-      modenum = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value);
-      vid.setmodeneeded = ++modenum;
-    }
+  vid.setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 }
 
 // =========================================================================
@@ -347,16 +332,17 @@ void Video::Recalc()
   else
 #endif
     {
+      // screens[0] points to the actual video surface, other screens to buffers we allocate ourselves.
+      screens[0] = direct;
+
       if (buffer)
         free(buffer);
 
       int screensize = width * height * BytesPerPixel;
-      buffer = (byte *)calloc(screensize * NUMSCREENS, 1);
+      buffer = static_cast<byte*>(calloc(screensize * (NUMSCREENS-1), 1));
 
-      for (i=0 ; i<NUMSCREENS ; i++)
-        screens[i] = buffer + i*screensize;
-
-      //added:26-01-98: statusbar buffer
+      for (i=1 ; i<NUMSCREENS ; i++)
+        screens[i] = buffer + (i-1)*screensize;
     }
 
   // fuzzoffsets for the 'spectre' effect,... this is a quick hack

@@ -304,8 +304,8 @@ void R_InitViewBuffer(int width, int height)
   // Precalculate all row offsets.
   for (i=0 ; i<height ; i++)
     {
-      ylookup1[i] = vid.buffer + (i+viewwindowy)*vid.width*bytesperpixel;
-      ylookup2[i] = vid.buffer + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
+      ylookup1[i] = vid.screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
+      ylookup2[i] = vid.screens[0] + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
     }
 }
 

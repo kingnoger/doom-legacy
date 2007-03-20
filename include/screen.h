@@ -57,7 +57,7 @@ public:
   int  BitsPerPixel;  ///< == BytesPerPixel * 8
 
   // software mode only
-  byte  *buffer;     ///< invisible screens buffer
+public:
   byte  *screens[NUMSCREENS]; ///< Each screen is [vid.width*vid.height];
   byte  *direct;     ///< linear frame buffer, or vga base mem.
 
@@ -75,6 +75,8 @@ public:
   int    currentpalette; ///< number of the currently active palette
 
 private:
+  byte  *buffer;     ///< invisible screens buffer
+
   /// Recalc screen size dependent stuff
   void Recalc();
 

@@ -54,14 +54,14 @@ void MD3_InitNormLookup();
 
 OGLRenderer::OGLRenderer()
 {
-  screen = NULL;
   workinggl = false;
+  glversion = 0;
+  screen = NULL;
   curssec = NULL;
 
   palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_STATIC));
 
   mp = NULL;
-  //  l.glvertexes = NULL;
 
   x = y = z = 0.0;
   theta = phi = 0.0;
@@ -79,11 +79,18 @@ OGLRenderer::OGLRenderer()
   MD3_InitNormLookup();
 
   CONS_Printf("New OpenGL renderer created.\n");
+#ifndef NO_OPENGL
+  CONS_Printf("OpenGL vendor:   %s\n", glGetString(GL_VENDOR));
+  CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
+  const char *str = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+  glversion = str ? strtof(str, NULL) : 0;
+  CONS_Printf("OpenGL version:  %s\n", str);
+#endif
 }
 
-OGLRenderer::~OGLRenderer() {
+OGLRenderer::~OGLRenderer()
+{
   CONS_Printf("Closing OpenGL renderer.\n");
-
   // No need to release screen. SDL does it automatically.
 }
 
@@ -273,14 +280,8 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     CONS_Printf("OpenGL mode is NOT double buffered.\n");
 
   // Print state and debug info.
-  CONS_Printf("Set OpenGL video mode %dx%dx%d.", screen->w, screen->h, cbpp);
-  if(fullscreen)
-    CONS_Printf(" (fullscreen)\n");
-  else
-    CONS_Printf(" (windowed)\n");
-  CONS_Printf("OpenGL Vendor:   %s\n", glGetString(GL_VENDOR));
-  CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
-  CONS_Printf("OpenGL version:  %s\n", glGetString(GL_VERSION));
+  CONS_Printf("Set OpenGL video mode %dx%dx%d", screen->w, screen->h, cbpp);
+  CONS_Printf(fullscreen ? " (fullscreen)\n" : " (windowed)\n");
 
   // Calculate the screen's aspect ratio. Assumes square pixels.
   if(w == 1280 && h == 1024 &&     // Check a couple of exceptions.

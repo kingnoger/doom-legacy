@@ -20,16 +20,18 @@
 /// \file
 /// \brief GLSL shader implementation.
 
-#define GL_GLEXT_PROTOTYPES 1
+#include "hardware/oglshaders.h"
+
+#if defined(TEST_SHADERS) && !defined(GL_VERSION_2_0)
+#error Shaders require OpenGL 2.0!
+#endif
+
+#ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
 
 #include <GL/glu.h>
-
 #include "doomdef.h"
-#include "hardware/oglshaders.h"
 #include "w_wad.h"
 #include "z_zone.h"
-
-
 
 ShaderProg *sprog = NULL;
 
@@ -234,3 +236,5 @@ void ShaderProg::PrintInfoLog()
       Z_Free(log);
     }
 }
+
+#endif // GL_VERSION_2_0

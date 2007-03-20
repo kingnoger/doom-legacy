@@ -371,6 +371,9 @@ void SoundSystem::Startup()
   cv_surround.Reg();
   cv_precachesound.Reg();
 
+  nosound = M_CheckParm("-nosound");
+  nomusic = M_CheckParm("-nomusic");
+
   if (M_CheckParm("-precachesound"))
     cv_precachesound.Set("1");
 

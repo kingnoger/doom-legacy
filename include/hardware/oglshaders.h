@@ -23,7 +23,10 @@
 #ifndef oglshaders_h
 #define oglshaders_h 1
 
-#include<GL/gl.h>
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/gl.h>
+
+#ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
 
 #include "z_cache.h"
 
@@ -79,4 +82,5 @@ public:
   void PrintInfoLog();
 };
 
+#endif // GL_VERSION_2_0
 #endif

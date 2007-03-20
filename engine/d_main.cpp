@@ -100,7 +100,7 @@ enum gamemission_t
   gmi_hexen
 };
 
-gamemission_t mission = gmi_doom2;
+static gamemission_t mission = gmi_doom2;
 
 
 // Helper function: start a new game
@@ -491,8 +491,6 @@ void D_SetPaths()
 //
 void D_DoomMain()
 {
-  extern bool nomusic, nosound;
-
   // we need to check for dedicated before initialization of some subsystems
   game.dedicated = M_CheckParm("-dedicated");
 
@@ -586,9 +584,6 @@ void D_DoomMain()
   // generate a couple of lookup tables
   GenerateTables();
 
-  nosound = M_CheckParm("-nosound");
-  nomusic = M_CheckParm("-nomusic");
-
   // Server init
   SV_Init();
 
@@ -619,8 +614,6 @@ void D_DoomMain()
 
   if (!game.dedicated)
     {
-      // FIXME replace these with cv_fullscreen_onchange or something...
-      I_PrepareVideoModeList(); // Regenerate Modelist according to cv_fullscreen
       // set user default mode or mode set at cmdline
       SCR_CheckDefaultMode();
     }

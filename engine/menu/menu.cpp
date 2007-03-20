@@ -2084,7 +2084,7 @@ Menu VidModeDef("M_VIDEO", "Video Mode", &OptionsDef, ITEMS(VideoMode_MI), 48, 3
 struct modedesc_t
 {
   int   modenum;   // video mode number in the vidmodes list
-  char *desc;      // XXXxYYY
+  const char *desc;      // XXXxYYY
   int   iscur;     // 1 if it is the current active mode
 };
 
@@ -2096,14 +2096,11 @@ static modedesc_t modedescs[MAXMODEDESCS];
 void Menu::DrawVideoMode()
 {
   int     i,j,dup,row,col,nummodes;
-  char    *desc;
+  const char *desc;
   char    temp[80];
 
   DrawTitle();
 
-#ifdef LINUX
-  I_PrepareVideoModeList(); // FIXME: hack
-#endif
   vidm_nummodes = 0;
   nummodes = I_NumVideoModes();
 
