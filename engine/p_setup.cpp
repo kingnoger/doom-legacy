@@ -47,6 +47,7 @@
 #include "m_bbox.h"
 #include "m_swap.h"
 #include "m_misc.h"
+#include "m_argv.h"
 #include "tables.h"
 
 #include "i_sound.h" //for I_PlayCD()..
@@ -793,100 +794,260 @@ void Map::LoadSideDefs2(int lump)
 }
 
 
+void Map::GenerateBlockMap()
+{
+  bmap.orgx = root_bbox[BOXLEFT];
+  bmap.orgy = root_bbox[BOXBOTTOM];
+  bmap.width = bmap.BlockX(root_bbox[BOXRIGHT]) + 1;
+  bmap.height = bmap.BlockY(root_bbox[BOXTOP]) + 1;
+
+  int cells = bmap.width * bmap.height;
+  CONS_Printf("Generating blockmap (%dx%d blocks)...", bmap.width, bmap.height);
+
+  vector<Uint16> xxx[cells];
+
+  for (int i=0; i<numlines; i++)
+    {
+      line_t *li = &lines[i];
+      double x1 = (li->v1->x - bmap.orgx).Float() / MAPBLOCKUNITS;
+      double y1 = (li->v1->y - bmap.orgy).Float() / MAPBLOCKUNITS;
+      double x2 = (li->v2->x - bmap.orgx).Float() / MAPBLOCKUNITS;
+      double y2 = (li->v2->y - bmap.orgy).Float() / MAPBLOCKUNITS;
+
+      double dx = x2-x1;
+      double dy = y2-y1;
+
+      double x_intercept = x1, y_intercept = y1;
+
+      // split (nonnegative) block coords to integer and fractional parts
+      double dummy;
+      int bx1 = int(x1); x1 = modf(x1, &dummy);
+      int by1 = int(y1); y1 = modf(y1, &dummy);
+      int bx2 = int(x2); x2 = modf(x2, &dummy);
+      int by2 = int(y2); y2 = modf(y2, &dummy);
+
+      int bdx, bdy;
+      double xstep, ystep;
+
+      if (bx2 > bx1)
+	{
+	  bdx = 1;
+	  ystep = dy / fabs(dx);
+	  y_intercept += (1 - x1) * ystep;
+	}
+      else if (bx2 < bx1)
+	{
+	  bdx = -1;
+	  ystep = dy / fabs(dx);
+	  y_intercept += x1 * ystep;
+	}
+      else
+	{
+	  // vertical run of blocks
+	  bdx = 0;
+	  ystep = 0;
+	  y_intercept += 1000000; // must not hit it ever
+	}
+
+      if (by2 > by1)
+	{
+	  bdy = 1;
+	  xstep = dx / fabs(dy);
+	  x_intercept += (1 - y1) * xstep;
+	}
+      else if (by2 < by1)
+	{
+	  bdy = -1;
+	  xstep = dx / fabs(dy);
+	  x_intercept += y1 * xstep;
+	}
+      else
+	{
+	  // horizontal run of blocks
+	  bdy = 0;
+	  xstep = 0;
+	  x_intercept += 1000000;
+	}
+
+      // Step through map blocks.
+      // Count is present to prevent a round off error causing us to miss the end block.
+      for (int count = abs(bx2-bx1) + abs(by2-by1); ; count--)
+	{
+	  // store the line number
+	  xxx[by1*bmap.width + bx1].push_back(i);
+
+	  if (count <= 0)
+	    break;
+
+	  // intercepts can not become negative until count has expired
+	  if (int(y_intercept) == by1)
+	    {
+	      y_intercept += ystep;
+	      bx1 += bdx;
+	    }
+	  else if (int(x_intercept) == bx1)
+	    {
+	      x_intercept += xstep;
+	      by1 += bdy;
+	    }
+	}
+    }
+
+  // convert the vector array into old-style blocklists (no packing for now...)
+
+  // find out blocklist size
+  int list_size = 1; // "empty block" list (only end marker)
+  for (int i=0; i<cells; i++)
+    {
+      int temp = xxx[i].size();
+      if (temp)
+	list_size += temp + 1; // line numbers + end marker
+    }
+
+  // Build a new blockmap index using pointers
+  bmap.index = static_cast<Uint16 **>(Z_Malloc(cells * sizeof(Uint16 *), PU_LEVEL, 0));
+  bmap.lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
+
+  int idx = 0; // next free slot
+  bmap.lists[idx++] = MAPBLOCK_END; // "empty block" list
+  for (int i=0; i<cells; i++)
+    {
+      int temp = xxx[i].size();
+      if (!temp)
+	bmap.index[i] = &bmap.lists[0];
+      else
+	{
+	  // add a new blocklist
+	  bmap.index[i] = &bmap.lists[idx];
+	  for (int k=0; k<temp; k++)
+	    bmap.lists[idx++] = xxx[i][k];
+	  bmap.lists[idx++] = MAPBLOCK_END;
+	}
+    }
+
+  if (idx != list_size)
+    I_Error("FUCK!\n");
+
+  CONS_Printf("done. %d entries, %d bytes.\n", list_size, 2*(4 + cells + list_size));
+}
+
+
 void Map::LoadBlockMap(int lump)
 {
-  Uint16 *blockmaplump = (Uint16 *)fc.CacheLumpNum(lump, PU_LEVEL);
-  Uint16 *blockmap = blockmaplump + 4; // the offsets array
-
-  // Endianness: everything in blockmap is expressed in 2-byte shorts
   int size = fc.LumpLength(lump)/2;
-  if (size < 6)
-    I_Error("Map %s: Blockmap is missing.\n", lumpname.c_str());
 
-  for (int i=0; i < size; i++)
-    blockmaplump[i] = SHORT(blockmaplump[i]);
-
-  // read the header
-  blockmapheader_t *bm = (blockmapheader_t *)blockmaplump;
-  bmaporgx = bm->origin_x;
-  bmaporgy = bm->origin_y;
-  bmapwidth = bm->width;
-  bmapheight = bm->height;
-
-  int count = bmapwidth * bmapheight;
-  // check the blockmap for errors
-  int errors = 0;
-  int first = 4 + count; // first possible blocklist offset (in shorts)
-  int list_size = size - first;
-
-  if (list_size < 0)
-    I_Error("Map %s: Blockmap is corrupted.\n", lumpname.c_str());
-
-  // we make a new 32-bit blockmap index
-  bmap.index = (Uint16 **)Z_Malloc(count * sizeof(Uint16 *), PU_LEVEL, 0);
-  bmap.lists = (Uint16 *)Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0);
-  memcpy(bmap.lists, &blockmaplump[first], 2*list_size); // copy the lists
-
-  if (list_size < 2) // one empty blocklist (two shorts) is the minimal size
+  if (M_CheckParm("-blockmap") ||
+      size < 6 || // smallest possible blockmap
+      size > 0x10000+1) // largest, always fully addressable blockmap
+    GenerateBlockMap(); // blockmap lump is invalid, we must build our own
+  else
     {
-      CONS_Printf(" Blockmap lump is too small!\n");
-      errors++;
+      // use the blockmap from the wad
+      bmap.index = NULL;
+      bmap.lists = NULL;
+
+      Uint16 *blockmap_lump = static_cast<Uint16*>(fc.CacheLumpNum(lump, PU_LEVEL));
+      Uint16 *blockmap_index = blockmap_lump + 4; // the offsets array
+
+      // Endianness: everything in blockmap is expressed in 2-byte shorts
+      for (int i=0; i < size; i++)
+	blockmap_lump[i] = SHORT(blockmap_lump[i]);
+
+      // read the header
+      blockmapheader_t *bm = reinterpret_cast<blockmapheader_t*>(blockmap_lump);
+      bmap.orgx = bm->origin_x;
+      bmap.orgy = bm->origin_y;
+      bmap.width = bm->width;
+      bmap.height = bm->height;
+
+      int cells = bmap.width * bmap.height;
+      // check the blockmap for errors
+      int errors = 0;
+      int first = 4 + cells; // first possible blocklist offset (in shorts)
+      int list_size = size - first; // blocklist size
+
+      try
+	{
+	  if (list_size < 2) // one empty blocklist (two shorts) is the minimal size
+	    {
+	      CONS_Printf(" Blockmap is corrupted (blocklist is too short).\n");
+	      throw -1;
+	    }
+
+	  // Build a new blockmap index using pointers
+	  bmap.index = static_cast<Uint16 **>(Z_Malloc(cells * sizeof(Uint16 *), PU_LEVEL, 0));
+	  bmap.lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
+	  memcpy(bmap.lists, &blockmap_lump[first], 2*list_size); // copy the lists
+
+	  for (int i=0; i < cells && errors < 50; i++)
+	    {
+	      int offs = blockmap_index[i] - first;
+	      if (offs < 0)
+		{
+		  CONS_Printf(" Invalid blocklist offset for cell %d: %d (possible offset overflow).\n",
+			      i, blockmap_index[i]);
+		  errors++;
+		  // TEST: assume that (short) offset has overflowed, fix
+		  offs += 0x10000;
+		}
+
+	      if (offs >= list_size)
+		{
+		  CONS_Printf(" Cell %d blocklist offset points past the lump!\n", i);
+		  errors++;
+		  continue;
+		}
+
+	      // build new blockmap index
+	      bmap.index[i] = &bmap.lists[offs+1]; // skip the zero marker
+
+	      if (bmap.lists[offs] != 0x0000)
+		{
+		  CONS_Printf(" Cell %d blocklist does not start with zero!\n", i);
+		  errors++;
+		}
+
+	      while (offs < list_size && bmap.lists[offs] != MAPBLOCK_END)
+		offs++;
+
+	      if (offs >= list_size)
+		{
+		  CONS_Printf(" Cell %d blocklist is unterminated!\n", i);
+		  errors++;
+		  continue;
+		}
+	    }
+
+	  if (errors)
+	    {
+	      CONS_Printf("Map %s: Blockmap (%dx%d cells, %d bytes) had some errors.\n",
+		      lumpname.c_str(), bmap.width, bmap.height, 2*size);
+	      throw -1;
+	    }
+
+	  Z_Free(blockmap_lump);
+	}
+      catch(int i)
+	{
+	  Z_Free(blockmap_lump);
+	  if (bmap.index)
+	    Z_Free(bmap.index);
+	  if (bmap.lists)
+	    Z_Free(bmap.lists);
+
+	  GenerateBlockMap(); // blockmap lump is invalid, we must build our own
+	}
     }
-
-  if (size > 0x10000+1) // largest, always fully addressable blockmap
-    CONS_Printf(" Warning: Blockmap may be too large.\n");
-
-
-  for (int i=0; i < count && errors < 50; i++)
-    {
-      int offs = blockmap[i] - first;
-      if (offs < 0)
-	{
-	  //CONS_Printf(" Invalid blocklist offset for cell %d: %d\n", i, blockmap[i]);
-	  //errors++;
-	  // TEST: assume that (short) offset has overflowed, fix
-	  offs += 0x10000;
-	}
-
-      if (offs >= list_size)
-	{
-	  CONS_Printf(" Blocklist %d offset points past the lump!\n", i);
-	  errors++;
-	  continue;
-	}
-
-      // build new blockmap index
-      bmap.index[i] = &bmap.lists[offs+1]; // skip the zero marker
-
-      if (bmap.lists[offs] != 0x0000)
-	{
-	  CONS_Printf(" Blocklist %d does not start with zero!\n", i);
-	  errors++;
-	}
-
-      while (offs < list_size && bmap.lists[offs] != MAPBLOCK_END)
-	offs++;
-
-      if (offs >= list_size)
-	{
-	  CONS_Printf(" Blocklist %d is unterminated!\n", i);
-	  errors++;
-	  continue;
-	}
-    }
-
-  if (errors)
-    I_Error("Map %s: Blockmap (%dx%d cells, %d bytes) had some errors.\n", lumpname.c_str(), bmapwidth, bmapheight, 2*size);
-
-  Z_Free(blockmaplump);
+  
+  int cells = bmap.width * bmap.height;
 
   // init the mobj chains
-  blocklinks = (Actor **)Z_Malloc(count * sizeof(Actor *), PU_LEVEL, 0);
-  memset(blocklinks, 0, count * sizeof(Actor *));
+  blocklinks = static_cast<Actor **>(Z_Malloc(cells * sizeof(Actor *), PU_LEVEL, 0));
+  memset(blocklinks, 0, cells * sizeof(Actor *));
 
   // init the polyblockmap
-  PolyBlockMap = (polyblock_t **)Z_Malloc(count * sizeof(polyblock_t *), PU_LEVEL, 0);
-  memset(PolyBlockMap, 0, count * sizeof(polyblock_t *));
+  PolyBlockMap = static_cast<polyblock_t **>(Z_Malloc(cells * sizeof(polyblock_t *), PU_LEVEL, 0));
+  memset(PolyBlockMap, 0, cells * sizeof(polyblock_t *));
 }
 
 
@@ -965,19 +1126,19 @@ void Map::GroupLines()
       sector->soundorg.z = sector->floorheight-10;
 
       // adjust bounding box to map blocks
-      int block = (bb[BOXTOP]-bmaporgy+MAXRADIUS).floor() >> MAPBLOCKBITS;
-      block = block >= bmapheight ? bmapheight-1 : block;
+      int block = bmap.BlockY(bb[BOXTOP] + MAXRADIUS);
+      block = block >= bmap.height ? bmap.height-1 : block;
       sector->blockbox[BOXTOP]=block;
 
-      block = (bb[BOXBOTTOM]-bmaporgy-MAXRADIUS).floor() >> MAPBLOCKBITS;
+      block = bmap.BlockY(bb[BOXBOTTOM] - MAXRADIUS);
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXBOTTOM]=block;
 
-      block = (bb[BOXRIGHT]-bmaporgx+MAXRADIUS).floor() >> MAPBLOCKBITS;
-      block = block >= bmapwidth ? bmapwidth-1 : block;
+      block = bmap.BlockX(bb[BOXRIGHT] + MAXRADIUS);
+      block = block >= bmap.width ? bmap.width-1 : block;
       sector->blockbox[BOXRIGHT]=block;
 
-      block = (bb[BOXLEFT]-bmaporgx-MAXRADIUS).floor() >> MAPBLOCKBITS;
+      block = bmap.BlockX(bb[BOXLEFT] - MAXRADIUS);
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXLEFT]=block;
     }
@@ -1287,34 +1448,26 @@ void Map::LoadGLNodes(const int lump, const int glversion)
 
 // Load glVis data. If it does not exist, glvis is set to NULL.
 
-void Map::LoadGLVis(const int lump) {
-  byte *data;
-  int vissize;
+void Map::LoadGLVis(const int lump)
+{
   const char *lname = fc.FindNameForNum(lump);
+  int vissize = fc.LumpLength(lump);
 
   // glVIS is not always present. Check for it.
-  if(lname == NULL || !strcmp(lname, "GL_VIS")) {
-    CONS_Printf("Level does not have GL_VIS data.\n");
+  if (lname == NULL || !strcmp(lname, "GL_VIS"))
+    CONS_Printf("Map does not have GL_VIS data.\n");
+  else if (vissize == 0)
+    CONS_Printf("Map has empty GL_VIS data.\n");
+  else
+    {
+      // At this point we know that GL_VIS exists, and that it is
+      // nonempty. Load it.
+      glvis = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
+      CONS_Printf("Loaded %d bytes of glVIS data.\n", vissize);
+    }
+
+  if (!glvis && rendermode == render_opengl)
     CONS_Printf("Automap will not work until you run glvis on this file.\n");
-    return;
-  }
-
-  vissize = fc.LumpLength(lump);
-  if(vissize == 0) {
-    CONS_Printf("Level has empty GL_VIS data.\n");
-    CONS_Printf("Automap will not work until you run glvis on this file.\n");
-    return;
-  }
-
-  // At this point we know that GL_VIS exists, and that it is
-  // nonempty. Load it.
-
-  data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
-  glvis = static_cast<byte*>(Z_Malloc(vissize, PU_STATIC, 0));
-
-  memcpy(glvis, data, vissize);
-
-  CONS_Printf("Loaded %d bytes of glVIS data.\n", vissize);
 }
 
 
@@ -1358,7 +1511,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
 {
   extern  bool precache;
 
-  CONS_Printf("Map::Setup: %s\n", lumpname.c_str());
+  CONS_Printf("Loading map %s...\n", lumpname.c_str());
   con.Drawer();     // let the user know what we are going to do
   I_FinishUpdate(); // page flip or blit buffer
 
@@ -1411,22 +1564,22 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (gllump != -1 && gllump > lumpnum)
     {
       gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
-      CONS_Printf("Map %s has v%d GL nodes.\n", lumpname.c_str(), gl_version);
+      CONS_Printf("Map has v%d GL nodes.\n", gl_version);
 
       if (gl_version < 0)
 	I_Error("Can not handle GL nodes that are not v2 or v5.");
     }
   else
     {
-      CONS_Printf("Level %s has no GL nodes.\n", lumpname.c_str());
+      CONS_Printf("Map has no GL nodes.\n");
       gllump = -1;
     }
 
   LoadVertexes(lumpnum+LUMP_VERTEXES); // These are always needed.
-  LoadBlockMap(lumpnum+LUMP_BLOCKMAP); // loads (and possibly fixes) the blockmap
   LoadSectors1(lumpnum+LUMP_SECTORS);  // allocates sectors
   LoadSideDefs(lumpnum+LUMP_SIDEDEFS); // allocates sidedefs
   LoadLineDefs(lumpnum+LUMP_LINEDEFS); // points to v, si(and back)
+  LoadBlockMap(lumpnum+LUMP_BLOCKMAP); // loads (or builds) the blockmap, uses vertexes and lines
 
   if (!hexen_format)
     ConvertLineDefs(); // just type conversion to mod. Hexen system

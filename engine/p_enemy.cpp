@@ -1284,8 +1284,6 @@ bool PIT_VileCheck(Actor *th)
 //
 void A_VileChase(DActor *actor)
 {
-  int xl, xh, yl, yh, bx, by;
-
   Actor *temp;
   Map *m = actor->mp;
 
@@ -1295,45 +1293,34 @@ void A_VileChase(DActor *actor)
       viletryx = actor->pos.x + actor->info->speed*xspeed[actor->movedir];
       viletryy = actor->pos.y + actor->info->speed*yspeed[actor->movedir];
 
-      xl = ((viletryx - m->bmaporgx).floor() - MAXRADIUS*2) >> MAPBLOCKBITS;
-      xh = ((viletryx - m->bmaporgx).floor() + MAXRADIUS*2) >> MAPBLOCKBITS;
-      yl = ((viletryy - m->bmaporgy).floor() - MAXRADIUS*2) >> MAPBLOCKBITS;
-      yh = ((viletryy - m->bmaporgy).floor() + MAXRADIUS*2) >> MAPBLOCKBITS;
-
       vileobj = actor;
-      for (bx=xl ; bx<=xh ; bx++)
-        {
-	  for (by=yl ; by<=yh ; by++)
-            {
-	      // Call PIT_VileCheck to check
-	      // whether object is a corpse
-	      // that canbe raised.
-	      if (!m->BlockThingsIterator(bx,by,PIT_VileCheck))
-                {
-		  // got one!
-		  temp = actor->target;
-		  actor->target = corpsehit;
-		  A_FaceTarget (actor);
-		  actor->target = temp;
+      // Call PIT_VileCheck to check
+      // whether object is a corpse
+      // that can be raised.
+      if (!m->BlockIterateThingsRadius(viletryx, viletryy, MAXRADIUS*2, PIT_VileCheck))
+	{
+	  // got one!
+	  temp = actor->target;
+	  actor->target = corpsehit;
+	  A_FaceTarget (actor);
+	  actor->target = temp;
 
-		  actor->SetState(S_VILE_HEAL1);
-		  S_StartSound (corpsehit, sfx_gib);
-		  const ActorInfo *info = corpsehit->info;
+	  actor->SetState(S_VILE_HEAL1);
+	  S_StartSound (corpsehit, sfx_gib);
+	  const ActorInfo *info = corpsehit->info;
 
-		  corpsehit->SetState(info->raisestate);
-		  corpsehit->pres->SetAnim(presentation_t::Raise);
+	  corpsehit->SetState(info->raisestate);
+	  corpsehit->pres->SetAnim(presentation_t::Raise);
 
-		  corpsehit->height = info->height;
-		  corpsehit->radius = info->radius;
+	  corpsehit->height = info->height;
+	  corpsehit->radius = info->radius;
 
-		  corpsehit->flags = info->flags;
-		  corpsehit->health = info->spawnhealth;
-		  corpsehit->target = NULL;
+	  corpsehit->flags = info->flags;
+	  corpsehit->health = info->spawnhealth;
+	  corpsehit->target = NULL;
 
-		  return;
-                }
-            }
-        }
+	  return;
+	}
     }
 
   // Return to normal attack.

@@ -130,18 +130,26 @@ public:
 #define MAXRADIUS       32
 #define MAPBLOCK_END    0xFFFF ///< terminator for a blocklist
 
-  // I'm too lazy to move these into the struct...
-  fixed_t bmaporgx, bmaporgy;    ///< origin (lower left corner) of block map in map coordinates
-  int     bmapwidth, bmapheight; ///< size of the blockmap in mapblocks
-
   struct blockmap_t
   {
+    fixed_t  orgx, orgy;    ///< origin (lower left corner) of block map in map coordinates
+    int      width, height; ///< size of the blockmap in mapblocks
     Uint16 **index;  ///< width*height array of pointers to the blocklists
     Uint16  *lists;  ///< packed array of -1 terminated blocklists
+
+    inline int BlockX(fixed_t x) const { return (x - orgx).floor() >> MAPBLOCKBITS; }
+    inline int BlockY(fixed_t y) const { return (y - orgy).floor() >> MAPBLOCKBITS; }
   } bmap;
 
   class  Actor       **blocklinks;   ///< width*height array of thing chains
   struct polyblock_t **PolyBlockMap; ///< width*height array of polyblock chains
+
+  bool BlockLinesIterator(int x, int y, line_iterator_t func);
+  bool BlockThingsIterator(int x, int y, thing_iterator_t func);
+
+  bool BlockIterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func);
+  bool BlockIterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
+
   //@}
 
 
@@ -290,7 +298,6 @@ public:
   Actor *FindFromTIDmap(int tid, int *pos);
 
   // in p_map.cpp
-  bool RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
   bool CheckSector(sector_t* sector, int crunch);
   bool ChangeSector(sector_t *sector, int crunch);
 
@@ -312,6 +319,7 @@ public:
   void LoadACScripts(int lump);
   void GroupLines();
   void SetupSky();
+  void GenerateBlockMap();
 
   int LoadGLVertexes(const int lump);
   void LoadGLSegs(const int lump, const int glversion);
@@ -326,8 +334,6 @@ public:
   bool CheckSight2(Actor *t1, Actor *t2, fixed_t nx, fixed_t ny, fixed_t nz);
 
   // in p_maputl.cpp
-  bool BlockLinesIterator(int x, int y, line_iterator_t func);
-  bool BlockThingsIterator(int x, int y, thing_iterator_t func);
   bool IterateThinkers(thinker_iterator_t func);
   bool IterateActors(thing_iterator_t func);
   bool PathTraverse(const vec_t<fixed_t>& p1, const vec_t<fixed_t>& p2, int flags, traverser_t trav);

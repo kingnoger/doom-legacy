@@ -324,7 +324,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       if (mo)
 	{
 	  pawn_height = mo->height;
-	  if (mp->RadiusLinesCheck(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
+	  if (mp->BlockIterateLinesRadius(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
 	      /*
 	      && mp->PathTraverse(x, y, destx - 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x, y, destx + 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)

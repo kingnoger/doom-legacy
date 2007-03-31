@@ -100,10 +100,64 @@
 extern int boomsupport;
 
 
-static Actor *tmthing;
-bbox_t  tmb;      // a bounding box;
-fixed_t tmx, tmy; // mostly used here, set together with tmb
+//===========================================
+//  Radius iteration
+//===========================================
 
+static Actor *tmthing;
+
+bbox_t  tmb; // bounding box, used by line PIT_* functions
+
+// iterates the radius around (x,y) using func
+bool Map::BlockIterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func)
+{
+  validcount++; // used by BlockLinesIterator to make sure we only process a line once
+  tmb.Set(x, y, radius);
+
+  int xl, xh, yl, yh, bx, by;
+
+  // check lines within box
+  xl = bmap.BlockX(tmb[BOXLEFT]);
+  xh = bmap.BlockX(tmb[BOXRIGHT]);
+  yl = bmap.BlockY(tmb[BOXBOTTOM]);
+  yh = bmap.BlockY(tmb[BOXTOP]);
+
+  for (bx=xl; bx<=xh; bx++)
+    for (by=yl; by<=yh; by++)
+      if (!BlockLinesIterator(bx, by, func))
+	return false;
+
+  return true;
+}
+
+
+static fixed_t tmx, tmy; // used by thing PIT_* functions
+
+bool Map::BlockIterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func)
+{
+  int xl,xh,yl,yh,bx,by;
+
+  tmx = x;
+  tmy = y;
+
+  xl = bmap.BlockX(x - radius);
+  xh = bmap.BlockX(x + radius);
+  yl = bmap.BlockY(y - radius);
+  yh = bmap.BlockY(y + radius);
+
+  for (bx=xl ; bx<=xh ; bx++)
+    for (by=yl ; by<=yh ; by++)
+      if (!BlockThingsIterator(bx, by, func))
+	return false;
+
+  return true;
+}
+
+
+
+//===========================================
+//  Movement
+//===========================================
 
 // If floatok is true, XY move would be ok if we were at the correct Z
 bool    floatok;
@@ -332,27 +386,17 @@ void Actor::UnsetPosition(bool clear_touching_sectorlist)
 	bprev->bnext = bnext;
       else
         {
-	  int blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-	  int blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+	  int blockx = mp->bmap.BlockX(pos.x);
+	  int blocky = mp->bmap.BlockY(pos.y);
 
-	  if (blockx>=0 && blockx < mp->bmapwidth && blocky>=0 && blocky < mp->bmapheight)
-	    mp->blocklinks[blocky * mp->bmapwidth + blockx] = bnext;
+	  if (blockx>=0 && blockx < mp->bmap.width && blocky>=0 && blocky < mp->bmap.height)
+	    mp->blocklinks[blocky * mp->bmap.width + blockx] = bnext;
         }
 
       bprev = bnext = NULL;
     }
 }
 
-/*
-bool Map::SetBMlink(fixed_t x, fixed_t y, Actor *a)
-{
-  int blockx = (x - bmaporgx) >> MAPBLOCKSHIFT;
-  int blocky = (y - bmaporgy) >> MAPBLOCKSHIFT;
-
-  if (blockx >= 0 && blockx < bmapwidth && blocky >= 0 && blocky < bmapheight)
-    blocklinks[blocky * bmapwidth + blockx] = a;
-}
-*/
 
 
 /// \brief Links an Actor into blockmap and a sector lists
@@ -405,15 +449,15 @@ void Actor::SetPosition()
   if (! (flags & MF_NOBLOCKMAP))
     {
       // inert things don't need to be in blockmap
-      blockx = (pos.x - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-      blocky = (pos.y - mp->bmaporgy).floor() >> MAPBLOCKBITS;
+      blockx = mp->bmap.BlockX(pos.x);
+      blocky = mp->bmap.BlockY(pos.y);
 
       if (blockx>=0
-	  && blockx < mp->bmapwidth
+	  && blockx < mp->bmap.width
 	  && blocky>=0
-	  && blocky < mp->bmapheight)
+	  && blocky < mp->bmap.height)
         {
-	  link = &mp->blocklinks[blocky * mp->bmapwidth + blockx];
+	  link = &mp->blocklinks[blocky * mp->bmap.width + blockx];
 	  bprev = NULL;
 	  bnext = *link;
 	  if (*link)
@@ -652,8 +696,6 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
   interact = act; // should we touch or just look?
   tmthing = this;
 
-  tmb.Set(nx, ny, radius);
-
   // The base floor / ceiling is from the subsector that contains the point.
   // Any contacted lines will adjust them closer together.
   subsector_t *ss = mp->R_PointInSubsector(nx,ny);
@@ -668,44 +710,17 @@ bool Actor::CheckPosition(fixed_t nx, fixed_t ny, bool act)
   PosCheck.floor_thing = NULL;
   PosCheck.skyimpact = false;
 
-  validcount++;
+  // check lines
+  if (!(flags & MF_NOCLIPLINE) && !mp->BlockIterateLinesRadius(nx, ny, radius, PIT_CheckLine))
+    return false;
 
-  // Check things first, possibly picking things up.
+  // Check things, possibly picking things up.
   // The bounding box is extended by MAXRADIUS
   // because Actors are grouped into mapblocks
   // based on their origin point, and can overlap
   // into adjacent blocks by up to MAXRADIUS units.
-
-  int xl, xh, yl, yh, bx, by;
-  fixed_t bmox = mp->bmaporgx; 
-  fixed_t bmoy = mp->bmaporgy; 
-
-  if (!(flags & MF_NOCLIPLINE))
-    {
-      // check lines
-      xl = (tmb[BOXLEFT] - bmox).floor() >> MAPBLOCKBITS;
-      xh = (tmb[BOXRIGHT] - bmox).floor() >> MAPBLOCKBITS;
-      yl = (tmb[BOXBOTTOM] - bmoy).floor() >> MAPBLOCKBITS;
-      yh = (tmb[BOXTOP] - bmoy).floor() >> MAPBLOCKBITS;
-      for (bx=xl ; bx<=xh ; bx++)
-	for (by=yl ; by<=yh ; by++)
-	  if (!mp->BlockLinesIterator(bx,by,PIT_CheckLine))
-	    return false;
-    }
-
-  if (!(flags & MF_NOCLIPTHING))
-    {
-      // check things
-      xl = ((tmb[BOXLEFT] - bmox).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-      xh = ((tmb[BOXRIGHT] - bmox).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-      yl = ((tmb[BOXBOTTOM] - bmoy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-      yh = ((tmb[BOXTOP] - bmoy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-
-      for (bx=xl ; bx<=xh ; bx++)
-	for (by=yl ; by<=yh ; by++)
-	  if (!mp->BlockThingsIterator(bx,by,PIT_CheckThing))
-	    return false;
-    }
+  if (!(flags & MF_NOCLIPTHING) && !mp->BlockIterateThingsRadius(nx, ny, radius + MAXRADIUS, PIT_CheckThing))
+    return false;
 
   return true;
 }
@@ -862,28 +877,15 @@ Actor *Actor::CheckOnmobj()
   // float vz+float_ai+fly change z, vz and z are clipped by geometry
   // then check if new z position makes us hit things
   
-  tmb.Set(pos.x, pos.y, radius);
-  validcount++;
-        
-  // check things first, possibly picking things up
   // the bounding box is extended by MAXRADIUS because Actors are grouped
   // into mapblocks based on their origin point, and can overlap into adjacent
   // blocks by up to MAXRADIUS units
-
-  int xl, xh, yl, yh, bx, by;
-  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-    
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!mp->BlockThingsIterator(bx,by,PIT_CheckOnmobjZ))
-	{
-	  pos.z = oldz;
-	  vel.z = oldpz;
-	  return onmobj;
-	}
+  if (!mp->BlockIterateThingsRadius(pos.x, pos.y, radius + MAXRADIUS, PIT_CheckOnmobjZ))
+    {
+      pos.z = oldz;
+      vel.z = oldpz;
+      return onmobj;
+    }
 
   pos.z = oldz;
   vel.z = oldpz;
@@ -1789,7 +1791,7 @@ static PlayerPawn *usething;
 static bool PTR_UseTraverse(intercept_t *in)
 {
   line_t *line = in->line;
-  CONS_Printf("Line: s = %d, tag = %d, flags = %x\n", line->special, line->tag, line->flags);
+  CONS_Printf("Line %d: s = %d, tag = %d, flags = %x\n", line-usething->mp->lines, line->special, line->tag, line->flags);
   if (!line->special)
     {
       line_opening_t *open = line_opening_t::Get(line, usething);
@@ -2002,21 +2004,13 @@ void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, boo
   else
     Bomb.radius = rad;
 
-  fixed_t dist = Bomb.radius + MAXRADIUS;
-  int yh = (pos.y + dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
-  int yl = (pos.y - dist - mp->bmaporgy).floor() >> MAPBLOCKBITS;
-  int xh = (pos.x + dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-  int xl = (pos.x - dist - mp->bmaporgx).floor() >> MAPBLOCKBITS;
-
   Bomb.b = this;
   Bomb.owner = culprit;
   Bomb.damage = damage;
   Bomb.dtype = dtype;
   Bomb.damage_owner = downer;
 
-  for (int ny=yl ; ny<=yh ; ny++)
-    for (int nx=xl ; nx<=xh ; nx++)
-      mp->BlockThingsIterator (nx, ny, PIT_RadiusAttack);
+  mp->BlockIterateThingsRadius(pos.x, pos.y, Bomb.radius + MAXRADIUS, PIT_RadiusAttack);
 }
 
 
@@ -2154,7 +2148,7 @@ bool Map::ChangeSector(sector_t *sector, int crunch)
   // re-check heights for all things near the moving sector
   for (int x = sector->blockbox[BOXLEFT] ; x<= sector->blockbox[BOXRIGHT] ; x++)
     for (int y = sector->blockbox[BOXBOTTOM];y<= sector->blockbox[BOXTOP] ; y++)
-      BlockThingsIterator (x, y, PIT_ChangeSector);
+      BlockThingsIterator(x, y, PIT_ChangeSector);
 
   return nofit;
 }
@@ -2283,8 +2277,6 @@ static bool PIT_GetSectors(line_t *ld)
 */
 void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 {
-  int xl, xh, yl, yh, bx, by;
-
   // First, clear out the existing m_thing fields. As each node is
   // added or verified as needed, m_thing will be set properly. When
   // finished, delete all nodes where m_thing is still NULL. These
@@ -2300,18 +2292,7 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   tmthing = thing;
 
-  tmb.Set(x, y, tmthing->radius);
-
-  validcount++; // used to make sure we only process a line once
-
-  xl = (tmb[BOXLEFT] - bmaporgx).floor() >> MAPBLOCKBITS;
-  xh = (tmb[BOXRIGHT] - bmaporgx).floor() >> MAPBLOCKBITS;
-  yl = (tmb[BOXBOTTOM] - bmaporgy).floor() >> MAPBLOCKBITS;
-  yh = (tmb[BOXTOP] - bmaporgy).floor() >> MAPBLOCKBITS;
-
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      BlockLinesIterator(bx,by,PIT_GetSectors);
+  BlockIterateLinesRadius(x, y, tmthing->radius, PIT_GetSectors);
 
   // Add the sector of the (x,y) point to sector_list.
 
@@ -2375,8 +2356,6 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
 {
   // kill anything occupying the position
   tmthing = this;
-  tmb.Set(nx, ny, radius);
-
   sector_t *newsec = mp->R_PointInSubsector(nx, ny)->sector;
 
   // TODO do a linecheck first to see if we fit
@@ -2384,20 +2363,9 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   PosCheck.op.bottom = newsec->floorheight;
   PosCheck.op.top = newsec->ceilingheight;
 
-  validcount++;
-
-  int  xl, xh, yl, yh, bx, by;
-
   // stomp on any things contacted
-  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!mp->BlockThingsIterator(bx,by,PIT_StompThing))
-	return false;
+  if (!mp->BlockIterateThingsRadius(nx, ny, radius + MAXRADIUS, PIT_StompThing))
+    return false;
 
   // the move is ok, so link the thing into its new position
   UnsetPosition();
@@ -2405,37 +2373,6 @@ bool Actor::TeleportMove(fixed_t nx, fixed_t ny)
   pos.y = ny;
   SetPosition();
 
-  return true;
-}
-
-
-
-
-
-//===========================================
-//  Radius iteration
-//===========================================
-
-// iterates the radius around (x,y) using func
-bool Map::RadiusLinesCheck(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func)
-{
-  int xl, xh, yl, yh, bx, by;
-
-  tmb.Set(x, y, radius);
-
-  validcount++;
- 
-  // check lines
-  xl = (tmb[BOXLEFT] - bmaporgx).floor() >> MAPBLOCKBITS;
-  xh = (tmb[BOXRIGHT] - bmaporgx).floor() >> MAPBLOCKBITS;
-  yl = (tmb[BOXBOTTOM] - bmaporgy).floor() >> MAPBLOCKBITS;
-  yh = (tmb[BOXTOP] - bmaporgy).floor() >> MAPBLOCKBITS;
-
-  for (bx=xl; bx<=xh; bx++)
-    for (by=yl; by<=yh; by++)
-      if (!BlockLinesIterator(bx, by, func))
-	return false;
- 
   return true;
 }
 
@@ -2473,21 +2410,7 @@ static bool PIT_ThrustStompThing(Actor *thing)
 
 void P_ThrustSpike(Actor *actor)
 {
-  int xl,xh,yl,yh,bx,by;
-
   tmthing = actor;
-  Map *mp = actor->mp;
-
-  tmb.Set(actor->pos.x, actor->pos.y, actor->radius);
-
-  xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-  yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-  yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-
   // stomp on any things contacted
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      mp->BlockThingsIterator(bx,by,PIT_ThrustStompThing);
+  actor->mp->BlockIterateThingsRadius(actor->pos.x, actor->pos.y, actor->radius+MAXRADIUS, PIT_ThrustStompThing);
 }
-

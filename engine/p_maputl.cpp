@@ -534,11 +534,11 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
 {
   int i;
 
-  if (x<0 || y<0 || x>=bmapwidth || y>=bmapheight)
+  if (x<0 || y<0 || x>=bmap.width || y>=bmap.height)
     return true;
 
   // first iterate through polyblockmap, then normal blockmap
-  int cell = y*bmapwidth + x;
+  int cell = y*bmap.width + x;
 
   polyblock_t *polyLink = PolyBlockMap[cell];
 
@@ -591,12 +591,12 @@ bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
 {
   Actor *mobj;
 
-  if (x<0 || y<0 || x>=bmapwidth || y>=bmapheight)
+  if (x<0 || y<0 || x>=bmap.width || y>=bmap.height)
     return true;
 
   //added:15-02-98: check interaction (ligne de tir, ...)
   //                avec les objets dans le blocmap
-  for (mobj = blocklinks[y*bmapwidth+x]; mobj; mobj = mobj->bnext)
+  for (mobj = blocklinks[y*bmap.width+x]; mobj; mobj = mobj->bnext)
     {
       if (!func(mobj))
 	return false;
@@ -617,12 +617,12 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
   int count;
   Actor *target;
 
-  int startX = (center->pos.x - bmaporgx).floor() >> MAPBLOCKBITS;
-  int startY = (center->pos.y - bmaporgy).floor() >> MAPBLOCKBITS;
+  int startX = bmap.BlockX(center->pos.x);
+  int startY = bmap.BlockY(center->pos.y);
 	
-  if (startX >= 0 && startX < bmapwidth && startY >= 0 && startY < bmapheight)
+  if (startX >= 0 && startX < bmap.width && startY >= 0 && startY < bmap.height)
     {
-      if ((target = RoughBlockCheck(center, master, startY*bmapwidth+startX, flags)))
+      if ((target = RoughBlockCheck(center, master, startY*bmap.width+startX, flags)))
 	{ // found a target right away
 	  return target;
 	}
@@ -635,32 +635,32 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
 
       if (blockY < 0)
 	blockY = 0;
-      else if (blockY >= bmapheight)
-	blockY = bmapheight-1;
+      else if (blockY >= bmap.height)
+	blockY = bmap.height-1;
 
       if (blockX < 0)
 	blockX = 0;
-      else if (blockX >= bmapwidth)
-	blockX = bmapwidth-1;
+      else if (blockX >= bmap.width)
+	blockX = bmap.width-1;
 
-      int blockIndex = blockY*bmapwidth+blockX;
+      int blockIndex = blockY*bmap.width+blockX;
       int firstStop = startX+count;
       if (firstStop < 0)
 	continue;
 
-      if (firstStop >= bmapwidth)
-	firstStop = bmapwidth-1;
+      if (firstStop >= bmap.width)
+	firstStop = bmap.width-1;
 
       int secondStop = startY+count;
       if (secondStop < 0)
 	continue;
 
-      if (secondStop >= bmapheight)
-	secondStop = bmapheight-1;
+      if (secondStop >= bmap.height)
+	secondStop = bmap.height-1;
 
-      int thirdStop = secondStop*bmapwidth+blockX;
-      secondStop = secondStop*bmapwidth+firstStop;
-      firstStop += blockY*bmapwidth;
+      int thirdStop = secondStop*bmap.width+blockX;
+      secondStop = secondStop*bmap.width+firstStop;
+      firstStop += blockY*bmap.width;
       int finalStop = blockIndex;		
 
       // Trace the first block section (along the top)
@@ -669,17 +669,17 @@ Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int fla
 	  return target;
 
       // Trace the second block section (right edge)
-      for (blockIndex--; blockIndex <= secondStop; blockIndex += bmapwidth)
+      for (blockIndex--; blockIndex <= secondStop; blockIndex += bmap.width)
 	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
 
       // Trace the third block section (bottom edge)
-      for (blockIndex -= bmapwidth; blockIndex >= thirdStop; blockIndex--)
+      for (blockIndex -= bmap.width; blockIndex >= thirdStop; blockIndex--)
 	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
 
       // Trace the final block section (left edge)
-      for (blockIndex++; blockIndex > finalStop; blockIndex -= bmapwidth)
+      for (blockIndex++; blockIndex > finalStop; blockIndex -= bmap.width)
 	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
 	  return target;
     }
@@ -989,22 +989,22 @@ bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int f
 
 #define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
 
-  if (((p1.x-bmaporgx).value() & (MAPBLOCKSIZE-1)) == 0)
+  if (((p1.x-bmap.orgx).value() & (MAPBLOCKSIZE-1)) == 0)
     p1.x += 1; // don't side exactly on a line
 
-  if (((p1.y-bmaporgy).value() & (MAPBLOCKSIZE-1)) == 0)
+  if (((p1.y-bmap.orgy).value() & (MAPBLOCKSIZE-1)) == 0)
     p1.y += 1; // don't side exactly on a line
 
   // set up the trace struct
   trace.Init(this, p1, p2);
 
-  p1.x -= bmaporgx;
-  p1.y -= bmaporgy;
+  p1.x -= bmap.orgx;
+  p1.y -= bmap.orgy;
   int xt1 = p1.x.floor() >> MAPBLOCKBITS;
   int yt1 = p1.y.floor() >> MAPBLOCKBITS;
 
-  p2.x -= bmaporgx;
-  p2.y -= bmaporgy;
+  p2.x -= bmap.orgx;
+  p2.y -= bmap.orgy;
   int xt2 = p2.x.floor() >> MAPBLOCKBITS;
   int yt2 = p2.y.floor() >> MAPBLOCKBITS;
 

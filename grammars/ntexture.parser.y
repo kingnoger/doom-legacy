@@ -45,7 +45,7 @@
 
 %include {
 #include "parser_driver.h"
-#include "decorate.parser.h"
+#include "ntexture.parser.h"
 }
 
 //============================================================================

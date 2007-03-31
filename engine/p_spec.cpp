@@ -1731,20 +1731,11 @@ void pusher_t::Think()
 
   if (type == p_point)
     {
-      int xl,xh,yl,yh,bx,by;
       // Seek out all pushable things within the force radius of this
       // point pusher. Crosses sectors, so use blockmap.
 
       tmpusher = this; // MT_PUSH/MT_PULL point source
-      tmb.Set(x, y, radius);
-
-      xl = ((tmb[BOXLEFT] - mp->bmaporgx).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-      xh = ((tmb[BOXRIGHT] - mp->bmaporgx).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-      yl = ((tmb[BOXBOTTOM] - mp->bmaporgy).floor() - MAXRADIUS) >> MAPBLOCKBITS;
-      yh = ((tmb[BOXTOP] - mp->bmaporgy).floor() + MAXRADIUS) >> MAPBLOCKBITS;
-      for (bx=xl ; bx<=xh ; bx++)
-	for (by=yl ; by<=yh ; by++)
-	  mp->BlockThingsIterator(bx,by,PIT_PushThing);
+      mp->BlockIterateThingsRadius(x, y, radius + MAXRADIUS, PIT_PushThing);
       return;
     }
 

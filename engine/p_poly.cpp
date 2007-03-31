@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1996 by Raven Software, Corp.
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -773,10 +773,10 @@ void Map::UnLinkPolyobj(polyobj_t *po)
   // remove the polyobj from each blockmap section
   for (int j = po->bbox[BOXBOTTOM]; j <= po->bbox[BOXTOP]; j++)
     {
-      int index = j*bmapwidth;
+      int index = j*bmap.width;
       for (int i = po->bbox[BOXLEFT]; i <= po->bbox[BOXRIGHT]; i++)
 	{
-	  if (i >= 0 && i < bmapwidth && j >= 0 && j < bmapheight)
+	  if (i >= 0 && i < bmap.width && j >= 0 && j < bmap.height)
 	    {
 	      polyblock_t *link = PolyBlockMap[index+i];
 	      while(link != NULL && link->polyobj != po)
@@ -816,16 +816,16 @@ void Map::LinkPolyobj(polyobj_t *po)
       if ((*tempSeg)->v1->y < bottomY)
 	bottomY = (*tempSeg)->v1->y;
     }
-  po->bbox[BOXRIGHT]  = (rightX-bmaporgx).floor()  >> MAPBLOCKBITS;
-  po->bbox[BOXLEFT]   = (leftX-bmaporgx).floor()   >> MAPBLOCKBITS;
-  po->bbox[BOXTOP]    = (topY-bmaporgy).floor()    >> MAPBLOCKBITS;
-  po->bbox[BOXBOTTOM] = (bottomY-bmaporgy).floor() >> MAPBLOCKBITS;
+  po->bbox[BOXRIGHT]  = bmap.BlockX(rightX);
+  po->bbox[BOXLEFT]   = bmap.BlockX(leftX);
+  po->bbox[BOXTOP]    = bmap.BlockY(topY);
+  po->bbox[BOXBOTTOM] = bmap.BlockY(bottomY);
   // add the polyobj to each blockmap section
-  for (j = po->bbox[BOXBOTTOM]*bmapwidth; j <= po->bbox[BOXTOP]*bmapwidth; j += bmapwidth)
+  for (j = po->bbox[BOXBOTTOM]*bmap.width; j <= po->bbox[BOXTOP]*bmap.width; j += bmap.width)
     {
       for (i = po->bbox[BOXLEFT]; i <= po->bbox[BOXRIGHT]; i++)
 	{
-	  if (i >= 0 && i < bmapwidth && j >= 0 && j < bmapheight*bmapwidth)
+	  if (i >= 0 && i < bmap.width && j >= 0 && j < bmap.height*bmap.width)
 	    {
 	      polyblock_t **link = &PolyBlockMap[j+i];
 	      polyblock_t *tempLink;
@@ -871,23 +871,23 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 
   line_t *ld = seg->linedef;
 
-  int top =    ((ld->bbox.box[BOXTOP]-bmaporgy).floor() +MAXRADIUS) >> MAPBLOCKBITS;
-  int bottom = ((ld->bbox.box[BOXBOTTOM]-bmaporgy).floor() -MAXRADIUS) >> MAPBLOCKBITS;
-  int left =   ((ld->bbox.box[BOXLEFT]-bmaporgx).floor() -MAXRADIUS) >> MAPBLOCKBITS;
-  int right =  ((ld->bbox.box[BOXRIGHT]-bmaporgx).floor() +MAXRADIUS) >> MAPBLOCKBITS;
+  int top =    bmap.BlockY(ld->bbox.box[BOXTOP] + MAXRADIUS);
+  int bottom = bmap.BlockY(ld->bbox.box[BOXBOTTOM] - MAXRADIUS);
+  int left =   bmap.BlockX(ld->bbox.box[BOXLEFT] - MAXRADIUS);
+  int right =  bmap.BlockX(ld->bbox.box[BOXRIGHT] + MAXRADIUS);
 
   bool blocked = false;
 
   bottom = bottom < 0 ? 0 : bottom;
-  bottom = bottom >= bmapheight ? bmapheight-1 : bottom;
+  bottom = bottom >= bmap.height ? bmap.height-1 : bottom;
   top = top < 0 ? 0 : top;
-  top = top >= bmapheight  ? bmapheight-1 : top;
+  top = top >= bmap.height  ? bmap.height-1 : top;
   left = left < 0 ? 0 : left;
-  left = left >= bmapwidth ? bmapwidth-1 : left;
+  left = left >= bmap.width ? bmap.width-1 : left;
   right = right < 0 ? 0 : right;
-  right = right >= bmapwidth ?  bmapwidth-1 : right;
+  right = right >= bmap.width ?  bmap.width-1 : right;
 
-  for (j = bottom*bmapwidth; j <= top*bmapwidth; j += bmapwidth)
+  for (j = bottom*bmap.width; j <= top*bmap.width; j += bmap.width)
     {
       for (i = left; i <= right; i++)
 	{
@@ -895,12 +895,13 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 	    {
 	      if (mobj->flags & MF_SOLID)
 		{
-		  tmb.Set(mobj->pos.x, mobj->pos.y, mobj->radius);
+		  bbox_t box;
+		  box.Set(mobj->pos.x, mobj->pos.y, mobj->radius);
 
-		  if (!tmb.BoxTouchBox(ld->bbox))
+		  if (!box.BoxTouchBox(ld->bbox))
 		    continue;
 
-		  if (tmb.BoxOnLineSide(ld) != -1)
+		  if (box.BoxOnLineSide(ld) != -1)
 		    continue;
 
 		  ThrustMobj(mobj, seg, po);

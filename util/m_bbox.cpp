@@ -90,11 +90,6 @@ bool bbox_t::BoxTouchBox(const bbox_t &other)
 // set temp location and boundingbox
 void bbox_t::Set(fixed_t x, fixed_t y, fixed_t r)
 {
-  // HACK
-  extern fixed_t tmx, tmy;
-  tmx = x;
-  tmy = y;
-
   box[BOXTOP]    = y + r;
   box[BOXBOTTOM] = y - r;
   box[BOXRIGHT]  = x + r;

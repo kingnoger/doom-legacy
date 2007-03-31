@@ -1096,8 +1096,8 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of vertical gridlines
   start = m_x;
-  if ((start - mp->bmaporgx) % MAPBLOCKUNITS != 0)
-    start += MAPBLOCKUNITS - ((start - mp->bmaporgx) % MAPBLOCKUNITS);
+  if ((start - mp->bmap.orgx) % MAPBLOCKUNITS != 0)
+    start += MAPBLOCKUNITS - ((start - mp->bmap.orgx) % MAPBLOCKUNITS);
   end = m_x + m_w;
 
   // draw vertical gridlines
@@ -1112,8 +1112,8 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of horizontal gridlines
   start = m_y;
-  if ((start - mp->bmaporgy) % MAPBLOCKUNITS != 0)
-    start += MAPBLOCKUNITS - ((start - mp->bmaporgy) % MAPBLOCKUNITS);
+  if ((start - mp->bmap.orgy) % MAPBLOCKUNITS != 0)
+    start += MAPBLOCKUNITS - ((start - mp->bmap.orgy) % MAPBLOCKUNITS);
   end = m_y + m_h;
 
   // draw horizontal gridlines
