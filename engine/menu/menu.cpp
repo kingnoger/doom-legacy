@@ -3079,6 +3079,8 @@ void Menu::Open()
     return;
 
   active = true;
+  I_UngrabMouse();
+
   // pause the game if possible
   if (!game.netgame && game.state != GameInfo::GS_DEMOPLAYBACK)
     game.paused = true;
@@ -3117,6 +3119,7 @@ void Menu::Close(bool callexitmenufunc)
         return; // we can't quit this menu (also used to set parameter from the menu)
     }
 
+  I_GrabMouse();
   active = false;
   // unpause the game if necessary
   if (!game.netgame)

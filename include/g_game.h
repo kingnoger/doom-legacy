@@ -164,6 +164,7 @@ public:
   bool RemovePlayer(int number);        ///< erases player from game
   void ClearPlayers();                  ///< erases all players
 
+  void Pause(bool on); ///< pauses or unpauses the game
 
   // in sv_main.cpp
 public:

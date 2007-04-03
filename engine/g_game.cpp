@@ -705,3 +705,13 @@ void GameInfo::ClearPlayers()
   ViewPlayers.clear();
   hud.ST_Stop();
 }
+
+
+void GameInfo::Pause(bool on)
+{
+  paused = on;
+  if (!paused && !Menu::active)
+    I_GrabMouse();
+  else
+    I_UngrabMouse();
+}

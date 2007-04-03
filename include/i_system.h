@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -54,8 +53,6 @@ void I_GetDiskFreeSpace(Sint64 *freespace);
 /// return free and total physical memory in the system
 Uint32 I_GetFreeMem(Uint32 *total);
 
-
-
 // called before processing any tics in a frame
 // (just after displaying a frame).
 // Time consuming syncronous operations
@@ -84,9 +81,8 @@ char *I_GetWadPath();
 //               User input
 //===========================================
 
-/// polls input events and pushes them to the Legacy event queue
+/// Polls input events and pushes them to the Legacy event queue.
 void I_GetEvent();
-
 
 /// Joystick init and cleanup.
 void I_JoystickInit();
@@ -94,6 +90,10 @@ void I_ShutdownJoystick();
 
 void I_StartupMouse();
 void I_StartupMouse2();
+
+/// Grabs mouse and keyboard input from the window manager.
+void I_GrabMouse();
+void I_UngrabMouse();
 
 // Either returns a null ticcmd,
 // or calls a loadable driver to build it.

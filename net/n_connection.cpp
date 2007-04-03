@@ -455,7 +455,7 @@ void LNetInterface::Pause(int pnum, bool on)
   if (game.server)
     {
       // server can pause the game anytime
-      game.paused = on;
+      game.Pause(on);
 
       // send rpc event to all clients
       if (game.netgame && client_con.size())
@@ -487,7 +487,7 @@ LCONNECTION_RPC(rpcPause, (U8 pnum, bool on), (pnum, on),
   if (isConnectionToServer())
     {
       // server orders a pause
-      game.paused = on;
+      game.Pause(on);
       PauseMsg(on, pnum);
     }
   else if (cv_allowpause.value)

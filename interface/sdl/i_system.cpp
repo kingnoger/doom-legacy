@@ -81,7 +81,7 @@ static bool mouse2_started = false;
 
 static int lastmousex = 0;
 static int lastmousey = 0;
-
+static bool warp_mouse = false;
 
 
 //
@@ -204,7 +204,8 @@ void I_GetEvent()
 		  (inputEvent.motion.x > (vid.width/2)+(vid.width/4)) || 
 		  (inputEvent.motion.y > (vid.height/2)+(vid.height/4)))
                 {
-		  SDL_WarpMouse(vid.width/2, vid.height/2);
+		  if (warp_mouse)
+		    SDL_WarpMouse(vid.width/2, vid.height/2);
                 }
             }
 	  break;
@@ -249,6 +250,9 @@ void I_GrabMouse()
 {
   if (SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_OFF)
     SDL_WM_GrabInput(SDL_GRAB_ON);
+
+  SDL_ShowCursor(SDL_DISABLE);
+  warp_mouse = true;
 }
 
 
@@ -256,6 +260,9 @@ void I_UngrabMouse()
 {
   if (SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_ON)
     SDL_WM_GrabInput(SDL_GRAB_OFF);
+
+  SDL_ShowCursor(SDL_ENABLE);
+  warp_mouse = false;
 }
 
 
@@ -269,13 +276,6 @@ void I_StartupMouse()
   lastmousey = vid.height/2;
   // remove the mouse event by reading the queue
   SDL_PollEvent(&inputEvent);
-
-  /*    
-  if (cv_usemouse.value) 
-    I_GrabMouse();
-  else
-    I_UngrabMouse();
-  */
 
   return;
 }

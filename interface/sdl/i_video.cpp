@@ -44,8 +44,6 @@
 #include "hardware/oglrenderer.hpp"
 #include "hardware/oglhelpers.hpp"
 
-void I_UngrabMouse();
-void I_GrabMouse();
 
 extern consvar_t cv_fullscreen; // for fullscreen support
 
@@ -272,8 +270,6 @@ int I_GetVideoModeForSize(int w, int h)
 
 int I_SetVideoMode(int modeNum)
 {
-  I_UngrabMouse();
-
   Uint32 flags = surfaceFlags;
   vid.modenum = modeNum;
 
@@ -317,7 +313,8 @@ int I_SetVideoMode(int modeNum)
       if (!oglrenderer->InitVideoMode(vid.width, vid.height, cv_fullscreen.value))
 	I_Error("Could not set OpenGL vidmode.\n");
     }
-  I_StartupMouse();
+
+  I_StartupMouse(); // grabs mouse and keyboard input if necessary
   
   return 1;
 }
@@ -401,6 +398,7 @@ bool I_StartupGraphics()
   vid.height = BASEVIDHEIGHT;
   if (M_CheckParm("-opengl"))
     {
+      // OpenGL mode
       rendermode = render_opengl;
 
 #if 0  //FIXME: Hurdler: for now we do not use that anymore (but it should probably be back some day
@@ -423,10 +421,10 @@ bool I_StartupGraphics()
       
       oglrenderer = new OGLRenderer;
     }
-
-  if (rendermode == render_soft)
+  else
     {
-      // not fullscreen
+      // software mode
+      rendermode = render_soft;
       CONS_Printf("I_StartupGraphics: windowed %d x %d x %d bpp\n", vid.width, vid.height, vid.BitsPerPixel);
       vidSurface = SDL_SetVideoMode(vid.width, vid.height, vid.BitsPerPixel, surfaceFlags);
 
@@ -439,8 +437,7 @@ bool I_StartupGraphics()
     }
 
   SDL_ShowCursor(SDL_DISABLE);
-  I_UngrabMouse();
-  //I_GrabMouse();
+  I_StartupMouse(); // grab mouse and keyboard input if needed
 
   graphics_started = true;
 
