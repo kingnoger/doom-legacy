@@ -87,7 +87,7 @@ bool G_RemoveLocalPlayer(PlayerInfo *p)
 
 static char default_weaponpref[NUMWEAPONS] =
 {
-  1,5,6,7,3,9,2,4,8,  // Doom
+  1,4,5,6,8,7,3,9,2,  // Doom
   1,4,5,7,8,3,9,6,0,  // Heretic
   2,2,2,4,4,4,6,6,6,0,0,0,0 // Hexen
 };

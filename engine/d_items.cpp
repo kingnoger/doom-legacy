@@ -66,17 +66,24 @@ inventory_t::inventory_t(byte t, byte c)
 weapon_group_t weapongroup[NUMWEAPONS] =
 {
   // Doom
-  {0, wp_chainsaw},
+  {0, wp_chainsaw}, {0, wp_staff},
   {1, wp_goldwand},
-  {2, wp_supershotgun},
-  {3, wp_blaster}, {4, wp_phoenixrod}, {5, wp_skullrod}, {6, wp_mace},
-  {0, wp_staff},
-  {2, wp_crossbow},
+  {2, wp_supershotgun}, {2, wp_crossbow},
+  {3, wp_blaster},
+  {4, wp_phoenixrod},
+  {5, wp_skullrod},
+  {6, wp_mace},
 
   // Heretic
   {0, wp_gauntlets}, {0, wp_fpunch},
-  {1, wp_timons_axe}, {2, wp_hammer_of_retribution}, {3, wp_quietus},
-  {4, wp_missile}, {5, wp_plasma}, {6, wp_bfg}, {7, wp_snout},
+  {1, wp_timons_axe},
+  {2, wp_hammer_of_retribution},
+  {3, wp_quietus},
+  {4, wp_missile},
+  {5, wp_plasma},
+  {6, wp_bfg},
+  {7, wp_snout},
+
   // Hexen
   {0, wp_cmace}, {0, wp_mwand}, {0, wp_fist},
   {1, wp_serpent_staff}, {1, wp_cone_of_shards}, {1, wp_pistol},
@@ -107,14 +114,14 @@ weaponinfo_t wpnlev1info[NUMWEAPONS] =
 {
   // Doom weapons
   {am_noammo, 0, S_PUNCHUP, S_PUNCHDOWN, S_PUNCH, S_PUNCH1, S_PUNCH1, S_WNULL},             // fist
+  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
   {am_clip,   1, S_PISTOLUP, S_PISTOLDOWN, S_PISTOL, S_PISTOL1, S_PISTOL1, S_PISTOLFLASH}, // pistol
   {am_shell,  1, S_SGUNUP, S_SGUNDOWN, S_SGUN, S_SGUN1, S_SGUN1, S_SGUNFLASH1},            // shotgun
+  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
   {am_clip,   1, S_CHAINUP, S_CHAINDOWN, S_CHAIN, S_CHAIN1, S_CHAIN1, S_CHAINFLASH1},      // chaingun
   {am_misl,   1, S_MISSILEUP, S_MISSILEDOWN, S_MISSILE, S_MISSILE1, S_MISSILE1, S_MISSILEFLASH1}, // missile launcher
   {am_cell,   1, S_PLASMAUP, S_PLASMADOWN, S_PLASMA, S_PLASMA1, S_PLASMA1, S_PLASMAFLASH1},       // plasma rifle
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
-  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
-  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
 
   // Heretic weapons
   {am_noammo,   0, S_STAFFUP, S_STAFFDOWN, S_STAFFREADY, S_STAFFATK1_1, S_STAFFATK1_1, S_WNULL}, // Staff
@@ -149,14 +156,14 @@ weaponinfo_t wpnlev2info[NUMWEAPONS] =
 {
   // Doom weapons
   {am_noammo, 0, S_PUNCHUP, S_PUNCHDOWN, S_PUNCH, S_PUNCH1, S_PUNCH1, S_WNULL},             // fist
+  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
   {am_clip,   1, S_PISTOLUP, S_PISTOLDOWN, S_PISTOL, S_PISTOL1, S_PISTOL1, S_PISTOLFLASH}, // pistol
   {am_shell,  1, S_SGUNUP, S_SGUNDOWN, S_SGUN, S_SGUN1, S_SGUN1, S_SGUNFLASH1},            // shotgun
+  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
   {am_clip,   1, S_CHAINUP, S_CHAINDOWN, S_CHAIN, S_CHAIN1, S_CHAIN1, S_CHAINFLASH1},      // chaingun
   {am_misl,   1, S_MISSILEUP, S_MISSILEDOWN, S_MISSILE, S_MISSILE1, S_MISSILE1, S_MISSILEFLASH1}, // missile launcher
   {am_cell,   1, S_PLASMAUP, S_PLASMADOWN, S_PLASMA, S_PLASMA1, S_PLASMA1, S_PLASMAFLASH1},       // plasma rifle
   {am_cell,  40, S_BFGUP, S_BFGDOWN, S_BFG, S_BFG1, S_BFG1, S_BFGFLASH1}, // bfg 9000
-  {am_noammo, 0, S_SAWUP, S_SAWDOWN, S_SAW, S_SAW1, S_SAW1, S_WNULL},      // chainsaw
-  {am_shell,  2, S_DSGUNUP, S_DSGUNDOWN, S_DSGUN, S_DSGUN1, S_DSGUN1, S_DSGUNFLASH1}, // super shotgun
 
   // Heretic weapons
   {am_noammo,   0, S_STAFFUP2, S_STAFFDOWN2, S_STAFFREADY2_1, S_STAFFATK2_1, S_STAFFATK2_1, S_WNULL}, // Staff

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -203,6 +201,13 @@ void Command_CheatGimme_f()
 	p->ammo[am_clip] = p->maxammo[am_clip];
 
 	CONS_Printf("got chaingun\n");
+      }
+    else if (!strncmp(s,"backpack",8))
+      {
+	for (i = 0; i < NUMAMMO; i++)
+	  p->maxammo[i] = maxammo2[i];
+
+	CONS_Printf("got backpack\n");
       }
     else if (!strncmp(s,"berserk",7))
       //
@@ -472,14 +477,14 @@ static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
       for (i = 0; i < NUMAMMO; i++)
 	p->maxammo[i] = maxammo2[i];
 
-      for (i = wp_heretic; i <= wp_gauntlets; i++)
+      for (i = wp_heretic; i < wp_hexen; i++)
 	p->weaponowned[i] = true;
 
       msg = CHEAT_WEAPONS;
     }
   else
     {
-      for (i=0; i < wp_heretic; i++)
+      for (i = wp_doom; i < wp_heretic; i++)
 	p->weaponowned[i] = true;
 
       if (game.mode != gm_doom2)

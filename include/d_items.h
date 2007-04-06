@@ -191,14 +191,14 @@ enum weapontype_t
   wp_none = -1,
 
   wp_fist = 0, wp_doom = wp_fist,
+  wp_chainsaw,
   wp_pistol,
   wp_shotgun,
+  wp_supershotgun,
   wp_chaingun,
   wp_missile,
   wp_plasma,
   wp_bfg,
-  wp_chainsaw,
-  wp_supershotgun,
 
   wp_staff, wp_heretic = wp_staff,
   wp_gauntlets,

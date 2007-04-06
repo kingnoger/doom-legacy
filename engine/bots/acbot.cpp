@@ -665,13 +665,14 @@ enum ai_weapon_e
 static ai_weapon_t ai_weapon_data[NUMWEAPONS] =
 {
   /*
-  wp_fist, wp_pistol, wp_shotgun, wp_chaingun,
+  wp_fist, wp_chainsaw, wp_pistol,
+  wp_shotgun, wp_supershotgun, wp_chaingun,
   wp_missile,  wp_plasma,  wp_bfg,
-  wp_chainsaw, wp_supershotgun
   */
-  {MELEE, 0.1, MT_NONE, 0}, {INSTANT|AF, 0.5, MT_NONE, 0}, {INSTANT, 30, MT_NONE, 0}, {INSTANT|AF, 50, MT_NONE, 0},
+  {MELEE, 0.1, MT_NONE, 0}, {MELEE, 1, MT_NONE, 0}, {INSTANT|AF, 0.5, MT_NONE, 0},
+  {INSTANT, 30, MT_NONE, 0}, {INSTANT, 55, MT_NONE, 0}, {INSTANT|AF, 50, MT_NONE, 0},
   {MISSILE, 50, MT_ROCKET, 100}, {MISSILE|AF, 50, MT_PLASMA, 0}, {MISSILE, 20, MT_BFG, 0},
-  {MELEE, 1, MT_NONE, 0}, {INSTANT, 55, MT_NONE, 0},
+  
   /*
   wp_staff, wp_gauntlets, wp_goldwand,
   wp_crossbow, wp_blaster, wp_phoenixrod,

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -144,13 +143,14 @@ angle_t G_ClipAimingPitch(angle_t pitch)
 static byte NextWeapon(PlayerPawn *p, int step)
 {
   // Kludge. TODO when netcode is redone, fix me.
-  int w = p->readyweapon;
+  int w0 = (p->pendingweapon != wp_none) ? p->pendingweapon : p->readyweapon;
+  int w = w0;
   do
     {
       w = (w + step + NUMWEAPONS) % NUMWEAPONS;
       if (p->weaponowned[w] && p->ammo[p->weaponinfo[w].ammo] >= p->weaponinfo[w].ammopershoot)
         return w;
-    } while (w != p->readyweapon);
+    } while (w != w0);
 
   return 0;
 }
@@ -166,6 +166,17 @@ void ticcmd_t::Clear()
 }
 
 
+static inline bool ControlDown(const short *control)
+{
+  return gamekeydown[control[0]] || gamekeydown[control[1]];
+}
+
+static inline void ReleaseControl(const short *control)
+{
+  gamekeydown[control[0]] = gamekeydown[control[1]] = false;
+}
+
+
 //! Builds a ticcmd from all of the available inputs
 void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 {
@@ -177,12 +188,12 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   short (*gc)[2]   = gamecontrol[c];
   PlayerPawn *pawn = pref->info ? pref->info->pawn : NULL;
 
-  int  speed = (gamekeydown[gc[gc_speed][0]] || gamekeydown[gc[gc_speed][1]]) ^ pref->autorun;
-  bool mouseaiming = (gamekeydown[gc[gc_mouseaiming][0]] || gamekeydown[gc[gc_mouseaiming][1]]) ^ cv_automlook[c].value;
-  bool strafe = gamekeydown[gc[gc_strafe][0]] || gamekeydown[gc[gc_strafe][1]];
+  int  speed = ControlDown(gc[gc_speed]) ^ pref->autorun;
+  bool mouseaiming = ControlDown(gc[gc_mouseaiming]) ^ cv_automlook[c].value;
+  bool strafe = ControlDown(gc[gc_strafe]);
 
-  bool turnright = gamekeydown[gc[gc_turnright][0]] || gamekeydown[gc[gc_turnright][1]];
-  bool turnleft  = gamekeydown[gc[gc_turnleft][0]] || gamekeydown[gc[gc_turnleft][1]];
+  bool turnright = ControlDown(gc[gc_turnright]);
+  bool turnleft  = ControlDown(gc[gc_turnleft]);
 
   // initialization
   //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
@@ -229,44 +240,51 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 
   // forwards/backwards, strafing
 
-  if (gamekeydown[gc[gc_forward][0]] || gamekeydown[gc[gc_forward][1]])
+  if (ControlDown(gc[gc_forward]))
     fw += forwardspeed[speed];
 
-  if (gamekeydown[gc[gc_backward][0]] || gamekeydown[gc[gc_backward][1]])
+  if (ControlDown(gc[gc_backward]))
     fw -= forwardspeed[speed];
 
-  if (gamekeydown[gc[gc_straferight][0]] || gamekeydown[gc[gc_straferight][1]])
+  if (ControlDown(gc[gc_straferight]))
     sd += sidespeed[speed];
 
-  if (gamekeydown[gc[gc_strafeleft][0]] || gamekeydown[gc[gc_strafeleft][1]])
+  if (ControlDown(gc[gc_strafeleft]))
     sd -= sidespeed[speed];
 
 
   // buttons
 
-  if (gamekeydown[gc[gc_fire][0]] || gamekeydown[gc[gc_fire][1]])
+  if (ControlDown(gc[gc_fire]))
     buttons |= BT_ATTACK;
 
-  if (gamekeydown[gc[gc_use][0]] || gamekeydown[gc[gc_use][1]])
+  if (ControlDown(gc[gc_use]))
     buttons |= BT_USE;
 
-  if (gamekeydown[gc[gc_jump][0]] || gamekeydown[gc[gc_jump][1]])
+  if (ControlDown(gc[gc_jump]))
     buttons |= BT_JUMP;
 
-  if (gamekeydown[gc[gc_flydown][0]] || gamekeydown[gc[gc_flydown][1]])
+  if (ControlDown(gc[gc_flydown]))
     buttons |= BT_FLYDOWN;
 
   if (pawn)
     {
       // impulse-type controls
-      if (gamekeydown[gc[gc_nextweapon][0]] || gamekeydown[gc[gc_nextweapon][1]])
-	buttons |= ((NextWeapon(pawn, 1) + 1) << WEAPONSHIFT);
-      else if (gamekeydown[gc[gc_prevweapon][0]] || gamekeydown[gc[gc_prevweapon][1]])
-	buttons |= ((NextWeapon(pawn, -1) + 1) << WEAPONSHIFT);
+      if (ControlDown(gc[gc_nextweapon]))
+	{
+	  buttons |= ((NextWeapon(pawn, 1) + 1) << WEAPONSHIFT);
+	  ReleaseControl(gc[gc_nextweapon]);
+	}
+      else if (ControlDown(gc[gc_prevweapon]))
+	{
+	  buttons |= ((NextWeapon(pawn, -1) + 1) << WEAPONSHIFT);
+	  ReleaseControl(gc[gc_prevweapon]);
+	}
       else for (i = gc_weapon1; i <= gc_weapon8; i++)
 	if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
 	  {
 	    buttons |= ((pawn->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
+	    ReleaseControl(gc[i]);
 	    break;
 	  }
     }
@@ -278,17 +296,17 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   if (!keyboard_look[c] && !mouseaiming)
     pitch = 0;
 
-  if (gamekeydown[gc[gc_lookup][0]] || gamekeydown[gc[gc_lookup][1]])
+  if (ControlDown(gc[gc_lookup]))
     {
       pitch += KB_LOOKSPEED;
       keyboard_look[c] = true;
     }
-  else if (gamekeydown[gc[gc_lookdown][0]] || gamekeydown[gc[gc_lookdown][1]])
+  else if (ControlDown(gc[gc_lookdown]))
     {
       pitch -= KB_LOOKSPEED;
       keyboard_look[c] = true;
     }
-  else if (gamekeydown[gc[gc_centerview][0]] || gamekeydown[gc[gc_centerview][1]])
+  else if (ControlDown(gc[gc_centerview]))
     {
       pitch = 0;
       keyboard_look[c] = false;
