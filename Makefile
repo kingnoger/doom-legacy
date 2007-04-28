@@ -345,10 +345,10 @@ versionstring:
 
 ifdef DYNAMIC
 # main program
-$(exename) : versionstring engine util audio video net sdl grammars
+$(exename) : engine util audio video net sdl grammars versionstring
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
 else
 # all in one
-$(exename) : versionstring engine util audio video net sdl grammars
+$(exename) : engine util audio video net sdl grammars versionstring
 	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -o $@
 endif
