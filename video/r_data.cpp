@@ -957,21 +957,21 @@ Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t &source, boo
     return NULL;
 
   // insert Texture into cache, change name if it is already taken (namespace overlaps, just a few)
-  const char *name = t->GetName();
-  if (textures.Find(name))
-    t->SetName((string(name) + "_xxx").c_str());
+  string name = t->GetName(); // char* won't do since we may change the Texture's name
+  if (textures.Find(name.c_str()))
+    t->SetName((name + "_xxx").c_str());
 
   if (!textures.Insert(t))
-    CONS_Printf("Overlapping Texture names '%s'!\n", name);
+    CONS_Printf("Overlapping Texture names '%s'!\n", t->GetName());
 
   // see if we already have a Material with this name
-  Material *m = reinterpret_cast<Material *>(source.Find(name));
+  Material *m = reinterpret_cast<Material *>(source.Find(name.c_str()));
   if (!m)
     {
       if (h_start)
 	return NULL; // no original with same name, ignore
 
-      m = new Material(name); // create a new Material
+      m = new Material(name.c_str()); // create a new Material
       source.Insert(m);
       all_materials.insert(m);
     }
