@@ -1440,14 +1440,14 @@ bool trace_t::HitZPlane(sector_t *s)
     {
       frac = (frac * (r.high - start.z).Float()) / dz;
       lastz = r.high;
-      hitsky = (s->ceilingpic == skyflatnum && r.high == s->ceilingheight);
+      hitsky = (s->SkyCeiling() && r.high == s->ceilingheight);
       return true;
     }
   else if (lastz < r.low) // hit floor
     {
       frac = (frac * (r.low - start.z).Float()) / dz;
       lastz = r.low;
-      hitsky = (s->floorpic == skyflatnum && r.low == s->floorheight);
+      hitsky = (s->SkyFloor() && r.low == s->floorheight);
       return true;
     }
 

@@ -112,31 +112,17 @@ sounditem_t::~sounditem_t()
 
 
 
-class soundcache_t : public cache_t
+class soundcache_t : public cache_t<sounditem_t>
 {
 protected:
-  cacheitem_t *Load(const char *p);
-
-public:
-  soundcache_t(memtag_t tag);
-  inline sounditem_t *Get(const char *p) { return (sounditem_t *)Cache(p); };
-};
-
-
-
-soundcache_t::soundcache_t(memtag_t tag)
-  : cache_t(tag)
-{}
-
-
-// We assume that the sound is in Doom or WAV sound format.
-cacheitem_t *soundcache_t::Load(const char *p)
-{
+  // We assume that the sound is in Doom or WAV sound format.
+  virtual sounditem_t *Load(const char *p)
+  {
   int lump = fc.FindNumForName(p, false);
   if (lump == -1)
     return NULL;
 
-  byte *raw = static_cast<byte *>(fc.CacheLumpNum(lump, tagtype));
+  byte *raw = static_cast<byte *>(fc.CacheLumpNum(lump, PU_SOUND));
   unsigned size = fc.LumpLength(lump);
 
   sounditem_t *t = new sounditem_t(p);
@@ -188,11 +174,12 @@ cacheitem_t *soundcache_t::Load(const char *p)
       t->sdata = &ds->data;
     }
   return t;
-}
+  }
+};
 
 
 /// The sound cache.
-static soundcache_t sc(PU_SOUND);
+static soundcache_t sc;
 
 
 

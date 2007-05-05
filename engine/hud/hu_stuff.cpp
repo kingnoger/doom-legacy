@@ -94,8 +94,8 @@ static char hu_tick;
 
 
 #define HU_CROSSHAIRS 3
-Texture* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
-static Texture* PatchRankings;
+Material* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
+static Material* PatchRankings;
 
 
 HUD::HUD()
@@ -159,9 +159,9 @@ void HUD::Init()
 
   startlump = fc.GetNumForName("CROSHAI1");
   for (int i=0; i<HU_CROSSHAIRS; i++)
-    crosshair[i] = tc.GetPtrNum(startlump + i);
+    crosshair[i] = materials.GetLumpnum(startlump + i);
 
-  PatchRankings = tc.GetPtr("RANKINGS");
+  PatchRankings = materials.Get("RANKINGS");
 
   //----------- legacy.wad stuff ends
 
@@ -573,7 +573,7 @@ class HudPic
 {
 protected:
   int      xpos, ypos;
-  Texture *data;
+  Material *data;
 
 public:
   bool     draw;
@@ -583,7 +583,7 @@ public:
   {
     xpos = x;
     ypos = y;
-    data = tc.GetPtrNum(lump);
+    data = materials.GetLumpnum(lump);
     draw = true;
   };
 

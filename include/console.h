@@ -74,8 +74,8 @@ protected:
   int con_hudtime[CON_MAXHUDLINES];   ///< remaining time of display for hud msg lines
 
   // graphics
-  class Texture *con_backpic; ///< console background picture, loaded static
-  Texture *con_lborder, *con_rborder; ///< console borders in translucent mode
+  class Material *con_backpic; ///< console background picture, loaded static
+  Material *con_lborder, *con_rborder; ///< console borders in translucent mode
 
   int con_destheight; ///< destination height in pixels
   int con_height;     ///< current console height in pixels

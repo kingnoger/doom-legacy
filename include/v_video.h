@@ -24,6 +24,7 @@
 #ifndef v_video_h
 #define v_video_h 1
 
+#include <vector>
 #include "doomdef.h"
 #include "doomtype.h"
 
@@ -49,7 +50,7 @@ class font_t
 {
 protected:
   char  start, end;     ///< first and last ASCII characters included in the font
-  class Texture **font; ///< one Texture per symbol
+  std::vector<class Material*> font; ///< one Material per symbol
 
 public:
   float height, width;  ///< world dimensions of the character '0' in the font

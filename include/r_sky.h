@@ -29,12 +29,8 @@
 
 extern int            skytexturemid;
 
-// Needed to store the number of the dummy sky flat.
-// Used for rendering, as well as tracking projectiles etc.
-extern int              skyflatnum;
-
 // call after skytexture is set to adapt for old/new skies
-void R_SetupSkyDraw(class Texture *skytex);
+void R_SetupSkyDraw(class Material *skytex);
 
 
 #endif

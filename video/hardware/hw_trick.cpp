@@ -942,7 +942,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdr->bottomtexture == 0)
                     {
                         if(sdr->midtexture == 0)
-                            sdr->bottomtexture = tc.GetID("STONE2");
+                            sdr->bottomtexture = materials.Get("STONE2", TEX_wall);
                         else
                             sdr->bottomtexture = sdr->midtexture;
                     }
@@ -953,7 +953,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdl->bottomtexture == 0)
                     {
                         if(sdl->midtexture == 0)
-                            sdl->bottomtexture = tc.GetID("STONE2");
+                            sdl->bottomtexture = materials.Get("STONE2", TEX_wall);
                         else
                             sdl->bottomtexture = sdl->midtexture;
                     }
@@ -968,7 +968,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdr->toptexture == 0)
                     {
                         if(sdr->midtexture == 0)
-                            sdr->toptexture = tc.GetID("STONE2");
+                            sdr->toptexture = materials.Get("STONE2", TEX_wall);
                         else
                             sdr->toptexture = sdr->midtexture;
                     }
@@ -979,7 +979,7 @@ void Rend::HWR_CorrectSWTricks()
                     if(sdl->toptexture == 0)
                     {
                     if(sdl->midtexture == 0)
-                        sdl->toptexture = tc.GetID("STONE2");
+                        sdl->toptexture = materials.Get("STONE2", TEX_wall);
                     else
                         sdl->toptexture = sdl->midtexture;
 

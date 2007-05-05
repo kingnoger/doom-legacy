@@ -477,7 +477,7 @@ int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int 
       rtn++;
       floor_t *floor = new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
 
-      int texture = sec->floorpic;
+      Material *texture = sec->floorpic;
       int osecnum = secnum;           //jff 3/4/98 preserve loop index
       
       // Find next sector to raise
@@ -646,7 +646,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
   step_t s;
 
   int ret = 0;
-  int Texture = 0;
+  Material *texture = 0;
 
   // type STAIRS_PHASED is not implemented (nor was it in original Hexen)
   StepDelta = stepdelta;
@@ -657,7 +657,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
       sector_t *sec = &sectors[secnum];
 
       // TODO wrong, if there are several tagged sectors with different heights/textures... was like this in Hexen.
-      Texture = sec->floorpic;
+      texture = sec->floorpic;
       StartHeight = sec->floorheight;
 
       if (sec->floordata)
@@ -694,7 +694,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
 
 	  sector_t *tsec = sec->lines[i]->frontsector;
 	  if ((tsec->special == phase + SS_Stairs_Special1) && !tsec->floordata
-	      && tsec->floorpic == Texture && tsec->validcount != validcount)
+	      && tsec->floorpic == texture && tsec->validcount != validcount)
 	    {
 	      s.sector = tsec;
 	      s.phase = phase^1;
@@ -706,7 +706,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
 	    }
 	  tsec = sec->lines[i]->backsector;
 	  if ((tsec->special == phase + SS_Stairs_Special1) && !tsec->floordata
-	      && tsec->floorpic == Texture && tsec->validcount != validcount)
+	      && tsec->floorpic == texture && tsec->validcount != validcount)
 	    {
 	      s.sector = tsec;
 	      s.phase = phase^1;

@@ -595,7 +595,7 @@ int Map::EV_DoGenStairs(line_t *line)
       rtn++;
       floor_t *floor = new floor_t(this, floor_t::AbsHeight, sec, speed, 0, height);
 
-      int texture = sec->floorpic;
+      Material *texture = sec->floorpic;
 
       sec->stairlock = -2;
       sec->nextsec = -1;

@@ -51,7 +51,7 @@ struct line_opening_t
   fixed_t top;
   fixed_t bottom;
   fixed_t lowfloor;  ///< one floor down from bottom
-  int     bottompic; ///< floorpic of bottom plane
+  class Material *bottompic; ///< floorpic of bottom plane
 
   bool top_sky;      ///< top    limit is set by a sky plane
   bool bottom_sky;   ///< bottom limit is set by a sky plane
@@ -61,7 +61,7 @@ public:
   {
     top = fixed_t::FMAX;
     bottom = lowfloor = fixed_t::FMIN;
-    bottompic = -1;
+    bottompic = NULL;
     top_sky = bottom_sky = false;
   }
 

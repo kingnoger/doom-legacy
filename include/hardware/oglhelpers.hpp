@@ -22,5 +22,3 @@
 
 byte LightLevelToLum(int l, int extralight=0);
 void InitLumLut();
-
-void ClearGLTextures();

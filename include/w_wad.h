@@ -33,8 +33,7 @@ namespace TNL { class BitStream; };
 
 #define MAX_WADPATH   128
 #define MAX_WADFILES  32       // maximum of wad files used at the same time
-                               // (there is a max of simultaneous open files
-                               // anyway, and this should be plenty)
+
 
 //=========================================================================
 /// \brief First-level cache for data files
@@ -54,42 +53,54 @@ private:
 public:
   ~FileCache();
 
-  void SetPath(const char *p);        ///< set the default path
-  const char *Access(const char *f);  ///< tries to find the given file, returns path where found
-
-  int  AddFile(const char *filename, bool silent = false); ///< opens a new VFile, returns -1 on error
-
-  /// returns true if everything is OK, false if at least one file was missing
+  /// Set the default path.
+  void SetPath(const char *path);
+  /// Try to find the given file, return path where found.
+  const char *Access(const char *filename);
+  /// Open a new VFile, return -1 on error.
+  int  AddFile(const char *filename, bool silent = false);
+  /// Return true if everything is OK, false if at least one file was missing.
   bool InitMultipleFiles(const char *const*filenames);
 
-  // info about open vfiles
-  int Size() const { return vfiles.size(); };  ///< number of open VFiles
-  const char *Name(int i);               ///< returns the name of the VFile
-  unsigned int GetNumLumps(int filenum); ///< returns the number of lumps in the VFile
+  // These methods return info about the open VFiles.
+
+  /// Number of open VFiles.
+  unsigned int Size() const { return vfiles.size(); };
+  /// Name of the VFile.
+  const char *Name(int filenum);
+  /// Number of lumps in the VFile
+  unsigned int GetNumLumps(int filenum);
+  /// Writes miscellaneous info about the VFile into the BitStream.
   void WriteNetInfo(TNL::BitStream &s);
 
-  int LumpLength(int lump);              ///< length of a lump in bytes
+  // Search methods return a lump number. Return -1 if nothing is found.
 
-  // searching: Find gives -1 if not found, Get gives an error.
+  /// Search a lump by name.
   int FindNumForName(const char *name, bool scanforward = false);
-  int GetNumForName(const char *name, bool scanforward = false, bool errorifnotfound = true);
+  /// Search a lump by name, generate an error if nothing is found.
+  int GetNumForName(const char *name, bool scanforward = false);
+  /// Search a lump by name inside a specific file, starting from a given lump.
   int FindNumForNameFile(const char *name, unsigned filenum, int startlump = 0);
-  const char *FindNameForNum(int lump);
+  /// Return the first lump in a file whose name starts with the given four bytes, also returns the full name of the lump.
   int FindPartialName(Uint32 iname, unsigned filenum, int startlump, const char **fullname);
 
-  // reading and caching lumps
-  int ReadLumpHeader(int lump, void *dest, int size);
+  // Lump info.
+
+  /// Name of a lump.
+  const char *FindNameForNum(int lump);
+  /// Length of a lump in bytes.
+  int LumpLength(int lump);
+
+  // Reading and caching of lumps.
+
+  /// Read size bytes from the lump (starting from the given offset) into dest. Returns the number of bytes actually read.
+  int ReadLumpHeader(int lump, void *dest, unsigned size, unsigned offset = 0);
+  /// Read the entire lump into memory, allocating the space. Returns a pointer to the buffer.
   void *CacheLumpNum(int lump, int tag);
-
-  inline int ReadLump(int lump, void *dest)
-  {
-    return ReadLumpHeader(lump, dest, 0);
-  };
-
-  inline void *CacheLumpName(const char* name, int tag)
-  {
-    return CacheLumpNum(GetNumForName(name), tag);
-  };
+  /// Read the entire lump into dest without allocating any memory.
+  inline int ReadLump(int lump, void *dest) { return ReadLumpHeader(lump, dest, 0); };
+  /// Shorthand for caching lumps by name.
+  inline void *CacheLumpName(const char* name, int tag) { return CacheLumpNum(GetNumForName(name), tag); };
 };
 
 

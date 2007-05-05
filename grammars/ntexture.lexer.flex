@@ -63,13 +63,19 @@ WHITESP [ \t\v\r\f]
 
 %{ // NTEXTURE keywords
 %}
-texture      { return TEXTURE; }
+material     { return MATERIAL; }
 sprite       { return SPRITE; }
-data         { return DATA; }
+texture_unit { return TEX_UNIT; }
+texture      { return TEXTURE; }
 worldsize    { return WORLDSIZE; }
 scale        { return SCALE; }
 texeloffsets { return TEXELOFFSETS; } 
 offset       { return OFFSET; }
+shader_ref   { return SHADER_REF; }
+
+shader          { return SHADER; }
+vertex_source   { return V_SOURCE; }
+fragment_source { return F_SOURCE; }
 
 %{
 // octals? can be confusing...

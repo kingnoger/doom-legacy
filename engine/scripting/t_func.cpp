@@ -1736,23 +1736,23 @@ void SF_FloorTexture()
   // argv is sector tag
   int secnum = current_map->FindSectorFromTag(tagnum, -1);
 
-  if(secnum < 0)
+  if (secnum < 0)
     { script_error("sector not found with tagnum %i\n", tagnum); return;}
 
   sector_t *s = &current_map->sectors[secnum];
 
-  if(t_argc > 1)
+  if (t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.GetID(t_argv[1].value.s, TEX_floor);
+      Material *pic = materials.Get(t_argv[1].value.s, TEX_floor);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
-        current_map->sectors[i].floorpic = picnum;
+        current_map->sectors[i].floorpic = pic;
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(tc[s->floorpic]->GetName(), PU_STATIC, 0);
+  t_return.value.s = s->floorpic ? Z_Strdup(s->floorpic->GetName(), PU_STATIC, 0) : "sky";
 }
 
 
@@ -1816,7 +1816,7 @@ void SF_CeilingTexture()
   // argv is sector tag
   int secnum = current_map->FindSectorFromTag(tagnum, -1);
 
-  if(secnum < 0)
+  if (secnum < 0)
     { script_error("sector not found with tagnum %i\n", tagnum); return;}
 
   sector_t *s = &current_map->sectors[secnum];
@@ -1824,15 +1824,15 @@ void SF_CeilingTexture()
   if (t_argc > 1)
     {
       int i = -1;
-      int picnum = tc.GetID(t_argv[1].value.s, TEX_floor);
+      Material *pic = materials.Get(t_argv[1].value.s, TEX_floor);
 
       // set all sectors with tag
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
-        current_map->sectors[i].ceilingpic = picnum;
+        current_map->sectors[i].ceilingpic = pic;
     }
 
   t_return.type = svt_string;
-  t_return.value.s = Z_Strdup(tc[s->ceilingpic]->GetName(), PU_STATIC, 0);
+  t_return.value.s = s->ceilingpic ? Z_Strdup(s->ceilingpic->GetName(), PU_STATIC, 0) : "sky";
 }
 
 

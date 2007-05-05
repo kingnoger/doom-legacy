@@ -33,7 +33,7 @@
 }
 
 %stack_overflow {
-  fprintf(stderr,"Giving up.  Parser stack overflow\n");
+  fprintf(stderr,"Giving up.  Parser stack overflow.\n");
 }
 
 %token_type {yy_t}
@@ -44,6 +44,7 @@
 %type num {float}
 
 %include {
+#include "z_zone.h"
 #include "parser_driver.h"
 #include "ntexture.parser.h"
 }
@@ -54,92 +55,125 @@ start ::= definitions.
 
 // sequence of 0-N texture definitions
 definitions ::= . // empty
-definitions ::= definitions texture. // left recursion
+definitions ::= definitions def. // left recursion
 
+// shader definition
+def ::= shader_name L_BRACE shader_props R_BRACE. { d->p->Link(); }
 
-// single texture declaration
-texture ::= tex_type tex_name tex_construction tex_properties R_BRACE.
+shader_name ::= SHADER str(A).
   {
-    //-------------
-    // texture definition finished, insert it into cache
-    if (d->t != &d->dummy)
+    d->p = shaderprogs.Get(A);
+  }
+
+shader_props ::= .
+shader_props ::= shader_props shader_prop. // left recursion
+
+shader_prop ::= shader_sourcetype shader_sources SEMICOLON.
+
+shader_sourcetype ::= V_SOURCE. { d->vertex_src = true; }
+shader_sourcetype ::= F_SOURCE. { d->vertex_src = false; }
+
+shader_sources ::= shader_src.
+shader_sources ::= shader_sources shader_src. // left recursion
+
+shader_src ::= str(A).
+  {
+    Shader *s = shaders.Find(A); // cannot use Get because Shader constructor needs type as parameter
+    if (!s)
     {
-      CONS_Printf(" Built texture '%s'.\n", d->t->GetName());
-      d->t->Initialize();
-      if (d->is_sprite)
-        tc.InsertSprite(d->t);
-      else
-        tc.InsertTexture(d->t);
+      s = new Shader(A, d->vertex_src); // construct and compile
+      shaders.Insert(s);
+    }
+
+    d->p->AttachShader(s); // attach a source module to the shader
+  }
+
+
+// TODO: shader default parameters
+
+
+//======================================================================
+// single Material declaration
+def ::= mat_type mat_name L_BRACE mat_props R_BRACE.
+  {
+    // Material definition finished
+    if (d->m)
+    {
+      CONS_Printf(" Built material '%s'.\n", d->m->GetName());
+      d->m->Initialize();
     }
   }
-texture ::= COLON. // temp HACK
 
+mat_type ::= MATERIAL. { d->is_sprite = false; }
+mat_type ::= SPRITE.   { d->is_sprite = true; }
 
-tex_type ::= TEXTURE. { d->is_sprite = false; }
-tex_type ::= SPRITE.  { d->is_sprite = true;  }
-
-
-tex_name ::= str(A).
+mat_name ::= str(A).
   {
-    d->texname = A;
-    d->t = NULL;
+    d->m = materials.Update(A, d->is_sprite ? TEX_sprite : TEX_wall);
     d->texeloffsets = false;
+    d->tex_unit = 0;
+  }
+//mat_name ::= str(A) COLON str(P).  // TODO inheritance, copy construction...
+def ::= COLON. // HACK
+
+// now we know that t points to a valid Material object, let's just fill in the props
+mat_props ::= . // empty
+mat_props ::= mat_props mat_prop. // left recursion
+
+mat_prop ::= SHADER_REF str(A) SEMICOLON.
+  {
+    ShaderProg *p = shaderprogs.Find(A);
+    if (p)
+      d->m->shader = p;
+    else
+      CONS_Printf(" Unknown shader '%s'.\n", A);
   }
 
-
-tex_construction ::= L_BRACE tex_initialization.
-/*
-tex_construction ::= COLON str(P) L_BRACE.  // inheritance, no initialization part allowed
+mat_prop ::= tex_unit L_BRACE tex_props R_BRACE.
   {
-    Texture *parent = tc.GetPtr(P, TEX_wall);
-    if (parent == tc.default_item)
+    d->tex_unit++;
+  }
+
+tex_unit ::= TEX_UNIT.
+  {
+    int units = d->m->tex.size();
+    if (units <= d->tex_unit)
+      d->m->tex.resize(d->tex_unit+1);
+    d->tr = &d->m->tex[d->tex_unit];
+  }
+
+tex_props ::= . // empty
+tex_props ::= tex_props tex_prop. // left recursion
+
+tex_prop ::= TEXTURE str(A) SEMICOLON.
+  {
+    Texture *tex = textures.Get(A);
+    d->tr->t = tex;
+  }
+
+tex_prop ::= WORLDSIZE num(A) num(B) SEMICOLON.
+  {
+    if (d->tr->t)
     {
-      CONS_Printf(" Parent Texture '%s' not found.\n", P);
+      d->tr->xscale = d->tr->t->width / A;
+      d->tr->yscale = d->tr->t->height / B;
     }
-    d->t = new XXX_Texture(*parent); // copy construction
-    d->t->SetName(d->texname.c_str());
   }
-*/
-
-// one or the other, not both
-tex_initialization ::= DATA str(A) SEMICOLON.
-  {
-    d->t = tc.Load(A);
-    if (!d->t)
+tex_prop ::= SCALE num(A) num(B) SEMICOLON.  { d->tr->yscale = 1.0/A; d->tr->xscale = d->tr->yscale/B; } 
+tex_prop ::= SCALE num(A) SEMICOLON.         { d->tr->xscale = d->tr->yscale = 1.0/A; }
+tex_prop ::= TEXELOFFSETS int(A) SEMICOLON.  { d->texeloffsets = A; }
+tex_prop ::= OFFSET num(A) num(B) SEMICOLON.
     {
-      CONS_Printf(" Texture lump '%s' not found.\n", A);
-      d->t = &d->dummy;
-    }
-    d->t->SetName(d->texname.c_str());
-  }
-// | COMPOSE INT INT SEMICOLON { d->t = new ComposedTexture(d->texname, $2, $3); } 
-
-
-// list of 0-N properties
-tex_properties ::= . // empty
-tex_properties ::= tex_properties tex_property. // left recursion
-
-
-// now we know that t points to a valid texture object, let's just fill in the properties
-tex_property ::= WORLDSIZE num(A) num(B) SEMICOLON.
-  {
-    d->t->xscale = d->t->width/A;
-    d->t->yscale = d->t->height/B;
-  }
-tex_property ::= SCALE num(A) num(B) SEMICOLON.  { d->t->yscale = 1.0/A; d->t->xscale = d->t->yscale/B; } 
-tex_property ::= SCALE num(A) SEMICOLON.         { d->t->xscale = d->t->yscale = 1.0/A; }
-tex_property ::= TEXELOFFSETS int(A) SEMICOLON.  { d->texeloffsets = A; }
-tex_property ::= OFFSET num(A) num(B) SEMICOLON.
-    {
+      if (d->tr->t)
       if (d->texeloffsets)
 	{
-	  d->t->leftoffs = (A / d->t->xscale).floor();
-	  d->t->topoffs = (B / d->t->yscale).floor();
+	  d->tr->t->leftoffs = int(A / d->tr->xscale);
+	  d->tr->t->topoffs = int(B / d->tr->yscale);
 	}
       else
 	{
-	  d->t->leftoffs = A;
-	  d->t->topoffs = B;
+	  d->tr->t->leftoffs = int(A);
+	  d->tr->t->topoffs = int(B);
 	}
     }
 

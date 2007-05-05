@@ -24,35 +24,56 @@
 #define z_cache_h 1
 
 #include <string.h>
+#include "doomdef.h"
 #include "dictionary.h"
-#include "z_zone.h"
 
 
 /// \brief BC for cache items
 class cacheitem_t
 {
-  friend class cachesource_t;
-  friend class cache_t;
-  friend class texturecache_t;
-#define CACHE_NAME_LEN 63 // was 8
 protected:
+#define CACHE_NAME_LEN 63 // was 8
   char  name[CACHE_NAME_LEN+1]; ///< name of the item, NUL-terminated
   int   usefulness; ///< how many times has it been used?
   int   refcount;   ///< reference count, number of current users
 
 public:
+  cacheitem_t(const char *name, bool link = false);
+  virtual ~cacheitem_t() {};
 
-  cacheitem_t(const char *name);
-  virtual ~cacheitem_t();
+  /// Mark item used by incrementing refcount. Return true if item is a link, i.e. usefulness is negated.
+  inline bool AddRef()
+  {
+    refcount++;
+    if (usefulness < 0)
+      {
+	usefulness--;
+	return true;
+      }
+    else
+      {
+	usefulness++;
+	return false;
+      }
+  }
 
   /// releases the item by decrementing the refcount
-  bool  Release();
+  bool Release();
+
+  /// Deletes the cacheitem (and returns true) if refcount is zero.
+  bool FreeIfUnused();
 
   /// returns the name of the item
-  const char *GetName() { return name; };
+  inline const char *GetName() { return name; }
 
   /// change the name of the item
-  void SetName(const char *n) { strncpy(name, n, CACHE_NAME_LEN); };
+  inline void SetName(const char *n) { strncpy(name, n, CACHE_NAME_LEN); }
+
+  /// Could virtualize this to print child class info too.
+  void Print()
+  {
+    CONS_Printf("- %s: rc = %d, use = %d\n", name, refcount, usefulness);
+  }
 
   void *operator new(size_t size);
   void  operator delete(void *mem);
@@ -63,7 +84,7 @@ public:
 /// \brief Data source within a cache_t.
 ///
 /// This is an extra layer of abstraction for complex caches with multiple data sources
-/// which can have different priorities depending on the query. See texturecache_t.
+/// which can have different priorities depending on the query. See material_cache_t.
 class cachesource_t : public HashDictionary<cacheitem_t>
 {
 public:
@@ -75,44 +96,121 @@ public:
 };
 
 
-
-/// \brief ABC for different types of simple caches.
+/// \brief Template for different types of simple caches.
 ///
 /// Data used through a cache_t must not be used anywhere
 /// else, because Z_Free and Z_ChangeTag will cause problems.
+/// T must be descendant of cacheitem_t.
+template<typename T>
 class cache_t
 {
 protected:
-  cachesource_t source;       ///< a simple cache has only one source
+  cachesource_t source; ///< a simple cache has only one source
+  T      *default_item; ///< the default data item
 
-  memtag_t      tagtype;      ///< memory tag used for the cached data
-  cacheitem_t  *default_item; ///< the default data item
-
-
-  /// Creates a new cacheitem_t, does the actual loading and conversion of the data during a Cache() operation.
-  virtual cacheitem_t *Load(const char *p) = 0;
-
-  /// Caches and returns the requested data item, or the default_item.
-  cacheitem_t *Cache(const char *p);
+  /// Creates a new cacheitem_t, does the actual loading and conversion of the data during a Get() operation.
+  virtual T *Load(const char *name) = 0;
 
 public:
-  cache_t(memtag_t tag);
-  virtual ~cache_t();
+  /// cache constructor
+  cache_t() { default_item = NULL; }
+
+  /// cache destructor
+  virtual ~cache_t()
+  {
+    // should empty the source and delete the items, but caches are only destroyed at program end...
+  }
+
+  /// Inserts an item into the cache. Alternative to Get().
+  bool Insert(T *t) { return source.Insert(t); }
+
+  /// Returns the requested data item (incrementing refcount) if it is in cache, otherwise NULL.
+  T *Find(const char *name)
+  {
+    if (!name)
+      return NULL;
+
+    cacheitem_t *p = source.Find(name);
+    if (!p)
+      return NULL;
+
+    if (p->AddRef())
+      {
+	// a "link" to default_item
+	default_item->AddRef();
+	return default_item;
+      }
+    else
+      return reinterpret_cast<T*>(p);
+  }
+
+  /// Caches and returns the requested data item, or, if not found, the default_item.
+  /// Checks if item is already in cache. If so, increments refcount and returns it.
+  /// If not, tries to Load() it. If succesful, returns the item.
+  /// If not, returns a link to the defaultitem.
+  T *Get(const char *name)
+  {
+    cacheitem_t *p;
+
+    if (name == NULL)
+      p = default_item;
+    else
+      {
+	p = source.Find(name);
+	if (!p)
+	  {
+	    // Not found in source.
+	    p = Load(name);
+	    if (!p)
+	      {
+		// Item not found at all.
+		// Some nonexistant items are asked again and again.
+		// We use a special cacheitem_t to link their names to the default item.
+		p = new cacheitem_t(name, true);
+	      }
+	    source.Insert(p);
+	  }
+      }
+
+    if (p->AddRef())
+      {
+	// a "link" to default_item
+	default_item->AddRef();
+	return default_item;
+      }
+    else
+      return reinterpret_cast<T*>(p);
+  }
 
   /// Defines the default data item for the cache.
-  void SetDefaultItem(const char *defitem);
+  /// Has to be separate from constructor. Static class instances are constructed when
+  /// program starts, and at that time we do not yet have a working FileCache.
+  void SetDefaultItem(const char *name)
+  {
+    if (default_item)
+      CONS_Printf("cache: Replacing default_item!\n");
 
-  /// Derived cache classes should define a function like this:
-  //inline derived_item_t *Get(const char *p) { return (derived_item_t *)Cache(p); };
+    default_item = Load(name);
+    if (!default_item)
+      I_Error("cache: New default_item '%s' not found!\n", name);
+    // TODO delete the old default item?
+  }
 
-  /// Prints current cache contents
-  void Inventory();
+  /// Prints current cache contents.
+  void Inventory()
+  {
+    if (default_item)
+      {
+	CONS_Printf("Default item: ");
+	default_item->Print();
+      }
+
+    source.Inventory();
+  }
 
   /// Removes unused data items from cache
-  inline int  Cleanup() { return source.Cleanup(); };
-
-  /// does not work yet
-  //void Flush();
+  inline int Cleanup() { return source.Cleanup(); };
 };
+
 
 #endif

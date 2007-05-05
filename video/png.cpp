@@ -29,7 +29,7 @@
 #include "console.h"
 #include "r_data.h"
 #include "w_wad.h"
-
+#include "z_zone.h"
 
 //=========================================
 //     callbacks
@@ -228,12 +228,12 @@ bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 	  Z_Free(tmpdata); // free the raw data
 
 	  // now convert RGB_t to current palette...
-	  int len = w * h;
+	  unsigned len = w * h;
 	  Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
 
 	  // this takes some time, so better do it only once (never flush PNG textures automatically)
 	  // colormap and transpose to col-major order
-	  int dest = 0;
+	  unsigned dest = 0;
 	  for (i=0; i<len; i++)
 	    {
 	      pixels[dest] = NearestColor(rgb_buf[i].r, rgb_buf[i].g, rgb_buf[i].b);
@@ -265,7 +265,7 @@ bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 	  png_destroy_read_struct(&png_p, &info_p, NULL);
 	  // discard any end chunks (comments etc.)
 	  Z_Free(tmpdata); // free the raw data
-	  format = GL_RGBA;
+	  gl_format = GL_RGBA;
 	}
     }
 

@@ -255,7 +255,7 @@ void R_ClearClipSegs (void)
 // It assumes that Doom has already ruled out a door being closed because
 // of front-back closure (e.g. front floor is taller than back ceiling).
 
-int R_DoorClosed(void)
+int R_DoorClosed()
 {
   return
 
@@ -270,8 +270,8 @@ int R_DoorClosed(void)
      curline->sidedef->bottomtexture)
 
     // properly render skies (consider door "open" if both ceilings are sky):
-    && (backsector->ceilingpic !=skyflatnum ||
-        frontsector->ceilingpic!=skyflatnum);
+    && (!backsector->SkyCeiling() ||
+        !frontsector->SkyCeiling());
 }
 
 //
@@ -329,7 +329,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
 
           if (underwater)
             {
-	      if (s->ceilingpic == skyflatnum)
+	      if (s->SkyCeiling())
 		{
 		  tempsec->floorheight   = tempsec->ceilingheight+1;
 		  tempsec->ceilingpic    = tempsec->floorpic;
@@ -367,7 +367,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
 
 	  f = s->topmap;
 
-	  if (s->floorpic != skyflatnum)
+	  if (!s->SkyFloor())
 	    {
 	      tempsec->ceilingheight = sec->ceilingheight;
 	      tempsec->floorpic      = s->floorpic;
@@ -806,8 +806,8 @@ void Rend::R_Subsector(int num)
 
   sub->sector->extra_colormap = frontsector->extra_colormap;
 
-  if ((frontsector->floorheight < viewz || (frontsector->heightsec != -1 &&
-        sectors[frontsector->heightsec].ceilingpic == skyflatnum)))
+  if (frontsector->floorheight < viewz ||
+      (frontsector->heightsec != -1 && sectors[frontsector->heightsec].SkyCeiling()))
     {
       floorplane = R_FindPlane (frontsector->floorheight,
 				frontsector->floorpic,
@@ -815,15 +815,15 @@ void Rend::R_Subsector(int num)
 				frontsector->floor_xoffs,
 				frontsector->floor_yoffs,
 				floorcolormap,
-				NULL);
+				NULL, frontsector->SkyFloor());
     }
   else
     floorplane = NULL;
 
   if ((frontsector->ceilingheight > viewz
-       || frontsector->ceilingpic == skyflatnum ||
+       || frontsector->SkyCeiling() ||
        (frontsector->heightsec != -1 &&
-	sectors[frontsector->heightsec].floorpic == skyflatnum)))
+	sectors[frontsector->heightsec].SkyFloor())))
     {
       ceilingplane = R_FindPlane (frontsector->ceilingheight,
 				  frontsector->ceilingpic,
@@ -831,7 +831,7 @@ void Rend::R_Subsector(int num)
 				  frontsector->ceiling_xoffs,
 				  frontsector->ceiling_yoffs,
 				  ceilingcolormap,
-				  NULL);
+				  NULL, frontsector->SkyCeiling());
     }
   else
     ceilingplane = NULL;
@@ -853,7 +853,7 @@ void Rend::R_Subsector(int num)
 				frontsector->lightlevel,
 				0, 0,
 				frontsector->extra_colormap,
-				NULL);
+				NULL, false);
     }
   else
     waterplane = NULL;
@@ -880,7 +880,7 @@ void Rend::R_Subsector(int num)
 						 *rover->bottomxoffs,
 						 *rover->bottomyoffs,
 						 frontsector->lightlist[light].extra_colormap,
-						 rover);
+						 rover, false);
 
 	  ffloor[numffloors].height = *rover->bottomheight;
 	  ffloor[numffloors].ffloor = rover;
@@ -902,7 +902,7 @@ void Rend::R_Subsector(int num)
 						 *rover->topxoffs,
 						 *rover->topyoffs,
 						 frontsector->lightlist[light].extra_colormap,
-						 rover);
+						 rover, false);
 	  ffloor[numffloors].height = *rover->topheight;
 	  ffloor[numffloors].ffloor = rover;
 	  numffloors++;

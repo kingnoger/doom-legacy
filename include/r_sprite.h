@@ -34,7 +34,7 @@
 
 /// \brief One frame of a sprite_t
 ///
-/// A sprite is a set of Textures that represent
+/// A sprite is a set of Materials that represent
 /// a three dimensional object seen from different angles.
 /// Doom sprites in wads are patches with a special naming convention
 /// so they can be recognized by R_InitSprites.
@@ -48,8 +48,8 @@ struct spriteframe_t
   //  we might as well insert the same name eight times.
   char   rotate;
 
-  class Texture *tex[8]; ///< Texture to use for view angles 0-7.
-  bool          flip[8]; ///< Flip bit to use for view angles 0-7.
+  class Material *tex[8]; ///< Material to use for view angles 0-7.
+  bool           flip[8]; ///< Flip bit to use for view angles 0-7.
 };
 
 
@@ -72,14 +72,10 @@ public:
 
 
 /// \brief Cache for sprite_t's.
-class spritecache_t : public cache_t
+class spritecache_t : public cache_t<sprite_t>
 {
 protected:
-  cacheitem_t *Load(const char *p);
-
-public:
-  spritecache_t(memtag_t tag);
-  inline sprite_t *Get(const char *p) { return (sprite_t *)Cache(p); };
+  virtual sprite_t *Load(const char *name);
 };
 
 extern spritecache_t sprites;

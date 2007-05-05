@@ -306,10 +306,6 @@ int I_SetVideoMode(int modeNum)
     }
   else
     {
-      // Some platfroms silently destroy OpenGL textures when changing
-      // resolution. Unload them all, just in case.
-      ClearGLTextures();
-
       if (!oglrenderer->InitVideoMode(vid.width, vid.height, cv_fullscreen.value))
 	I_Error("Could not set OpenGL vidmode.\n");
     }

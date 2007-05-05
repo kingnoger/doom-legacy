@@ -46,7 +46,7 @@ HudWidget::HudWidget(int nx, int ny)
 
 //===================================================================================
 
-HudNumber::HudNumber(int nx, int ny, int dig, const int *number, Texture **tex)
+HudNumber::HudNumber(int nx, int ny, int dig, const int *number, Material **tex)
   : HudWidget(nx, ny)
 {
   digits = dig;
@@ -119,7 +119,7 @@ void HudNumber::Draw()
 
 //===================================================================================
 
-HudPercent::HudPercent(int nx, int ny, const int *number, Texture **tex, Texture *percent)
+HudPercent::HudPercent(int nx, int ny, const int *number, Material **tex, Material *percent)
   : HudNumber(nx, ny, 3, number, tex)
 {
   pcent = percent;
@@ -140,7 +140,7 @@ void HudPercent::Update(bool force)
 
 //===================================================================================
 
-HudMultIcon::HudMultIcon(int nx, int ny, const int *inumber, Texture **tex)
+HudMultIcon::HudMultIcon(int nx, int ny, const int *inumber, Material **tex)
   : HudWidget(nx, ny)
 {
   oldinum = -1;
@@ -181,7 +181,7 @@ void HudMultIcon::Draw()
 
 //===================================================================================
 
-HudBinIcon::HudBinIcon(int nx, int ny, const bool *st, Texture *p0, Texture *p1)
+HudBinIcon::HudBinIcon(int nx, int ny, const bool *st, Material *p0, Material *p1)
   : HudWidget(nx, ny)
 {
   oldstatus = false;
@@ -223,7 +223,7 @@ void HudBinIcon::Draw()
 
 //===================================================================================
 
-HudSlider::HudSlider(int nx, int ny, const int *v, int mi, int ma, Texture **t)
+HudSlider::HudSlider(int nx, int ny, const int *v, int mi, int ma, Material **t)
   : HudWidget(nx, ny)
 {
   val = v;
@@ -335,7 +335,7 @@ void HexenHudSlider::Draw()
 //===================================================================================
 
 HudInventory::HudInventory(int nx, int ny, const bool *op, const int *iu, const inventory_t *vals,
-			   const int *sel, Texture **nn, Texture **it, Texture **t)
+			   const int *sel, Material **nn, Material **it, Material **t)
   : HudWidget(nx, ny)
 {
   open = op;

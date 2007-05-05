@@ -785,8 +785,6 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 // vertical movement
 void Actor::ZMovement()
 {
-  extern int skyflatnum;
-
   // adjust height
   pos.z += vel.z;
 
@@ -878,7 +876,7 @@ void Actor::ZMovement()
 	  eflags |= MFE_JUSTHITFLOOR; // with missiles works also with ceiling hits
 
 	  // Don't explode on the sky!
-	  if (subsector->sector->ceilingpic == skyflatnum &&
+	  if (subsector->sector->SkyCeiling() &&
 	      subsector->sector->ceilingheight == ceilingz &&
 	      !(flags2 & MF2_FULLBOUNCE))
             {

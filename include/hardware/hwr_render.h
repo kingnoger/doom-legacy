@@ -80,7 +80,7 @@ public:
   void DrawFill(int x, int y, int w, int h, int color);
 
   /// Fills a box of pixels using a flat texture as a pattern
-  void DrawFill(int x, int y, int w, int h, class Texture *t);
+  void DrawFill(int x, int y, int w, int h, class Material *m);
 
   /// Draw the border of the screen.
   void DrawViewBorder();

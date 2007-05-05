@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -101,7 +101,7 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
     return;
 
   // set the splat
-  Texture *t = splat->tex = tc.GetPtr(name);
+  Material *mat = splat->mat = materials.Get(name);
   side ^= 1;
  
   sector_t *backsector = NULL;
@@ -131,9 +131,11 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   
   // offset needed by draw code for texture mapping
   fixed_t linelength = P_SegLength(line);
-  splat->offset = wallfrac*linelength - t->worldwidth/2;
+  float temp = mat->tex[0].worldwidth/2;
+
+  splat->offset = wallfrac*linelength - temp;
   //CONS_Printf("offset splat %d\n",splat->offset);
-  fixed_t fracsplat = (t->worldwidth/2) / linelength;
+  fixed_t fracsplat = temp / linelength;
     
   wallfrac -= fracsplat;
   if (wallfrac > linelength)

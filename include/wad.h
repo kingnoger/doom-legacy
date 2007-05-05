@@ -28,11 +28,6 @@
 
 using namespace std;
 
-// We assume 32 bit int, 16 bit short, 8 bit char
-// WAD3 files (and probably all WAD files) use little-endian byte ordering (LSB)
-
-
-//========================================================================
 
 /// \brief Handles all IWAD/PWAD I/O and keeps a cache for the data lumps.
 ///
@@ -41,8 +36,10 @@ using namespace std;
 class Wad : public VDataFile
 {
   friend class FileCache;
-private:
+protected:
   struct waddir_t *directory;  ///< wad directory
+
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
 
 public:
   // constructor and destructor
@@ -62,9 +59,6 @@ public:
   virtual int FindNumForName(const char* name, int startlump = 0);
   virtual int FindPartialName(Uint32 iname, int startlump, const char **fullname);
 
-  /// retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
-
   /// process any DeHackEd lumps in this wad
   void LoadDehackedLumps();
 };
@@ -80,8 +74,10 @@ public:
 class Wad3 : public VDataFile
 {
   friend class FileCache;
-private:
+protected:
   struct wad3dir_t *directory;  ///< wad directory
+
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
 
 public:
   // constructor and destructor
@@ -98,9 +94,6 @@ public:
 
   /// search
   virtual int FindNumForName(const char* name, int startlump = 0);
-
-  /// retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 
@@ -110,8 +103,10 @@ public:
 
 class Pak : public VDataFile
 {
-private:
+protected:
   struct pakdir_t *directory; ///< item directory
+
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
 
 public:
   // constructor and destructor
@@ -125,9 +120,6 @@ public:
   virtual const char *GetItemName(int i);
   virtual int  GetItemSize(int i);
   virtual void ListItems();
-
-  // retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 //========================================================================
@@ -136,8 +128,10 @@ public:
 
 class ZipFile : public VDataFile
 {
-private:
+protected:
   struct zipdir_t *directory; ///< item directory
+
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
 
 public:
   // constructor and destructor
@@ -154,9 +148,6 @@ public:
 
   // search
   //virtual int FindPartialName(Uint32 iname, int startlump, const char **fullname);
-
-  /// retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 #endif

@@ -23,6 +23,8 @@
 
 #include <math.h>
 #include <png.h>
+
+#define GL_GLEXT_PROTOTYPES 1
 #include <GL/glu.h>
 
 #include "doomdef.h"
@@ -44,6 +46,9 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "hardware/oglshaders.h"
+#include "hardware/oglrenderer.hpp" // TODO temporary
+
 extern byte gammatable[5][256];
 
 static int R_TransmapNumForName(const char *name);
@@ -64,6 +69,93 @@ int             texturememory;
 //faB: highcolor stuff
 short    color8to16[256];       //remap color index to highcolor rgb value
 short*   hicolormaps;           // test a 32k colormap remaps high -> high
+
+
+//==================================================================
+//   Texture cache
+//==================================================================
+
+/// Generates a Texture from a single data lump, deduces format.
+Texture *texture_cache_t::Load(const char *name)
+{
+  int lump = fc.FindNumForName(name);
+  if (lump < 0)
+    return NULL;
+
+  return LoadLump(name, lump);
+}
+
+/// Creates a Texture with a given name from a given lump.
+Texture *texture_cache_t::LoadLump(const char *name, int lump)
+{
+  // Because Doom datatypes contain no magic numbers, we have to rely on heuristics to deduce the format...
+  Texture *t;
+
+  byte data[8];
+  fc.ReadLumpHeader(lump, &data, sizeof(data));
+  int size = fc.LumpLength(lump);
+  int name_len = strlen(name);
+
+  // Good texture formats have magic numbers. First check if they exist.
+  if (!png_sig_cmp(data, 0, sizeof(data)))
+    {
+      // it's PNG
+      t = new PNGTexture(name, lump);
+    }
+  else if (data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff && data[3] == 0xe0)
+    {
+      // it's JPEG/JFIF
+      t = new JPEGTexture(name, lump);
+    }
+  // For TGA, we use the filename extension.
+  else if (name_len > 4 && !strcasecmp(&name[name_len - 4], ".tga"))
+    {
+      // it's TGA
+      t = new TGATexture(name, lump);
+    }
+  // then try some common sizes for raw picture lumps
+  else if (size == 320*200)
+    {
+      // Heretic/Hexen fullscreen picture
+      t = new LumpTexture(name, lump, 320, 200);
+    }
+  else if (size == 4)
+    {
+      // God-damn-it! Heretic "F_SKY1" tries to be funny!
+      t = new LumpTexture(name, lump, 2, 2);
+    }
+  else if (!strcasecmp(name, "AUTOPAGE"))
+    {
+      // how many different annoying formats can you invent, anyway?
+      if (size % 320)
+	I_Error("Size of AUTOPAGE (%d bytes) must be a multiple of 320!\n", size);
+      t = new LumpTexture(name, lump, 320, size/320);
+    }
+  else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
+    {
+      // likely a pic_t (the magic number is inadequate)
+      CONS_Printf("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
+      return NULL;
+    }
+  else
+    {
+      // finally assume a patch_t
+      t = new PatchTexture(name, lump);
+    }
+
+  /*
+    else
+      {
+        CONS_Printf(" Unknown texture format: lump '%8s' in the file '%s'.\n", name, fc.Name(lump >> 16));
+        return false;
+      }
+  */
+
+  return t; // cache_t::Get() does the subsequent inserting into hash_map...
+}
+
+
+texture_cache_t textures;
 
 
 //==================================================================
@@ -138,8 +230,8 @@ static byte *R_CreatePaletteConversionColormap(int wadnum)
     I_Error("Bad PLAYPAL lump in file %d!\n", wadnum);
 
   byte *usegamma = gammatable[cv_usegamma.value];
-  byte *colormap = (byte *)Z_Malloc(256, PU_STATIC, NULL);
-  RGB_t *pal = (RGB_t *)fc.CacheLumpNum(i, PU_STATIC);
+  byte *colormap = static_cast<byte*>(Z_Malloc(256, PU_STATIC, NULL));
+  RGB_t *pal = static_cast<RGB_t*>(fc.CacheLumpNum(i, PU_STATIC));
 
   for (i=0; i<256; i++)
     colormap[i] = NearestColor(usegamma[pal[i].r], usegamma[pal[i].g], usegamma[pal[i].b]);
@@ -154,7 +246,7 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 {
  for (int i=0; i<p->width; i++)
    {
-     post_t *post = (post_t *)((byte *)p + p->columnofs[i]);
+     post_t *post = reinterpret_cast<post_t*>(reinterpret_cast<byte*>(p) + p->columnofs[i]);
 
      while (post->topdelta != 0xff)
        {
@@ -162,7 +254,7 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
          for (int j=0; j<count; j++)
            post->data[j] = colormap[post->data[j]];
 
-         post = (post_t *)&post->data[post->length + 1];
+         post = reinterpret_cast<post_t*>(&post->data[post->length + 1]);
        }
    }
 }
@@ -176,18 +268,13 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 Texture::Texture(const char *n)
   : cacheitem_t(n)
 {
-  width = height = 0;
-  xscale = yscale = 1;
-  worldwidth = worldheight = 0;
+  pixels = NULL;
   leftoffs = topoffs = 0;
+  width = height = 0;
   w_bits = h_bits = 0;
 
-  pixels = NULL;
-
-  // crap follows.
-  id = 0;
-
-  glid = NOTEXTURE; 
+  gl_format = 0;
+  gl_id = NOTEXTURE;
 }
 
 
@@ -200,18 +287,6 @@ Texture::~Texture()
 }
 
 
-void *Texture::operator new(size_t size)
-{
-  return Z_Malloc(size, PU_TEXTURE, NULL);
-}
-
-
-void Texture::operator delete(void *mem)
-{
-  Z_Free(mem);
-}
-
-
 // This basic version of the virtual method is used for native indexed col-major formats.
 void Texture::GLGetData()
 {
@@ -221,7 +296,7 @@ void Texture::GLGetData()
       byte *index_in = pixels;
 
       RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*width*height, PU_TEXTURE, NULL));
-      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
+      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpNum(materials.GetPaletteLump(0), PU_DAVE)); // FIXME palette
 
       for (int i=0; i<width; i++)
 	for (int j=0; j<height; j++)
@@ -242,7 +317,7 @@ void Texture::GLGetData()
       // replace pixels by the RGBA row-major version
       Z_Free(pixels);
       pixels = reinterpret_cast<byte*>(result);
-      format = GL_RGBA;
+      gl_format = GL_RGBA;
     }
 }
 
@@ -252,42 +327,42 @@ void Texture::GLGetData()
 GLuint Texture::GLPrepare()
 {
 #ifndef NO_OPENGL
-  if (glid == NOTEXTURE)
+  if (gl_id == NOTEXTURE)
     {
       GLGetData();
 
       // Discard old texture if we had one.
       /*
-      if(glid != NOTEXTURE)
-	glDeleteTextures(1, &glid);
+      if(gl_id != NOTEXTURE)
+	glDeleteTextures(1, &gl_id);
       */
 
-      glGenTextures(1, &glid);
-      glBindTexture(GL_TEXTURE_2D, glid);
+      glGenTextures(1, &gl_id);
+      glBindTexture(GL_TEXTURE_2D, gl_id);
+      // default params
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-      // TODO: per-texture filtering mode
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, format, GL_UNSIGNED_BYTE, pixels);
+      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, gl_format, GL_UNSIGNED_BYTE, pixels);
 
-      //  CONS_Printf("Created GL texture %d for %s.\n", glid, name);
+      //  CONS_Printf("Created GL texture %d for %s.\n", gl_id, name);
       // TODO free and null pixels?
     }
 #endif
-  return glid;
+  return gl_id;
 }
 
 
 /// Returns true if texture existed and was deleted. False otherwise.
 bool Texture::ClearGLTexture()
 {
-  if (glid != NOTEXTURE)
+  if (gl_id != NOTEXTURE)
     {
 #ifndef NO_OPENGL
-      glDeleteTextures(1, &glid);
+      glDeleteTextures(1, &gl_id);
 #endif
-      glid = NOTEXTURE;
+      gl_id = NOTEXTURE;
       return true;
     }
   return false;
@@ -298,7 +373,7 @@ bool Texture::ClearGLTexture()
 // Basic form for GetColumn, uses virtualized GetData.
 byte *Texture::GetColumn(fixed_t fcol)
 {
-  int col = (fcol * xscale).floor() % width;
+  int col = fcol.floor() % width;
 
   if (col < 0)
     col += width; // wraparound
@@ -316,7 +391,6 @@ byte *Texture::GetColumn(fixed_t fcol)
 LumpTexture::LumpTexture(const char *n, int l, int w, int h)
   : Texture(n)
 {
-  // TODO does Initialize() need to be in constructor? 
   lump = l;
   width = w;
   height = h;
@@ -340,7 +414,7 @@ void LumpTexture::GLGetData()
 
       // convert to RGBA
       byte   *index_in = temp;
-      RGB_t  *palette  = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
+      RGB_t  *palette  = static_cast<RGB_t*>(fc.CacheLumpNum(materials.GetPaletteLump(lump >> 16), PU_DAVE));
       RGBA_t *rgba_out = reinterpret_cast<RGBA_t*>(pixels);
 
       for (int i=0; i<width; i++)
@@ -361,7 +435,7 @@ void LumpTexture::GLGetData()
 
       Z_Free(palette);
       Z_Free(temp); // free indexed data
-      format = GL_RGBA;
+      gl_format = GL_RGBA;
     }
 }
 
@@ -374,7 +448,7 @@ byte *LumpTexture::GetData()
       int len = fc.LumpLength(lump);
       Z_Malloc(len, PU_TEXTURE, (void **)(&pixels));
 
-      byte *temp = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+      byte *temp = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
 
       // transposed to col-major order
       int dest = 0;
@@ -388,7 +462,7 @@ byte *LumpTexture::GetData()
       Z_Free(temp);
 
       // do a palette conversion if needed
-      byte *colormap = tc.GetPaletteConv(lump >> 16);
+      byte *colormap = materials.GetPaletteConv(lump >> 16);
       if (colormap)
 	for (int i=0; i<len; i++)
 	  pixels[i] = colormap[pixels[i]];
@@ -428,7 +502,7 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
       if (count > 0)
         memcpy(cache + position, source, count);
 
-      col = (column_t *)&col->data[col->length + 1];
+      col = reinterpret_cast<column_t*>(&col->data[col->length + 1]);
     }
 }
 
@@ -468,7 +542,7 @@ patch_t *PatchTexture::GeneratePatch()
   if (!patch_data)
     {
       int len = fc.LumpLength(lump);
-      patch_t *p = (patch_t *)Z_Malloc(len, PU_TEXTURE, (void **)&patch_data);
+      patch_t *p = static_cast<patch_t*>(Z_Malloc(len, PU_TEXTURE, (void **)&patch_data));
 
       // to avoid unnecessary memcpy
       fc.ReadLump(lump, patch_data);
@@ -480,7 +554,7 @@ patch_t *PatchTexture::GeneratePatch()
         p->columnofs[i] = LONG(p->columnofs[i]);
 
       // do a palette conversion if needed
-      byte *colormap = tc.GetPaletteConv(lump >> 16);
+      byte *colormap = materials.GetPaletteConv(lump >> 16);
       if (colormap)
 	{
 	  p->width = SHORT(p->width);
@@ -517,7 +591,7 @@ byte *PatchTexture::GetData()
 
 column_t *PatchTexture::GetMaskedColumn(fixed_t fcol)
 {
-  int col = (fcol * xscale).floor() % width;
+  int col = fcol.floor() % width;
 
   if (col < 0)
     col += width; // wraparound
@@ -536,12 +610,10 @@ DoomTexture::DoomTexture(const char *n, const maptexture_t *mtex)
   : Texture(n)
 {
   patchcount = SHORT(mtex->patchcount);
-  patches = (texpatch_t *)Z_Malloc(sizeof(texpatch_t)*patchcount, PU_TEXTURE, 0);
+  patches = static_cast<texpatch_t*>(Z_Malloc(sizeof(texpatch_t)*patchcount, PU_TEXTURE, 0));
 
   width  = SHORT(mtex->width);
   height = SHORT(mtex->height);
-  xscale = mtex->xscale ? fixed_t(mtex->xscale) >> 3 : 1;
-  yscale = mtex->yscale ? fixed_t(mtex->yscale) >> 3 : 1;
 
   Initialize();
   widthmask = (1 << w_bits) - 1;
@@ -588,7 +660,7 @@ patch_t *DoomTexture::GeneratePatch()
       int blocksize = fc.LumpLength(tp->patchlump);
       //CONS_Printf ("R_GenTex SINGLE %.8s size: %d\n",name,blocksize);
 
-      patch_t *p = (patch_t *)Z_Malloc(blocksize, PU_TEXTURE, (void **)&patch_data);
+      patch_t *p = static_cast<patch_t*>(Z_Malloc(blocksize, PU_TEXTURE, (void **)&patch_data));
       texturememory += blocksize;
       fc.ReadLump(tp->patchlump, patch_data);
 
@@ -610,7 +682,7 @@ patch_t *DoomTexture::GeneratePatch()
         p->columnofs[i] = LONG(p->columnofs[i]);
 
       // do a palette conversion if needed
-      byte *colormap = tc.GetPaletteConv(tp->patchlump >> 16);
+      byte *colormap = materials.GetPaletteConv(tp->patchlump >> 16);
       if (colormap)
 	R_ColormapPatch(p, colormap);
     }
@@ -628,14 +700,14 @@ byte *DoomTexture::GetData()
       // multi-patch (or 'composite') textures are stored as a simple bitmap
 
       int size = width * height;
-      int blocksize = size + width*sizeof(int); // first raw col-major data, then columnofs table
+      int blocksize = size + width*sizeof(Uint32); // first raw col-major data, then columnofs table
       //CONS_Printf ("R_GenTex MULTI  %.8s size: %d\n",name,blocksize);
 
       Z_Malloc(blocksize, PU_TEXTURE, (void **)&pixels);
       texturememory += blocksize;
 
       // generate column offset lookup table
-      columnofs = (Uint32 *)(pixels + size);
+      columnofs = reinterpret_cast<Uint32*>(pixels + size);
       for (i=0; i<width; i++)
         columnofs[i] = i * height;
 
@@ -646,7 +718,7 @@ byte *DoomTexture::GetData()
       // Composite the patches together.
       for (i=0, tp = patches; i<patchcount; i++, tp++)
         {
-	  patch_t *p = (patch_t *)fc.CacheLumpNum(tp->patchlump, PU_STATIC);
+	  patch_t *p = static_cast<patch_t*>(fc.CacheLumpNum(tp->patchlump, PU_STATIC));
           int x1 = tp->originx;
           int x2 = x1 + SHORT(p->width);
 
@@ -659,7 +731,7 @@ byte *DoomTexture::GetData()
 
           for ( ; x < x2; x++)
             {
-              column_t *patchcol = (column_t *)((byte *)p + LONG(p->columnofs[x-x1]));
+              column_t *patchcol = reinterpret_cast<column_t*>(reinterpret_cast<byte*>(p) + LONG(p->columnofs[x-x1]));
               R_DrawColumnInCache(patchcol, pixels + columnofs[x], tp->originy, height);
             }
 
@@ -677,7 +749,7 @@ byte *DoomTexture::GetData()
 // returns a pointer to column-major raw data
 byte *DoomTexture::GetColumn(fixed_t fcol)
 {
-  int col = (fcol * xscale).floor();
+  int col = fcol.floor();
 
   return GetData() + columnofs[col & widthmask];
 }
@@ -687,58 +759,109 @@ column_t *DoomTexture::GetMaskedColumn(fixed_t fcol)
 {
   if (patchcount == 1)
     {
-      int col = (fcol * xscale).floor();
+      int col = fcol.floor();
       patch_t *p = GeneratePatch();
-      return (column_t *)(patch_data + p->columnofs[col & widthmask]);
+      return reinterpret_cast<column_t*>(patch_data + p->columnofs[col & widthmask]);
     }
   else
     return NULL;
 }
 
 
+
 //==================================================================
-//  Texture cache
+//  Materials
 //==================================================================
 
-texturecache_t tc(PU_TEXTURE);
-
-
-Texture *texturecache_t::operator[](unsigned id)
+Material::Material(const char *name)
+  : cacheitem_t(name)
 {
-  if (id >= texture_ids.size())
-    I_Error("Invalid texture ID %d (max %d)!\n", id, texture_ids.size());
+  shader = NULL;
+  tex.resize(1); // at least one Texture
+  // The rest are taken care of by Initialize() later when Textures have been attached.
+}
 
-  map<unsigned, Texture *>::iterator t = texture_ids.find(id);
-  if (t == texture_ids.end())
-    return NULL;
+
+Material::~Material()
+{
+  // TODO release Textures
+}
+
+
+Material::TextureRef::TextureRef()
+{
+  // default scaling and OpenGL params
+  t = NULL;
+  xscale = yscale = 1;
+#ifndef NO_OPENGL
+  mag_filter = GL_NEAREST;
+  min_filter = GL_NEAREST_MIPMAP_LINEAR;
+#endif
+}
+
+
+void Material::TextureRef::GLSetTextureParams()
+{
+  glBindTexture(GL_TEXTURE_2D, t->GLPrepare()); // bind the texture
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+}
+
+
+int Material::GLUse()
+{
+  if (shader)
+    {
+      shader->Use();
+      shader->SetUniforms();
+    }
   else
-    return t->second;
+    ShaderProg::DisableShaders();
+
+  int n = tex.size(); // number of texture units
+  for (int i=0; i<n; i++)
+    {
+      glActiveTexture(GL_TEXTURE0 + i); // activate correct texture unit
+      tex[i].GLSetTextureParams(); // and set its parameters
+    }
+
+  return n;
 }
 
 
 
-texturecache_t::texturecache_t(memtag_t tag)
+//==================================================================
+//  Material cache
+//==================================================================
+
+material_cache_t materials;
+
+
+material_cache_t::material_cache_t()
 {
-  tagtype = tag;
   default_item = NULL;
-  texture_ids[0] = NULL; // "no texture" id
 }
 
 
-void texturecache_t::SetDefaultItem(const char *name)
+void material_cache_t::SetDefaultItem(const char *name)
 {
   if (default_item)
-    CONS_Printf("Texturecache: Replacing default_item!\n");
-
-  default_item = Load(name);
-  if (!default_item)
-    I_Error("Texturecache: New default_item '%s' not found!\n", name);
+    CONS_Printf("Material_Cache: Replacing default_item!\n");
   // TODO delete the old default item?
+
+  textures.SetDefaultItem(name);
+  Texture *t = textures.default_item;
+  if (!t)
+    I_Error("Material_Cache: New default_item '%s' not found!\n", name);
+
+  default_item = new Material(name);
+  default_item->tex[0].t = t;
 }
 
 
 
-void texturecache_t::Clear()
+void material_cache_t::Clear()
 {
   new_tex.Clear();
   doom_tex.Clear();
@@ -746,80 +869,45 @@ void texturecache_t::Clear()
   sprite_tex.Clear();
   lod_tex.Clear();
 
-  texture_ids.clear();
-  texture_ids[0] = NULL; // "no texture" id
+  all_materials.clear();
 }
 
 
-
-/// Tries loading a texture on demand from a single lump, deducing the format.
-Texture *texturecache_t::Load(const char *name)
+void material_cache_t::ClearGLTextures()
 {
-  int lump = fc.FindNumForName(name);
-
-  if (lump < 0)
-    return NULL;
-
-  // Because Doom datatypes contain no magic numbers, we have to rely on heuristics to deduce the format...
-
-  Texture *t;
-
-  byte data[8];
-  fc.ReadLumpHeader(lump, &data, sizeof(data));
-  int size = fc.LumpLength(lump);
-
-  // first check possible magic numbers!
-  if (!png_sig_cmp(data, 0, sizeof(data)))
+  int count = 0;
+  for (material_iterator_t ti = all_materials.begin(); ti != all_materials.end(); ti++)
     {
-      // it's a PNG
-      t = new PNGTexture(name, lump);
-    }
-  else if (data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff && data[3] == 0xe0)
-    {
-      // it's JPEG/JFIF
-      t = new JPEGTexture(name, lump);
-    } // then try some common sizes for raw picture lumps
-  else if (size == 320*200)
-    {
-      // Heretic/Hexen fullscreen picture
-      t = new LumpTexture(name, lump, 320, 200);
-    }
-  else if (size == 4)
-    {
-      // God-damn-it! Heretic "F_SKY1" tries to be funny!
-      t = new LumpTexture(name, lump, 2, 2);
-    }
-  else if (data[2] == 0 && data[6] == 0 && data[7] == 0)
-    {
-      // likely a pic_t (the magic number is inadequate)
-      CONS_Printf("A pic_t image '%s' was found, but this format is no longer supported.\n", name); // root 'em out!
-      return NULL;
-    }
-  else
-    {
-      // finally assume a patch_t
-      t = new PatchTexture(name, lump);
+      Material *m = *ti;
+      if (m)
+	{
+	  int n = m->tex.size();
+	  for (int k = 0; k < n; k++)
+	    if (m->tex[k].t->ClearGLTexture())
+	      count++;
+	}
     }
 
-  return t;
+  if (count)
+    CONS_Printf("Cleared %d OpenGL textures.\n", count);
 }
 
 
-/// Inserts a Texture into the given source, replaces and possibly deletes the original
+
+
+/// Inserts a Material into the given source, replaces and possibly deletes the original
 /// Returns true if an original was found.
-bool texturecache_t::Insert(Texture *t, cachesource_t &s, bool keep_old)
+/*
+bool material_cache_t::Insert(Material *t, cachesource_t &s, bool keep_old)
 {
-  Texture *old = reinterpret_cast<Texture *>(s.Find(t->name));
+  Material *old = reinterpret_cast<Material *>(s.Find(t->name));
 
   if (old)
     {
-      // A Texture of that name is already there
-      // Happens when generating animated textures.
-      // Happens with H_START textures, and if other namespaces have duplicates.
-      //CONS_Printf("Texture '%s' replaced!\n", old->name);
-
-      t->id = old->id;        // Grab the ID of the original,
-      texture_ids[t->id] = t; // and take its place here.
+      // A Material of that name is already there
+      // Happens when generating animated materials.
+      // Happens with H_START materials, and if other namespaces have duplicates.
+      //CONS_Printf("Material '%s' replaced!\n", old->name);
 
       s.Replace(t); // remove the old instance from the map, so there is room for the new one!
 
@@ -829,20 +917,88 @@ bool texturecache_t::Insert(Texture *t, cachesource_t &s, bool keep_old)
   else
     {
       if (keep_old)
-	I_Error("Bad animated texture replace!\n");
-
-      t->id = texture_ids.size(); // First texture gets the ID 1, 'cos zero maps to NULL
-      texture_ids[t->id] = t;
+	I_Error("Bad animated material replace!\n");
 
       s.Insert(t);
     }
 
+  all_materials.insert(t);
+
   return (old != NULL);
+}
+*/
+
+
+Material *material_cache_t::Update(const char *name, material_class_t mode)
+{
+  cacheitem_t *t = (mode == TEX_sprite) ? sprite_tex.Find(name) : new_tex.Find(name);
+
+  if (!t)
+    {
+      Material *m = new Material(name);
+      if (mode == TEX_sprite)
+	sprite_tex.Insert(m);
+      else
+	new_tex.Insert(m);
+
+      all_materials.insert(m);
+      return m;
+    }
+  
+  return reinterpret_cast<Material *>(t);
+}
+
+
+/// Build a single-Texture Material during startup, insert it into a given source.
+/// Texture is assumed not to be in cache before call (unless there is a namespace overlap).
+Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t &source, bool h_start)
+{
+  if (!t)
+    return NULL;
+
+  // insert Texture into cache, change name if it is already taken (namespace overlaps, just a few)
+  const char *name = t->GetName();
+  if (textures.Find(name))
+    t->SetName((string(name) + "_xxx").c_str());
+
+  if (!textures.Insert(t))
+    CONS_Printf("Overlapping Texture names '%s'!\n", name);
+
+  // see if we already have a Material with this name
+  Material *m = reinterpret_cast<Material *>(source.Find(name));
+  if (!m)
+    {
+      if (h_start)
+	return NULL; // no original with same name, ignore
+
+      m = new Material(name); // create a new Material
+      source.Insert(m);
+      all_materials.insert(m);
+    }
+
+  Material::TextureRef &r = m->tex[0];
+  r.t = t; // replace Texture
+
+  if (h_start)
+    {
+      // take over the original, scale so that worldsize stays the same
+      r.xscale = t->width / r.worldwidth;
+      r.yscale = t->height / r.worldheight;
+    }
+  else
+    {
+      r.xscale = 1;
+      r.yscale = 1;
+    }
+
+  m->Initialize();
+  return m;
 }
 
 
 
-void texturecache_t::InitPaletteConversion()
+
+void material_cache_t::InitPaletteConversion()
 {
   // create the palette conversion colormaps
   unsigned i;
@@ -852,31 +1008,38 @@ void texturecache_t::InitPaletteConversion()
 
   unsigned n = fc.Size(); // number of resource files
   palette_conversion.resize(n);
+  palette_lump.resize(n);
 
+  // For OpenGL, just find the correct palettes to use for each file
+  int def_palette = fc.FindNumForName("PLAYPAL");
   for (i=0; i<n; i++)
-    palette_conversion[i] = R_CreatePaletteConversionColormap(i);
+    {
+      palette_conversion[i] = R_CreatePaletteConversionColormap(i);
+      int lump = fc.FindNumForNameFile("PLAYPAL", i);
+      palette_lump[i] = (lump < 0) ? def_palette : lump;
+    }
 }
 
 
+/// Returns the id of an existing Material, or tries creating it if nonexistant.
+Material *material_cache_t::Get8char(const char *name, material_class_t mode)
+{
+  char name8[9]; // NOTE texture names in Doom map format are max 8 chars long and not always NUL-terminated!
 
-/// Returns pointer to an existing Texture, or tries creating it if nonexistant.
-Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode, bool name_8chars)
+  strncpy(name8, name, 8);
+  name8[8] = '\0';
+  strupr(name8); // TODO unfortunate, could be avoided if we used a non-case-sensitive string comparison functor...
+
+  return Get(name8, mode);
+};
+
+
+/// Returns pointer to an existing Material, or tries creating it if nonexistant.
+Material *material_cache_t::Get(const char *name, material_class_t mode)
 {
   // "No texture" marker.
   if (name[0] == '-')
     return NULL;
-
-  char name8[9];
-
-  if (name_8chars)
-    {
-      // NOTE texture names in Doom map format are max 8 chars long and not always NUL-terminated!
-      strncpy(name8, name, 8);
-      name8[8] = '\0';
-      // TODO unfortunate, could be avoided if we used a non-case-sensitive string comparison functor...
-      strupr(name8);
-      name = name8;
-    }
 
   cacheitem_t *t;
 
@@ -903,10 +1066,8 @@ Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode, bool nam
 	if (!(t = lod_tex.Find(name)))
 	  {
 	    // Not found there either, try loading on demand
-	    Texture *temp = Load(name);
-	    if (temp)
-	      Insert(temp, lod_tex);
-	    t = temp;
+	    Texture *tex = textures.Load(name);
+	    t = BuildMaterial(tex, lod_tex); // wasteful...
 	  }
       break;
     }
@@ -916,49 +1077,39 @@ Texture *texturecache_t::GetPtr(const char *name, texture_class_t mode, bool nam
       // Item not found at all.
       // Some nonexistant items are asked again and again.
       // We use a special cacheitem_t to link their names to the default item.
-      t = new cacheitem_t(name);
-      t->usefulness = -1; // negative usefulness marks them as links
+      t = new cacheitem_t(name, true);
 
       // NOTE insertion to cachesource only, not to id-map
       if (mode == TEX_sprite)
 	sprite_tex.Insert(t);
       else
-	new_tex.Insert(t); 
+	new_tex.Insert(t);
     }
 
-  if (t->usefulness < 0)
+  if (t->AddRef())
     {
       // a "link" to default_item
-      t->refcount++;
-      t->usefulness--; // negated
-
-      default_item->refcount++;
-      default_item->usefulness++;
-
-      // CONS_Printf("Def. texture used for '%s'\n", name);
+      default_item->AddRef();
+      // CONS_Printf("Def. material used for '%s'\n", name);
       return default_item;
     }
   else
-    {
-      t->refcount++;
-      t->usefulness++;
-      return reinterpret_cast<Texture *>(t); // should be safe
-    }
+    return reinterpret_cast<Material *>(t); // should be safe
 }
 
 
 
 /// Shorthand.
-Texture *texturecache_t::GetPtrNum(int n)
+Material *material_cache_t::GetLumpnum(int n)
 {
-  return GetPtr(fc.FindNameForNum(n), TEX_lod);
+  return Get(fc.FindNameForNum(n), TEX_lod);
 }
 
 
 
 // semi-hack for linedeftype 242 and the like, where the
 // "texture name" field can hold a colormap name instead.
-int texturecache_t::GetTextureOrColormap(const char *name, fadetable_t*& cmap)
+Material *material_cache_t::GetMaterialOrColormap(const char *name, fadetable_t*& cmap)
 {
   // "NoTexture" marker. No texture, no colormap.
   if (name[0] == '-')
@@ -979,13 +1130,13 @@ int texturecache_t::GetTextureOrColormap(const char *name, fadetable_t*& cmap)
   cmap = NULL;
 
   // it could be a texture, let's check
-  return GetID(name, TEX_wall);
+  return Get8char(name, TEX_wall);
 }
 
 
 // semi-hack for linedeftype 260, where the
 // "texture name" field can hold a transmap name instead.
-int texturecache_t::GetTextureOrTransmap(const char *name, int& map_num)
+Material *material_cache_t::GetMaterialOrTransmap(const char *name, int& map_num)
 {
   // "NoTexture" marker. No texture, no colormap.
   if (name[0] == '-')
@@ -1006,70 +1157,16 @@ int texturecache_t::GetTextureOrTransmap(const char *name, int& map_num)
   map_num = -1;
 
   // it could be a texture, let's check
-  return GetID(name, TEX_wall);
-}
-
-
-/// Creates a texture object of a given lump, inserts it into a container.
-/// Lump number must be valid. Returns true if succesful.
-bool texturecache_t::BuildLumpTexture(int lump, bool h_start, cachesource_t &source)
-{
-  const char *name = fc.FindNameForNum(lump); // now always NUL-terminated!
-  Texture *orig = reinterpret_cast<Texture *>(source.Find(name));
-  if ((h_start && !orig) || (!h_start && orig))
-    return false; // not to be added
-  
-  byte data[8];
-  fc.ReadLumpHeader(lump, &data, sizeof(data));
-
-  Texture *t;
-
-  // good texture formats have magic numbers
-  if (!png_sig_cmp(data, 0, sizeof(data)))
-    {
-      // it's a PNG
-      t = new PNGTexture(name, lump);
-    }
-  else if (data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff && data[3] == 0xe0)
-    {
-      // it's JPEG/JFIF
-      t = new JPEGTexture(name, lump);
-    }
-  else
-    {
-      // assume a patch_t
-      t = new PatchTexture(name, lump);
-    }
-  /*
-  else
-    {
-      CONS_Printf(" Unknown texture format: lump '%8s' in the file '%s'.\n", name, fc.Name(lump >> 16));
-      return false;
-    }
-  */
-
-  if (t)
-    {
-      if (h_start)
-	{
-	  // replace the original, use proper scaling
-	  t->xscale = fixed_t(t->width) / orig->width;
-	  t->yscale = fixed_t(t->height) / orig->height;
-	}
-      Insert(t, source);
-      return true;
-    }
-
-  return false;
+  return Get8char(name, TEX_wall);
 }
 
 
 
 bool Read_NTEXTURE(int lump);
 
-/// Initializes the texture cache, fills the cachesource_t containers with Texture objects.
+/// Initializes the material cache, fills the cachesource_t containers with Material objects.
 /// Follows the JDS texture standard.
-int texturecache_t::ReadTextures()
+int material_cache_t::ReadTextures()
 {
   int i, lump;
   int num_textures = 0;
@@ -1088,7 +1185,7 @@ int texturecache_t::ReadTextures()
     } __attribute__((packed));
 
     lump = fc.GetNumForName("PNAMES");
-    pnames_t *pnames = (pnames_t *)fc.CacheLumpNum(lump, PU_STATIC);
+    pnames_t *pnames = static_cast<pnames_t*>(fc.CacheLumpNum(lump, PU_STATIC));
     int numpatches = LONG(pnames->count);
 
     if (devparm)
@@ -1113,7 +1210,7 @@ int texturecache_t::ReadTextures()
     int  *maptex, *maptex1, *maptex2;
 
     lump = fc.GetNumForName("TEXTURE1");
-    maptex = maptex1 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
+    maptex = maptex1 = static_cast<int*>(fc.CacheLumpNum(lump, PU_STATIC));
     int numtextures1 = LONG(*maptex);
     int maxoff = fc.LumpLength(lump);
     if (devparm)
@@ -1124,7 +1221,7 @@ int texturecache_t::ReadTextures()
     if (fc.FindNumForName ("TEXTURE2") != -1)
       {
 	lump = fc.GetNumForName("TEXTURE2");
-	maptex2 = (int *)fc.CacheLumpNum(lump, PU_STATIC);
+	maptex2 = static_cast<int*>(fc.CacheLumpNum(lump, PU_STATIC));
 	numtextures2 = LONG(*maptex2);
 	maxoff2 = fc.LumpLength(lump);
 	if (devparm)
@@ -1161,7 +1258,7 @@ int texturecache_t::ReadTextures()
 
 	// maptexture describes texture name, size, and
 	// used patches in z order from bottom to top
-	maptexture_t *mtex = (maptexture_t *)((byte *)maptex + offset);
+	maptexture_t *mtex = reinterpret_cast<maptexture_t*>(reinterpret_cast<byte*>(maptex) + offset);
 	strncpy(name8, mtex->name, 8);
 	DoomTexture *tex = new DoomTexture(name8, mtex);
 
@@ -1178,7 +1275,12 @@ int texturecache_t::ReadTextures()
 		      SHORT(mp->patch), mtex->name, i);
 	  }
 
-	Insert(tex, doom_tex);
+	Material *m = BuildMaterial(tex, doom_tex);
+
+	// ZDoom extension, scaling.
+	m->tex[0].xscale = mtex->xscale ? mtex->xscale / 8.0 : 1;
+	m->tex[0].yscale = mtex->yscale ? mtex->yscale / 8.0 : 1;
+	m->Initialize();
       }
 
     Z_Free(maptex1);
@@ -1195,7 +1297,7 @@ int texturecache_t::ReadTextures()
 	    continue; // already defined in TEXTUREx
 
 	  PatchTexture *tex = new PatchTexture(name8, patchlookup[i]);
-	  Insert(tex, doom_tex);
+	  BuildMaterial(tex, doom_tex);
 	  numtextures++;
 
           //CONS_Printf(" Bare PNAMES texture '%s' found!\n", name8);
@@ -1227,7 +1329,7 @@ int texturecache_t::ReadTextures()
 	}
 
       for ( ; lump < end; lump++)
-	if (BuildLumpTexture(lump, false, new_tex))
+	if (BuildMaterial(textures.LoadLump(fc.FindNameForNum(lump), lump), new_tex))
 	  num_textures++;
     }
 
@@ -1284,7 +1386,7 @@ int texturecache_t::ReadTextures()
 	      continue;
 	    }
 
-	  Insert(t, flat_tex);
+	  BuildMaterial(t, flat_tex);
 	  num_textures++;
 	}
     }
@@ -1315,7 +1417,7 @@ int texturecache_t::ReadTextures()
 	}
 
       for ( ; lump < end; lump++)
-	if (BuildLumpTexture(lump, false, sprite_tex))
+	if (BuildMaterial(textures.LoadLump(fc.FindNameForNum(lump), lump), sprite_tex))
 	  num_textures++;
     }
 
@@ -1339,8 +1441,9 @@ int texturecache_t::ReadTextures()
 
       for ( ; lump < end; lump++)
 	{
-	  if (!BuildLumpTexture(lump, true, doom_tex) &&
-	      !BuildLumpTexture(lump, true, flat_tex))
+	  Texture *tex = textures.LoadLump(fc.FindNameForNum(lump), lump);
+	  if (!BuildMaterial(tex, doom_tex, true) &&
+	      !BuildMaterial(tex, flat_tex, true))
 	    {
 	      CONS_Printf(" H_START texture '%8s' in file '%s' has no original, ignored.\n",
 			  fc.FindNameForNum(lump), fc.Name(i));
@@ -1405,7 +1508,7 @@ fadetable_t::fadetable_t(int lumpnum)
     }
 
   // (aligned on 8 bit for asm code) now 64k aligned for smokie...
-  colormap = (lighttable_t *)Z_MallocAlign(length, PU_STATIC, 0, 16); // 8);
+  colormap = static_cast<lighttable_t*>(Z_MallocAlign(length, PU_STATIC, 0, 16)); // 8);
   fc.ReadLump(lump, colormap);
 
   // SoM: Added, we set all params of the colormap to normal because there
@@ -1457,7 +1560,7 @@ void R_InitColormaps()
 	  continue;
 	}
 
-      colormaplumps = (lumplist_t *)realloc(colormaplumps, sizeof(lumplist_t) * (numcolormaplumps + 1));
+      colormaplumps = static_cast<lumplist_t*>(realloc(colormaplumps, sizeof(lumplist_t) * (numcolormaplumps + 1)));
       colormaplumps[numcolormaplumps].wadfile = start >> 16;
       colormaplumps[numcolormaplumps].firstlump = (start & 0xFFFF) + 1; // after C_START
       colormaplumps[numcolormaplumps].numlumps = end - (start + 1);
@@ -1721,8 +1824,8 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
       deltas[i][2] = (cmap[i][2] - cdestb) / (double)fadedist;
     }
 
-    char *colormap_p = (char *)Z_MallocAlign((256 * 34) + 1, PU_LEVEL, 0, 8);
-    f->colormap = (lighttable_t *)colormap_p;
+    char *colormap_p = static_cast<char*>(Z_MallocAlign((256 * 34) + 1, PU_LEVEL, 0, 8));
+    f->colormap = reinterpret_cast<lighttable_t*>(colormap_p);
 
     for(p = 0; p < 34; p++)
     {
@@ -1769,7 +1872,7 @@ static int makecol15(int r, int g, int b)
 void R_Init8to16()
 {
   int i;
-  byte *palette = (byte *)fc.CacheLumpName("PLAYPAL", PU_DAVE);
+  byte *palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_DAVE));
 
   for (i=0;i<256;i++)
     {
@@ -1780,7 +1883,7 @@ void R_Init8to16()
   Z_Free(palette);
 
   // test a big colormap
-  hicolormaps = (short int *)Z_Malloc(32768 /**34*/, PU_STATIC, 0);
+  hicolormaps = static_cast<short int*>(Z_Malloc(32768 /**34*/, PU_STATIC, 0));
   for (i=0;i<16384;i++)
     hicolormaps[i] = i<<1;
 }
@@ -1811,7 +1914,7 @@ static int R_TransmapNumForName(const char *name)
 	I_Error("R_TransmapNumForName: Too many transmaps!\n");
       
       int n = num_transtables++;
-      transtables[n] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+      transtables[n] = static_cast<byte*>(Z_MallocAlign(tr_size, PU_STATIC, 0, 16));
       fc.ReadLump(lump, transtables[n]);
       return n;
     }
@@ -1831,7 +1934,7 @@ void R_InitTranslucencyTables()
       transtables[i] = NULL;
     }
     
-  transtables[0] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+  transtables[0] = static_cast<byte*>(Z_MallocAlign(tr_size, PU_STATIC, 0, 16));
 
   // load in translucency tables
 
@@ -1855,7 +1958,7 @@ void R_InitTranslucencyTables()
     {
       // we can use the transmaps in legacy.wad
       for (i=1; i<5; i++)
-	transtables[i] = (byte *)Z_MallocAlign(tr_size, PU_STATIC, 0, 16);
+	transtables[i] = static_cast<byte*>(Z_MallocAlign(tr_size, PU_STATIC, 0, 16));
 
       fc.ReadLump(fc.GetNumForName("TRANSMOR"), transtables[1]);
       fc.ReadLump(fc.GetNumForName("TRANSHI"),  transtables[2]);
@@ -1942,7 +2045,7 @@ void Map::PrecacheMap()
             continue;
 
         //texture = textures[i];
-        if( texturecache[i]==NULL )
+        if( material_cache[i]==NULL )
             R_GenerateTexture (i);
         //numgenerated++;
 

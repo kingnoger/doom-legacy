@@ -114,8 +114,8 @@ enum windowborder_e
 };
 
 // textures for window borders and background
-extern class Texture *window_border[8];
-extern Texture *window_background;
+extern class Material *window_border[8];
+extern Material *window_background;
 
 // ------------------------------------------------
 // r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp

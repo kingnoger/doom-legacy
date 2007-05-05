@@ -66,6 +66,7 @@
 
 #include "i_video.h"            //rendermode
 
+static Material *skyflat_mat;
 
 extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
 
@@ -203,8 +204,14 @@ void Map::LoadSectors2(int lump)
       ss->floorheight = SHORT(ms->floorheight);
       ss->ceilingheight = SHORT(ms->ceilingheight);
 
-      ss->floorpic = tc.GetID(ms->floorpic, TEX_floor);
-      ss->ceilingpic = tc.GetID(ms->ceilingpic, TEX_floor);
+      ss->floorpic = materials.Get8char(ms->floorpic, TEX_floor);
+      ss->ceilingpic = materials.Get8char(ms->ceilingpic, TEX_floor);
+
+      // avoid dummy sky flats (when the Material of a surface is NULL, use fake backdrop)
+      if (ss->floorpic == skyflat_mat)
+	ss->floorpic = NULL;
+      if (ss->ceilingpic == skyflat_mat)
+	ss->ceilingpic = NULL;
 
       ss->lightlevel = SHORT(ms->lightlevel);
 
@@ -730,15 +737,15 @@ void Map::LoadSideDefs2(int lump)
 	      {
 	      case 1:  // BOOM: 242 fake ceiling/floor, variable colormaps
 	      case 3:  // Legacy: swimmable water, colormaps
-		sd->toptexture = tc.GetTextureOrColormap(ttex, sec->topmap);
-		sd->midtexture = tc.GetTextureOrColormap(mtex, sec->midmap);
-		sd->bottomtexture = tc.GetTextureOrColormap(btex, sec->bottommap);
+		sd->toptexture = materials.GetMaterialOrColormap(ttex, sec->topmap);
+		sd->midtexture = materials.GetMaterialOrColormap(mtex, sec->midmap);
+		sd->bottomtexture = materials.GetMaterialOrColormap(btex, sec->bottommap);
 		break;
 
 	      case 2: // BOOM: 260 make middle texture translucent
-		sd->toptexture = tc.GetID(ttex);
-		sd->midtexture = tc.GetTextureOrTransmap(mtex, ld->transmap); // can also be a transmap lumpname
-		sd->bottomtexture = tc.GetID(btex);
+		sd->toptexture = materials.Get8char(ttex);
+		sd->midtexture = materials.GetMaterialOrTransmap(mtex, ld->transmap); // can also be a transmap lumpname
+		sd->bottomtexture = materials.Get8char(btex);
 		break;
 
 	      case 4: // Legacy: create a colormap
@@ -752,9 +759,9 @@ void Map::LoadSideDefs2(int lump)
 		  }
 		else
 		  {
-		    sd->toptexture = tc.GetID(ttex);
-		    sd->midtexture = tc.GetID(mtex);
-		    sd->bottomtexture = tc.GetID(btex);
+		    sd->toptexture = materials.Get8char(ttex);
+		    sd->midtexture = materials.Get8char(mtex);
+		    sd->bottomtexture = materials.Get8char(btex);
 		  }
 		break;
 
@@ -768,10 +775,10 @@ void Map::LoadSideDefs2(int lump)
 	      case 19:
 	      case 20:
 		if (ttex[0] == '#')
-		  sd->toptexture = sd->bottomtexture = ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
+		  sd->toptexture = sd->bottomtexture = 0; // FIXME 3D floor translucency ((ttex[1] - '0')*100 + (ttex[2] - '0')*10 + ttex[3] - '0') + 1;
 		else
 		  sd->toptexture = sd->bottomtexture = 0;
-		sd->midtexture = tc.GetID(mtex);
+		sd->midtexture = materials.Get8char(mtex);
 		break;
 
 	      default:
@@ -784,9 +791,9 @@ void Map::LoadSideDefs2(int lump)
 	{
 	normal:
 	  // normal texture names
-          sd->toptexture = tc.GetID(ttex);
-          sd->midtexture = tc.GetID(mtex);
-          sd->bottomtexture = tc.GetID(btex);
+          sd->toptexture = materials.Get8char(ttex);
+          sd->midtexture = materials.Get8char(mtex);
+          sd->bottomtexture = materials.Get8char(btex);
         }
     }
 
@@ -1490,17 +1497,17 @@ void Map::SetupSky()
   if (info->sky2.empty())
     info->sky2 = "SKY1";
 
-  skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall);
+  skytexture = materials.Get(info->sky1.c_str(), TEX_wall);
   skybox_pov = NULL;
 
   // scale up the old skies, if needed
   R_SetupSkyDraw(skytexture);
 
-  // set the sky flat num  FIXME should be Map-dependant
+  // set the dummy sky flat num (only used locally during map loading)
   if (hexen_format)
-    skyflatnum = tc.GetID("F_SKY", TEX_floor);
+    skyflat_mat = materials.Get("F_SKY", TEX_floor);
   else
-    skyflatnum = tc.GetID("F_SKY1", TEX_floor);
+    skyflat_mat = materials.Get("F_SKY1", TEX_floor);
 }
 
 

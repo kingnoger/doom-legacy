@@ -36,7 +36,7 @@ private:
   static class font_t *font;
 
   static short AnimCount;     ///< skull animation counter
-  static class Texture *pointer[2]; ///< the menu pointer
+  static class Material *pointer[2]; ///< the menu pointer
   static int   which_pointer;
   static int   SkullBaseLump; ///< menu animation base lump for Heretic and Hexen
   static tic_t NowTic;        ///< current time in tics

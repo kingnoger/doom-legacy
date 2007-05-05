@@ -31,7 +31,7 @@
 #include"r_defs.h"
 
 class PlayerInfo;
-class Texture;
+class Material;
 class Actor;
 struct fline_t;
 
@@ -52,6 +52,7 @@ struct fline_t;
 class OGLRenderer
 {
   friend class spritepres_t;
+  friend class ShaderProg;
 private:
   bool  workinggl;  ///< Do we have a working OpenGL context?
   float glversion;  ///< Current (runtime) OpenGL version (major.minor).
@@ -73,11 +74,11 @@ private:
   double hudar;     ///< HUD aspect ratio.
   double screenar;  ///< Aspect ratio of the physical screen (monitor).
 
-  byte *palette;  ///< Converting palette data to OGL colors.
+  RGB_t *palette;  ///< Converting palette data to OGL colors.
 
   void RenderBSPNode(int nodenum); ///< Render level using BSP.
   void RenderGLSubsector(int num);
-  void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor, GLfloat xoff=0.0, GLfloat yoff=0.0);
+  void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material *tex, bool isFloor, GLfloat xoff=0.0, GLfloat yoff=0.0);
   void RenderGLSeg(int num);
   void RenderActors(sector_t *sec);
   void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
@@ -101,10 +102,10 @@ public:
   bool In2DMode() const {return consolemode;}
 
   void Setup2DMode();
-  void Draw2DGraphic(GLfloat left, GLfloat bottom, GLfloat right, GLfloat top, GLuint tex,
+  void Draw2DGraphic(GLfloat left, GLfloat bottom, GLfloat right, GLfloat top, Material *mat,
 		     GLfloat texleft=0.0, GLfloat texbottom=1.0, GLfloat texright=1.0, GLfloat textop=0.0);
-  void Draw2DGraphic_Doom(float x, float y, Texture *tex, int flags);
-  void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex);
+  void Draw2DGraphic_Doom(float x, float y, Material *tex, int flags);
+  void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *tex);
   void ClearAutomap();
   void DrawAutomapLine(const fline_t *line, const int color);
 
@@ -113,10 +114,11 @@ public:
   void RenderPlayerView(PlayerInfo *player);
   void Render3DView(Actor *pov);
   void DrawPSprites(class PlayerPawn *p);
-  void DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip);
+  void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, bool flip);
 
   bool CheckVis(int fromss, int toss);
 };
 
+extern OGLRenderer *oglrenderer;
 
 #endif

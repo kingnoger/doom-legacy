@@ -45,12 +45,10 @@
 FileCache fc;
 
 
-// -----------------------------------------------------
 // destroys (closes) all open VFiles
 // If not done on a Mac then open wad files
 // can prevent removable media they are on from
 // being ejected
-
 FileCache::~FileCache()
 {
   for (int i = vfiles.size()-1; i>=0; i--)
@@ -92,12 +90,10 @@ const char *FileCache::Access(const char *f)
 }
 
 
-// -----------------------------------------------------
 // Pass a null terminated list of files to use.
 // All files are optional, but at least one file must be found.
 // The name searcher looks backwards, so a later file does override all earlier ones.
 // Also adds GWA files if they exist.
-
 bool FileCache::InitMultipleFiles(const char *const*filenames)
 {
   CONS_Printf("W_Init: Init WADfiles.\n");
@@ -130,14 +126,13 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
   return result;
 }
 
-// -----------------------------------------------------
+
 // Loads a wad file into memory, adds it into vfiles vector.
 // returns the number of the wadfile (0 is the first one)
 // or -1 in the case of error
 // Files with a .wad extension are idlink files with multiple lumps.
 // Other files are single lumps with the base filename for the lump name.
 // Lump names can appear multiple times.
-
 int FileCache::AddFile(const char *fname, bool silent)
 {
   int nfiles = vfiles.size();
@@ -241,23 +236,6 @@ int FileCache::AddFile(const char *fname, bool silent)
 //=============================
 
 
-// -----------------------------------------------------
-// Returns the buffer size needed to load the given lump.
-
-int FileCache::LumpLength(int lump)
-{
-  int item = lump & 0xffff;
-  unsigned int file = lump >> 16;
-  
-  if (file >= vfiles.size())
-    I_Error("FileCache::LumpLength: %i >= numvfiles(%i)\n", file, vfiles.size());
-  if (item >= vfiles[file]->numitems)
-    I_Error("FileCache::LumpLength: %i >= numitems", item);
-
-  return vfiles[file]->GetItemSize(item);
-}
-
-
 const char *FileCache::Name(int i)
 {
   return vfiles[i]->filename.c_str();
@@ -275,41 +253,55 @@ unsigned int FileCache::GetNumLumps(int filenum)
 //  searching 
 //==============
 
-// -----------------------------------------------------
-// Returns -1 if name not found.
-// scanforward: this is normally always false, so external pwads take precedence,
-// this is set true if W_GetNumForNameFirst() is called
 
+// Returns -1 if name not found.
+// scanforward: this is normally always false, so external pwads take precedence.
 int FileCache::FindNumForName(const char* name, bool scanforward)
 {
   int i, n = vfiles.size();
   int res;
 
-  if (!scanforward) {
-    // scan wad files backwards so patch lump files take precedence
-    for (i = n-1; i >= 0; i--) {
-      res = vfiles[i]->FindNumForName(name);
-      // high word is the wad file number, low word the lump number
-      if (res != -1) return ((i<<16) + res);
+  if (!scanforward)
+    {
+      // scan wad files backwards so patch lump files take precedence
+      for (i = n-1; i >= 0; i--)
+	{
+	  res = vfiles[i]->FindNumForName(name);
+	  // high word is the wad file number, low word the lump number
+	  if (res != -1)
+	    return ((i<<16) + res);
+	}
     }
-  } else {  
-    // scan wad files forward, when original wad resources
-    //  must take precedence
-    for (i = 0; i<n; i++) {
-      res = vfiles[i]->FindNumForName(name);
-      if (res != -1) return ((i<<16) + res);
+  else
+    {  
+      // scan wad files forward, when original wad resources
+      //  must take precedence
+      for (i = 0; i<n; i++)
+	{
+	  res = vfiles[i]->FindNumForName(name);
+	  if (res != -1)
+	    return ((i<<16) + res);
+	}
     }
-  }  
   // not found.
   return -1;
 }
 
 
-// -----------------------------------------------------
+// Calls FindNumForName, but bombs out if not found.
+int FileCache::GetNumForName(const char *name, bool scanforward)
+{
+  int i = FindNumForName(name, scanforward);
+  if (i == -1)
+    I_Error("FileCache::GetNumForName: %s not found!\n", name);
+  
+  return i;
+}
+
+
 // Same as the original, but checks in one wad only
 // 'filenum' is a wad number (Used for sprites loading)
 // 'startlump' is the lump number to start the search
-
 int FileCache::FindNumForNameFile(const char* name, unsigned filenum, int startlump)
 {
   // start at 'startlump', useful parameter when there are multiple
@@ -327,6 +319,20 @@ int FileCache::FindNumForNameFile(const char* name, unsigned filenum, int startl
 }
 
 
+// Return the first lump in a file whose name starts with the given four bytes, also returns the full name of the lump.
+int FileCache::FindPartialName(Uint32 iname, unsigned filenum, int startlump, const char **fullname)
+{
+  if (filenum >= vfiles.size())
+    I_Error("FileCache::FindNumForNamePwad: %i >= numvfiles(%i)\n", filenum, vfiles.size());
+ 
+  return vfiles[filenum]->FindPartialName(iname, startlump, fullname);
+}
+
+
+//====================
+// retrieve lump info
+//====================
+
 const char *FileCache::FindNameForNum(int lump)
 {
   unsigned int file = lump >> 16;
@@ -342,26 +348,20 @@ const char *FileCache::FindNameForNum(int lump)
 }
 
 
-// -----------------------------------------------------
-// Calls FindNumForName, but bombs out if not found.
-
-int FileCache::GetNumForName(const char *name, bool scanforward, bool errorifnotfound)
+// Returns the buffer size needed to load the given lump.
+int FileCache::LumpLength(int lump)
 {
-  int i = FindNumForName(name, scanforward);
-  if (i == -1 && errorifnotfound)
-    I_Error("FileCache::GetNumForName: %s not found!\n", name);
+  int item = lump & 0xffff;
+  unsigned int file = lump >> 16;
   
-  return i;
+  if (file >= vfiles.size())
+    I_Error("FileCache::LumpLength: %i >= numvfiles(%i)\n", file, vfiles.size());
+  if (item >= vfiles[file]->numitems)
+    I_Error("FileCache::LumpLength: %i >= numitems", item);
+
+  return vfiles[file]->GetItemSize(item);
 }
 
-
-int FileCache::FindPartialName(Uint32 iname, unsigned filenum, int startlump, const char **fullname)
-{
-  if (filenum >= vfiles.size())
-    I_Error("FileCache::FindNumForNamePwad: %i >= numvfiles(%i)\n", filenum, vfiles.size());
- 
-  return vfiles[filenum]->FindPartialName(iname, startlump, fullname);
-}
 
 
 
@@ -369,11 +369,10 @@ int FileCache::FindPartialName(Uint32 iname, unsigned filenum, int startlump, co
 //    reading and caching
 //================================
 
-//-----------------------------------------------------
+
 // read 'size' bytes of lump. If size == 0, read the entire lump
 // sometimes just the header is needed
-
-int FileCache::ReadLumpHeader(int lump, void *dest, int size)
+int FileCache::ReadLumpHeader(int lump, void *dest, unsigned size, unsigned offset)
 {
   int item = lump & 0xffff;
   unsigned int file = lump >> 16;
@@ -383,13 +382,11 @@ int FileCache::ReadLumpHeader(int lump, void *dest, int size)
   if (item >= vfiles[file]->numitems)
     I_Error("FileCache::ReadLumpHeader: %i >= numitems", item);
 
-  return vfiles[file]->ReadItemHeader(item, dest, size);
+  return vfiles[file]->ReadItem(item, dest, size, offset);
 }
 
 
-//-----------------------------------------------------
 // caches the given lump
-
 void *FileCache::CacheLumpNum(int lump, int tag)
 {
   int item = lump & 0xffff;

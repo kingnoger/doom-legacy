@@ -76,15 +76,18 @@ int VFile::FindNumForName(const char* name, int startitem)
   return -1;
 }
 
+
 void *VFile::CacheItem(int item, int tag)
 {
   if (!cache[item])
     {
       // read the lump in    
       //CONS_Printf("cache miss on lump %i\n",lump);
+
+      int size = GetItemSize(item);
       // looks frightening, but actually Z_Malloc sets cache[item] to point to the memory
-      Z_Malloc(GetItemSize(item), tag, &cache[item]);
-      ReadItemHeader(item, cache[item], 0);
+      Z_Malloc(size, tag, &cache[item]);
+      Internal_ReadItem(item, cache[item], size);
     }
   else
     {
@@ -98,6 +101,29 @@ void *VFile::CacheItem(int item, int tag)
   return cache[item];
 }
 
+
+// size clamping, cache check, then call virtualized Read
+int VFile::ReadItem(int item, void *dest, unsigned size, unsigned offset)
+{
+  unsigned itemsize = GetItemSize(item);
+
+  // ignore empty items (usually markers like S_START, F_END ..)
+  if (itemsize == 0)
+    return 0;
+
+  // 0 size means read all the lump
+  if (size == 0 || size + offset > itemsize)
+    size = itemsize - offset;
+
+  // if item happens to be cached, use it
+  if (cache[item])
+    {
+      memcpy(dest, static_cast<byte*>(cache[item]) + offset, size);
+      return size;
+    }
+  else
+    return Internal_ReadItem(item, dest, size, offset);
+}
 
 
 //====================================
@@ -207,18 +233,9 @@ void VDir::ListItems()
     printf("%s\n", contents[i].name);
 }
 
-// this should not be used directly, CacheItem() is better
-int VDir::ReadItemHeader(int i, void *dest, unsigned int size)
+int VDir::Internal_ReadItem(int i, void *dest, unsigned size, unsigned offset)
 {
   vdiritem_t *item = contents + i;
-
-  // there should not be any empty resources in a directory
-  if (item->size == 0)
-    return 0;
-
-  // 0 size means read all the lump
-  if (size == 0 || size > item->size)
-    size = item->size;
 
   // cache cannot be used here, because this function is used in the caching process
   FILE *str = fopen(item->name, "rb");
@@ -228,6 +245,7 @@ int VDir::ReadItemHeader(int i, void *dest, unsigned int size)
       return 0;
     }
 
+  fseek(str, offset, SEEK_SET);
   int n = fread(dest, 1, size, str);
   fclose(str);
 

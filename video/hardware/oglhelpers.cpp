@@ -62,14 +62,3 @@ void InitLumLut() {
         lightleveltonumlut[i] = 255 < k ? 255 : int(k); //min(255, k);
     }
 }
-
-void ClearGLTextures() {
-  int count = 0;
-  for(texiterator ti = tc.begin(); ti != tc.end(); ti++)
-    if((*ti).second)
-      if((*ti).second->ClearGLTexture())
-	count++;
-
-  if(count)
-    CONS_Printf("Cleared %d OpenGL textures.\n", count);
-}

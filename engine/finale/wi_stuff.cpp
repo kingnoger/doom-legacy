@@ -81,7 +81,7 @@
 
 // NET GAME STUFF
 #define NG_STATSY               50
-#define NG_STATSX               (32 + star->width/2 + 32 * !dofrags)
+#define NG_STATSX               (32 + star->worldwidth/2 + 32 * !dofrags)
 
 #define NG_SPACINGX             64
 
@@ -150,7 +150,7 @@ struct anim_t
   int         data2;
 
   // actual graphics for frames of animations
-  Texture*    p[3];
+  Material*    p[3];
 
   // following must be initialized to zero before use!
 
@@ -330,65 +330,65 @@ static anim_t *anims[NUMEPISODES] =
 //
 
 // background (map of levels).
-static Texture*         intermission_bg;
+static Material*         intermission_bg;
 
 // You Are Here graphic
-static Texture*         yah[2];
+static Material*         yah[2];
 
 // splat
-static Texture*         splat;
+static Material*         splat;
 
 // %, : graphics
-static Texture  *percent,  *colon;
+static Material  *percent,  *colon;
 
 
 // 0-9 graphics, minus sign
-static Texture*         num[11];
+static Material*         num[11];
 
 // "Finished!" graphics
-static Texture*         finished_tex;
+static Material*         finished_tex;
 
 // "Entering" graphic
-static Texture*         entering_tex;
+static Material*         entering_tex;
 
 // "secret"
-static Texture*         sp_secret;
+static Material*         sp_secret;
 
 // "Kills", "Scrt", "Items", "Frags"
-static Texture*         kills;
-static Texture*         secret;
-static Texture*         items;
-static Texture*         frags;
+static Material*         kills;
+static Material*         secret;
+static Material*         items;
+static Material*         frags;
 
 // Time sucks.
-static Texture*         timePatch;
-static Texture*         par;
-static Texture*         sucks;
+static Material*         timePatch;
+static Material*         par;
+static Material*         sucks;
 
 // "killers", "victims"
-static Texture*         killers;
-static Texture*         victims;
+static Material*         killers;
+static Material*         victims;
 
 // "Total"
-static Texture*         ptotal;
+static Material*         ptotal;
 
 // your face, your dead face, face background
-static Texture*         star;
-static Texture*         bstar;
-static Texture*         stpb;
+static Material*         star;
+static Material*         bstar;
+static Material*         stpb;
 
 // Name graphics of each level (centered)
-static Texture         *lastname_tex, *nextname_tex;
+static Material         *lastname_tex, *nextname_tex;
 
 
 /// local class for drawing numbers
 class WI_Number
 {
 protected:
-  Texture **tex;      ///< graphics for numbers 0-9, tex[10] is the minus sign
-  Texture  *pcent;
+  Material **tex;      ///< graphics for numbers 0-9, tex[10] is the minus sign
+  Material  *pcent;
 public:
-  void Set(Texture **t, Texture *p)
+  void Set(Material **t, Material *p)
   {
     tex = t;
     pcent = p;
@@ -438,7 +438,7 @@ int WI_Number::Draw(int x, int y, int n, int digits)
   if (n == 1994)
     return 0;
 
-  int w = tex[0]->width;
+  int w = tex[0]->worldwidth;
 
   // draw the new number
   while (digits--)
@@ -475,8 +475,8 @@ static void WI_drawLF(const char *name)
   if (lastname_tex)
     {
       // use levelname graphic if we have one
-      lastname_tex->Draw((BASEVIDWIDTH - (lastname_tex->width))/2, y, FB);
-      y += (5 * lastname_tex->height)/4;
+      lastname_tex->Draw((BASEVIDWIDTH - (lastname_tex->worldwidth))/2, y, FB);
+      y += (5 * lastname_tex->worldheight)/4;
     }
   else if (big_font)
     {
@@ -486,7 +486,7 @@ static void WI_drawLF(const char *name)
 
   // draw "Finished!"
   if (finished_tex)
-    finished_tex->Draw((BASEVIDWIDTH - (finished_tex->width))/2,y, FB);
+    finished_tex->Draw((BASEVIDWIDTH - (finished_tex->worldwidth))/2,y, FB);
   else if (big_font)
     big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Finished"))/2, y, "Finished", FB);
 }
@@ -500,8 +500,8 @@ static void WI_drawEL(const char *nextname)
   // draw "Entering"
   if (entering_tex)
     {
-      entering_tex->Draw((BASEVIDWIDTH - entering_tex->width)/2, y, FB);
-      y += (5 * entering_tex->height)/4;
+      entering_tex->Draw((BASEVIDWIDTH - entering_tex->worldwidth)/2, y, FB);
+      y += (5 * entering_tex->worldheight)/4;
     }
   else if (big_font)
     {
@@ -511,7 +511,7 @@ static void WI_drawEL(const char *nextname)
 
   // draw level
   if (nextname_tex)
-    nextname_tex->Draw((BASEVIDWIDTH - nextname_tex->width)/2, y, FB);
+    nextname_tex->Draw((BASEVIDWIDTH - nextname_tex->worldwidth)/2, y, FB);
   else if (big_font)
     big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(nextname))/2, y, nextname, FB);
 }
@@ -532,7 +532,7 @@ static void WI_drawTime(int x, int y, int t)
       do
         {
           int n = (t / div) % 60;
-          x = Num.Draw(x, y, n, 2) - colon->width;
+          x = Num.Draw(x, y, n, 2) - colon->worldwidth;
           div *= 60;
 
           // draw
@@ -544,7 +544,7 @@ static void WI_drawTime(int x, int y, int t)
   else
     {
       // "sucks"
-      sucks->Draw(x - sucks->width, y, FB);
+      sucks->Draw(x - sucks->worldwidth, y, FB);
     }
 }
 
@@ -576,7 +576,7 @@ void Intermission::SlamBackground()
 {
   // Heretic has a different bg during statcount
   if (game.mode == gm_heretic && state == StatCount)
-    tc.GetPtr("FLOOR16")->DrawFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy);
+    materials.Get("FLOOR16")->DrawFill(0, 0, vid.width/vid.dupx, vid.height/vid.dupy);
   else if (rendermode == render_soft)
     memcpy(vid.screens[0], vid.screens[1], vid.width * vid.height);
   else
@@ -778,7 +778,7 @@ static void WI_ddrawDeathmatchStats()
     lh = WI_SPACINGY;
 
     // draw stat titles (top line)
-    total->Draw(DM_TOTALSX-total->width/2,DM_MATRIXY-WI_SPACINGY+10,FB);
+    total->Draw(DM_TOTALSX-total->worldwidth/2,DM_MATRIXY-WI_SPACINGY+10,FB);
 
      killers->Draw(DM_KILLERSX, DM_KILLERSY, FB);
      victims->Draw(DM_VICTIMSX, DM_VICTIMSY, FB);
@@ -793,13 +793,13 @@ static void WI_ddrawDeathmatchStats()
         {
 	  colormap = translationtables[players[i].skincolor];
 
-		V_DrawMappedPatch(x-stpb->width/2,
+		V_DrawMappedPatch(x-stpb->worldwidth/2,
                         DM_MATRIXY - WI_SPACINGY,
                         FB,
                         stpb,      //p[i], now uses a common STPB0 translated
                         colormap); //      to the right colors
 
-            V_DrawMappedPatch(DM_MATRIXX-stpb->width/2,
+            V_DrawMappedPatch(DM_MATRIXX-stpb->worldwidth/2,
                         y,
                         FB,
                         stpb,      //p[i]
@@ -807,9 +807,9 @@ static void WI_ddrawDeathmatchStats()
 
             if (i == me)
             {
-             bstar->Draw(x-stpb->width/2, DM_MATRIXY - WI_SPACINGY, FB);
+             bstar->Draw(x-stpb->worldwidth/2, DM_MATRIXY - WI_SPACINGY, FB);
 
-             star->Draw(DM_MATRIXX-stpb->width/2, y, FB);
+             star->Draw(DM_MATRIXX-stpb->worldwidth/2, y, FB);
             }
         }
         else
@@ -825,7 +825,7 @@ static void WI_ddrawDeathmatchStats()
 
     // draw stats
     y = DM_MATRIXY+10;
-    w = num[0]->width;
+    w = num[0]->worldwidth;
 
     for (i=0 ; i<MAXPLAYERS ; i++)
     {
@@ -1049,7 +1049,7 @@ void Intermission::DrawCoopStats()
     {
       // single player stats are a bit different
       // line height
-      int lh = (3*(num[0]->height))/2;
+      int lh = (3*(num[0]->worldheight))/2;
 
       if (big_font)
         {
@@ -1086,17 +1086,17 @@ void Intermission::DrawCoopStats()
         }
       else
         {
-          kills->Draw(NG_STATSX+NG_SPACINGX-kills->width, NG_STATSY, FB);
-          items->Draw(NG_STATSX+2*NG_SPACINGX-items->width, NG_STATSY, FB);
-          secret->Draw(NG_STATSX+3*NG_SPACINGX-secret->width, NG_STATSY, FB);
+          kills->Draw(NG_STATSX+NG_SPACINGX-kills->worldwidth, NG_STATSY, FB);
+          items->Draw(NG_STATSX+2*NG_SPACINGX-items->worldwidth, NG_STATSY, FB);
+          secret->Draw(NG_STATSX+3*NG_SPACINGX-secret->worldwidth, NG_STATSY, FB);
           if (dofrags)
-            frags->Draw(NG_STATSX+4*NG_SPACINGX-frags->width, NG_STATSY, FB);
+            frags->Draw(NG_STATSX+4*NG_SPACINGX-frags->worldwidth, NG_STATSY, FB);
 
-          y = NG_STATSY + kills->height;
+          y = NG_STATSY + kills->worldheight;
         }
       // draw stats
       int i, n = plrs.size();
-      int pwidth = percent->width;
+      int pwidth = percent->worldwidth;
       int you = ViewPlayers.size() ? ViewPlayers[0]->number : 0;
 
       for (i=0 ; i<n ; i++)
@@ -1108,11 +1108,11 @@ void Intermission::DrawCoopStats()
           x = NG_STATSX - (i & 1) ? 10 : 0;
 	  current_colormap = translationtables[color];
 
-          stpb->Draw(x - stpb->width, y, FB | V_MAP);
+          stpb->Draw(x - stpb->worldwidth, y, FB | V_MAP);
 
           // TODO splitscreen
           if (plrs[i]->number == you)
-            star->Draw(x-stpb->width, y, FB);
+            star->Draw(x-stpb->worldwidth, y, FB);
 
           // draw stats
           x = NG_STATSX + NG_SPACINGX;
@@ -1147,7 +1147,7 @@ void Intermission::DrawCoopStats()
 
 void Intermission::LoadData()
 {
-  intermission_bg = tc.GetPtr(interpic);
+  intermission_bg = materials.Get(interpic);
   // TODO in doom2, darken the background image with colormap[25]? Nah.
 
   if (rendermode == render_soft)
@@ -1185,20 +1185,20 @@ void Intermission::LoadData()
 		    {
 		      // animations
 		      sprintf(name, "WIA%d%.2d%.2d", episode-1, j, i);
-		      a->p[i] = tc.GetPtr(name);
+		      a->p[i] = materials.Get(name);
 		    }
 		}
 	    }
 	}
 
-      yah[0] = tc.GetPtr("WIURH0");
-      yah[1] = tc.GetPtr("WIURH1");
-      splat = tc.GetPtr("WISPLAT");
+      yah[0] = materials.Get("WIURH0");
+      yah[1] = materials.Get("WIURH1");
+      splat = materials.Get("WISPLAT");
       break;
 
     case gm_heretic:
-      yah[0] = yah[1] = tc.GetPtr("IN_YAH");
-      splat = tc.GetPtr("IN_X");
+      yah[0] = yah[1] = materials.Get("IN_YAH");
+      splat = materials.Get("IN_X");
       break;
 
     default:
@@ -1212,82 +1212,82 @@ void Intermission::LoadData()
       for (i=0;i<10;i++)
 	{
 	  sprintf(name, "FONTB%d", 16+i);
-	  num[i] = tc.GetPtr(name);
+	  num[i] = materials.Get(name);
 	}
 
-      num[10] = tc.GetPtr("FONTB13"); // minus sign
-      percent = tc.GetPtr("FONTB05");
-      colon   = tc.GetPtr("FONTB26");
+      num[10] = materials.Get("FONTB13"); // minus sign
+      percent = materials.Get("FONTB05");
+      colon   = materials.Get("FONTB26");
 
       finished_tex = entering_tex = NULL;
     }
   else
     {
       // Doom
-      num[10] = tc.GetPtr("WIMINUS");
-      percent = tc.GetPtr("WIPCNT");
-      colon   = tc.GetPtr("WICOLON");
+      num[10] = materials.Get("WIMINUS");
+      percent = materials.Get("WIPCNT");
+      colon   = materials.Get("WICOLON");
 
       // numbers 0-9
       for (i=0;i<10;i++)
 	{
 	  sprintf(name, "WINUM%d", i);
-	  num[i] = tc.GetPtr(name);
+	  num[i] = materials.Get(name);
 	}
 
       // "finished"
-      finished_tex = tc.GetPtr("WIF");
+      finished_tex = materials.Get("WIF");
 
       // "entering"
-      entering_tex = tc.GetPtr("WIENTER");
+      entering_tex = materials.Get("WIENTER");
 
       // "kills"
-      kills = tc.GetPtr("WIOSTK");
+      kills = materials.Get("WIOSTK");
 
       // "scrt"
-      secret = tc.GetPtr("WIOSTS");
+      secret = materials.Get("WIOSTS");
 
       // "secret"
-      sp_secret = tc.GetPtr("WISCRT2");
+      sp_secret = materials.Get("WISCRT2");
 
       // "items"
-      items = tc.GetPtr("WIOSTI");
+      items = materials.Get("WIOSTI");
 
       // "frgs"
-      frags = tc.GetPtr("WIFRGS");
+      frags = materials.Get("WIFRGS");
 
       // "time"
-      timePatch = tc.GetPtr("WITIME");
+      timePatch = materials.Get("WITIME");
 
       // "sucks"
-      sucks = tc.GetPtr("WISUCKS");
+      sucks = materials.Get("WISUCKS");
 
       // "par"
-      par = tc.GetPtr("WIPAR");
+      par = materials.Get("WIPAR");
 
       // "killers" (vertical)
-      killers = tc.GetPtr("WIKILRS");
+      killers = materials.Get("WIKILRS");
 
       // "victims" (horiz)
-      victims = tc.GetPtr("WIVCTMS");
+      victims = materials.Get("WIVCTMS");
 
       // "total"
-      ptotal = tc.GetPtr("WIMSTT");
+      ptotal = materials.Get("WIMSTT");
     }
 
 
   // your face
-  star = tc.GetPtr("STFST01");
+  star = materials.Get("STFST01");
 
   // dead face
-  bstar = tc.GetPtr("STFDEAD0");
+  bstar = materials.Get("STFDEAD0");
 
 
   //added:08-02-98: now uses a single STPB0 which is remapped to the
   //                player translation table. Whatever new colors we add
   //                since we'll have to define a translation table for
   //                it, we'll have the right colors here automatically.
-  stpb = tc.GetPtr("STPB0");
+  stpb = materials.Get("STPB0");
 
   Num.Set(num, percent); // setup number "widget"
 }
@@ -1469,8 +1469,8 @@ void Intermission::Start(const MapInfo *f, const MapInfo *n, int maptic, int kil
   s_count = sfx_menu_choose;
 
   LoadData();
-  lastname_tex = f->namepic.empty() ? NULL : tc.GetPtr(f->namepic.c_str());
-  nextname_tex = n->namepic.empty() ? NULL : tc.GetPtr(n->namepic.c_str());
+  lastname_tex = f->namepic.empty() ? NULL : materials.Get(f->namepic.c_str());
+  nextname_tex = n->namepic.empty() ? NULL : materials.Get(n->namepic.c_str());
 
   if (cv_deathmatch.value)
     InitDMStats();

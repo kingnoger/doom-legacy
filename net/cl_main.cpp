@@ -163,6 +163,10 @@ void CL_Init()
   CONS_Printf("V_Init: Init the video module.\n");
   vid.Startup();
 
+  // init renderer (and texture system!)
+  CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
+  R_Init();
+
   // we need the HUD font for the console
   // HUD font, crosshairs, say commands
   CONS_Printf("HU_Init: Init the Heads Up Display\n");
@@ -176,10 +180,6 @@ void CL_Init()
   Menu::Startup();
 
   automap.Startup();
-
-  // init renderer
-  CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
-  R_Init();
 
   // set up sound and music
   CONS_Printf("S_Init: Init sound module.\n");
@@ -210,6 +210,7 @@ void CL_Init()
   cv_cam_speed.Reg();
 
   // client input
+  cv_grabinput.Reg();
   cv_controlperkey.Reg();
 
   // WARNING : the order is important when initing mouse2, we need the mouse2port

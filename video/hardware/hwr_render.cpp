@@ -366,7 +366,7 @@ void HWRend::DrawFill(int x, int y, int w, int h, int color)
   //R.HWR_DrawFill(x, y, w, h, color);
 }
 
-void HWRend::DrawFill(int x, int y, int w, int h, class Texture * t)
+void HWRend::DrawFill(int x, int y, int w, int h, class Material* t)
 {
   show_stackframe();
   //R.HWR_DrawFlatFill(x, y, w, h, t);

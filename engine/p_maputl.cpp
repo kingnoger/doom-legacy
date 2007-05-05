@@ -286,10 +286,10 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 sector_t::zcheck_t sector_t::CheckZ(fixed_t z)
 {
   if (z < floorheight)
-    return (floorpic == skyflatnum) ? z_Sky : z_Wall;
+    return SkyFloor() ? z_Sky : z_Wall;
 
   if (z > ceilingheight)
-    return (ceilingpic == skyflatnum) ? z_Sky : z_Wall;
+    return SkyCeiling() ? z_Sky : z_Wall;
 
   for (ffloor_t *rover = ffloors; rover; rover = rover->next)
     {
@@ -466,7 +466,7 @@ void line_opening_t::SubtractFromOpening(const Actor *a, sector_t *s)
   if (r.high < top)
     {
       top = r.high;
-      top_sky = (s->ceilingpic == skyflatnum && r.high == s->ceilingheight);
+      top_sky = (s->SkyCeiling() && r.high == s->ceilingheight);
     }
 
   // TEST originally lowfloor is the lowest floor encountered, now it is the second-highest.
@@ -475,7 +475,7 @@ void line_opening_t::SubtractFromOpening(const Actor *a, sector_t *s)
     {
       lowfloor = bottom;
       bottom = r.low;
-      bottom_sky = (s->floorpic == skyflatnum && r.low == s->floorheight);
+      bottom_sky = (s->SkyFloor() && r.low == s->floorheight);
       bottompic = s->floorpic;
     }
   else if (r.low > lowfloor)

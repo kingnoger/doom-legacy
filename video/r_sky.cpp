@@ -33,7 +33,6 @@
 #include "r_sky.h"
 #include "r_data.h"
 
-int          skyflatnum; 
 int          skytexturemid;
 
 
@@ -44,7 +43,7 @@ int          skytexturemid;
 //  NOTE: skycolfunc should be set at R_ExecuteSetViewSize ()
 //        I dont bother because we don't use low detail no more
 //
-void R_SetupSkyDraw(Texture *skytex)
+void R_SetupSkyDraw(Material *skytex)
 {
   // parse the patches composing sky texture for the tallest one
   // patches are usually RSKY1,RSKY2... and unique
@@ -52,7 +51,7 @@ void R_SetupSkyDraw(Texture *skytex)
   // note: the TEXTURES lump doesn't have the taller size of Legacy
   //       skies, but the patches it use will give the right size
 
-  if (skytex->height > 128)
+  if (skytex->tex[0].t->height > 128)
     {
       // horizon line on 256x240 freelook textures of Legacy or heretic
       skytexturemid = 200;
@@ -63,7 +62,7 @@ void R_SetupSkyDraw(Texture *skytex)
       // the horizon line in a 256x128 sky texture
       skytexturemid = 100;
       // double the texture vertically, bleeergh!!
-      skytex->yscale >>= 1;
+      skytex->tex[0].yscale /= 2;
     }
 
 

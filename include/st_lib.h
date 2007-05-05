@@ -56,7 +56,7 @@ class HudNumber : public HudWidget
 {
 private:
   int digits;  ///< max # of digits in the number
-  class Texture **nums; ///< graphics for numbers 0-9, nums[10] is the minus sign
+  class Material **nums; ///< graphics for numbers 0-9, nums[10] is the minus sign
 
 protected:
   const int *n; ///< pointer to current value
@@ -65,7 +65,7 @@ protected:
   virtual void Draw();
 
 public:
-  HudNumber(int x, int y, int digits, const int *number, Texture **tex);
+  HudNumber(int x, int y, int digits, const int *number, Material **tex);
 
   virtual void Update(bool force);  
   void Set(const int *nnum) { n = nnum; }
@@ -77,10 +77,10 @@ public:
 class HudPercent : public HudNumber
 {
 private:
-  Texture *pcent; ///< percent sign graphic
+  Material *pcent; ///< percent sign graphic
 
 public:
-  HudPercent(int x, int y, const int *number, Texture **tex, Texture *percent);
+  HudPercent(int x, int y, const int *number, Material **tex, Material *percent);
   virtual void Update(bool force);
 };
 
@@ -92,12 +92,12 @@ class HudMultIcon : public HudWidget
 private:
   int     oldinum; ///< previous icon number
   const int *inum; ///< pointer to current icon number, -1 is a magic value meaning no icon is drawn
-  Texture **icons; ///< array of icons
+  Material **icons; ///< array of icons
 
   virtual void Draw();
 
 public:
-  HudMultIcon(int x, int y, const int *inum, Texture **tex);
+  HudMultIcon(int x, int y, const int *inum, Material **tex);
   virtual void Update(bool force);
 };
 
@@ -110,12 +110,12 @@ private:
   // center-justified location of icon
   bool     oldstatus;  ///< last icon value
   const bool *status;  ///< pointer to current icon status
-  Texture  *icons[2];  ///< The icons. If p[0] == NULL, draw background instead
+  Material  *icons[2];  ///< The icons. If p[0] == NULL, draw background instead
 
   virtual void Draw();
 
 public:
-  HudBinIcon(int x, int y, const bool *status, Texture *p0, Texture *p1);
+  HudBinIcon(int x, int y, const bool *status, Material *p0, Material *p1);
   virtual void Update(bool force);
 };
 
@@ -128,12 +128,12 @@ protected:
   int minval, maxval; ///< min and max values
   int   oldval, cval; ///< old and current values
   const int     *val; ///< pointer to current value
-  Texture      **tex; ///< Slider graphics. See the Draw() implementation.
+  Material      **tex; ///< Slider graphics. See the Draw() implementation.
 
   virtual void Draw();
 
 public:
-  HudSlider(int x, int y, const int *v, int mi, int ma, Texture **t);
+  HudSlider(int x, int y, const int *v, int mi, int ma, Material **t);
   virtual void Update(bool force);
 };
 
@@ -145,7 +145,7 @@ protected:
   virtual void Draw();
 
 public:
-  HexenHudSlider(int x, int y, const int *v, int mi, int ma, Texture **t)
+  HexenHudSlider(int x, int y, const int *v, int mi, int ma, Material **t)
     : HudSlider(x, y, v, mi, ma, t) {};
 };
 
@@ -161,16 +161,16 @@ protected:
   const int  *itemuse; ///< counter for the item use animation
   const struct inventory_t *slots;
   const int *selected; ///< selected slot number 0-6
-  Texture **nums;  ///< small numbers 0-9
-  Texture **items; ///< item graphics
-  Texture **tex;   ///< inventory graphics
+  Material **nums;  ///< small numbers 0-9
+  Material **items; ///< item graphics
+  Material **tex;   ///< inventory graphics
 
   virtual void Draw();
   void DrawNumber(int x, int y, int val);
 
 public:
   HudInventory(int x, int y, const bool *op, const int *iu, const inventory_t *vals,
-	       const int *sel, Texture **nn, Texture **it, Texture **t);
+	       const int *sel, Material **nn, Material **it, Material **t);
   virtual void Update(bool force);
 };
 
@@ -185,7 +185,7 @@ protected:
 
 public:
   HexenHudInventory(int x, int y, const bool *op, const int *iu, const inventory_t *vals,
-		    const int *sel, Texture **nn, Texture **it, Texture **t)
+		    const int *sel, Material **nn, Material **it, Material **t)
     : HudInventory(x, y, op, iu, vals, sel, nn, it, t) {};
 };
 

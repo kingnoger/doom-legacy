@@ -1037,9 +1037,9 @@ int Map::Serialize(LArchive &a)
       if (ss->ceilingheight != SHORT(ms->ceilingheight))
 	diff |= SD_CEILHT;
 
-      if (ss->floorpic != tc.GetID(ms->floorpic, TEX_floor))
+      if (ss->floorpic   && strncmp(ss->floorpic->GetName(), ms->floorpic, 8))
 	diff |= SD_FLOORPIC;
-      if (ss->ceilingpic != tc.GetID(ms->ceilingpic, TEX_floor))
+      if (ss->ceilingpic && strncmp(ss->ceilingpic->GetName(), ms->ceilingpic, 8))
 	diff |= SD_CEILPIC;
 
       if (ss->lightlevel != SHORT(ms->lightlevel)) diff |= SD_LIGHT;
@@ -1071,9 +1071,9 @@ int Map::Serialize(LArchive &a)
 	  if (diff & SD_CEILHT)  a << ss->ceilingheight;
 
 	  if (diff & SD_FLOORPIC)
-	    a.Write((byte *)tc[ss->floorpic]->GetName(), 8);
+	    a.Write((byte*)ss->floorpic->GetName(), 8);
 	  if (diff & SD_CEILPIC)
-	    a.Write((byte *)tc[ss->ceilingpic]->GetName(), 8);
+	    a.Write((byte*)ss->ceilingpic->GetName(), 8);
 
 	  if (diff & SD_LIGHT)    a << ss->lightlevel;
 	  if (diff & SD_SPECIAL)  a << ss->special;
@@ -1134,11 +1134,11 @@ int Map::Serialize(LArchive &a)
 	    diff |= LD_S1TEXOFF;
 
 	  // do texture diffing by comparing names to be sure
-	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[temp].toptexture, 8))
+	  if (si->toptexture && strncmp(si->toptexture->GetName(), msd[temp].toptexture, 8))
 	    diff |= LD_S1TOPTEX;
-	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[temp].bottomtexture, 8))
+	  if (si->bottomtexture && strncmp(si->bottomtexture->GetName(), msd[temp].bottomtexture, 8))
 	    diff |= LD_S1BOTTEX;
-	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[temp].midtexture, 8))
+	  if (si->midtexture && strncmp(si->midtexture->GetName(), msd[temp].midtexture, 8))
 	    diff |= LD_S1MIDTEX;
         }
       if (li->sideptr[1])
@@ -1149,11 +1149,11 @@ int Map::Serialize(LArchive &a)
 	  if (si->textureoffset != SHORT(msd[temp].textureoffset))
 	    diff2 |= LD_S2TEXOFF;
 
-	  if (si->toptexture && strncmp(tc[si->toptexture]->GetName(), msd[temp].toptexture, 8))
+	  if (si->toptexture && strncmp(si->toptexture->GetName(), msd[temp].toptexture, 8))
 	    diff2 |= LD_S2TOPTEX;
-	  if (si->bottomtexture && strncmp(tc[si->bottomtexture]->GetName(), msd[temp].bottomtexture, 8))
+	  if (si->bottomtexture && strncmp(si->bottomtexture->GetName(), msd[temp].bottomtexture, 8))
 	    diff2 |= LD_S2BOTTEX;
-	  if (si->midtexture && strncmp(tc[si->midtexture]->GetName(), msd[temp].midtexture, 8))
+	  if (si->midtexture && strncmp(si->midtexture->GetName(), msd[temp].midtexture, 8))
 	    diff2 |= LD_S2MIDTEX;
 
 	  if (diff2)
@@ -1175,15 +1175,17 @@ int Map::Serialize(LArchive &a)
 
 	  si = li->sideptr[0];
 	  if (diff & LD_S1TEXOFF) a << si->textureoffset;
+
 	  if (diff & LD_S1TOPTEX) a << si->toptexture;
 	  if (diff & LD_S1BOTTEX) a << si->bottomtexture;
 	  if (diff & LD_S1MIDTEX) a << si->midtexture;
 
 	  si = li->sideptr[1];
 	  if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
-	  if (diff2 & LD_S2TOPTEX) a << si->toptexture;
-	  if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;
-	  if (diff2 & LD_S2MIDTEX) a << si->midtexture;
+
+	  if (diff & LD_S2TOPTEX) a << si->toptexture;
+	  if (diff & LD_S2BOTTEX) a << si->bottomtexture;
+	  if (diff & LD_S2MIDTEX) a << si->midtexture;
         }
     }
   a << (temp = MARK_END);
@@ -1370,12 +1372,12 @@ int Map::Unserialize(LArchive &a)
       if (diff & SD_FLOORPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].floorpic = tc.GetID(picname, TEX_floor);
+	  sectors[i].floorpic = materials.Get8char(picname, TEX_floor);
         }
       if (diff & SD_CEILPIC)
         {
 	  a.Read((byte *)picname, 8);
-	  sectors[i].ceilingpic = tc.GetID(picname, TEX_floor);
+	  sectors[i].ceilingpic = materials.Get8char(picname, TEX_floor);
         }
       if (diff & SD_LIGHT)    a << sectors[i].lightlevel;
       if (diff & SD_SPECIAL)  a << sectors[i].special;
@@ -1415,15 +1417,17 @@ int Map::Unserialize(LArchive &a)
 
       si = li->sideptr[0];
       if (diff & LD_S1TEXOFF) a << si->textureoffset;
+
       if (diff & LD_S1TOPTEX) a << si->toptexture;
       if (diff & LD_S1BOTTEX) a << si->bottomtexture;
       if (diff & LD_S1MIDTEX) a << si->midtexture;
 
       si = li->sideptr[1];
       if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
-      if (diff2 & LD_S2TOPTEX) a << si->toptexture;
-      if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;
-      if (diff2 & LD_S2MIDTEX) a << si->midtexture;
+
+      if (diff & LD_S2TOPTEX) a << si->toptexture;
+      if (diff & LD_S2BOTTEX) a << si->bottomtexture;
+      if (diff & LD_S2MIDTEX) a << si->midtexture;
     }
 
   //----------------------------------------------

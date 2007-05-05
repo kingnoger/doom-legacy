@@ -61,9 +61,9 @@ private:
 
   bool am_recalc;   ///< screen size has changed...
 
-  class Texture *mapback; ///< possible automap background
+  class Material *mapback; ///< possible automap background
 
-  Texture *marknums[10]; // numbers used for marking by the automap
+  Material *marknums[10]; // numbers used for marking by the automap
 
   static const int AM_NUMMARKPOINTS = 10;
   mpoint_t markpoints[AM_NUMMARKPOINTS];   // where the points are

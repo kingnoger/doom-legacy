@@ -25,6 +25,7 @@
 
 #include "doomdef.h"
 #include "r_data.h"
+#include "hardware/oglshaders.h"
 
 
 #ifndef YYSTYPE
@@ -42,13 +43,14 @@ union yy_t
 /// temp variables for building Textures
 struct ntexture_driver
 {
-  bool is_sprite;
-  std::string texname;
-  class Texture *t;
-  LumpTexture dummy;
-  bool texeloffsets;
+  class ShaderProg *p;
+  bool vertex_src;
 
-  ntexture_driver() : dummy("dummy", 0, 0, 0) {}
+  class Material *m;
+  bool is_sprite;
+  bool texeloffsets;
+  int  tex_unit;
+  struct Material::TextureRef *tr;
 };
 
 

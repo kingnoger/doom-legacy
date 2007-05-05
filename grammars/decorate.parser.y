@@ -44,6 +44,7 @@
 %type num {float}
 
 %include {
+#include "z_zone.h"
 #include "g_decorate.h"
 #include "sounds.h"
 #include "parser_driver.h"

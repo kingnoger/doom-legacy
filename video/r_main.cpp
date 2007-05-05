@@ -697,11 +697,11 @@ void R_ServerInit()
 {
   // server needs to know the texture names and dimensions
   CONS_Printf("InitTextures...\n");
-  tc.Clear();
-  tc.SetDefaultItem("DEF_TEX");
-  tc.ReadTextures();
+  materials.Clear();
+  materials.SetDefaultItem("DEF_TEX");
+  materials.ReadTextures();
 
-  //tc.Inventory();
+  //materials.Inventory();
 
   // set the default items for sprite and model caches
   CONS_Printf("InitSprites...\n");
@@ -716,6 +716,7 @@ int P_Read_ANIMDEFS(int lump);
 /// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
+  R_ServerInit();
   //TestAnims();
 
   // Read texture animations, insert them into the cache, replacing the originals.

@@ -26,6 +26,13 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 
+
+struct shader_attribs_t
+{
+  float tangent[3]; ///< surface tangent, points towards increasing s texture coord.
+};
+
+
 #ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
 
 #include "z_cache.h"
@@ -40,17 +47,15 @@ protected:
   GLenum type;      ///< Vertex or fragment shader?
   bool   ready;     ///< Compiled and functional?
 
+  void Compile(const char *code, int len);
+
 public:
-  Shader(const char *name, GLenum type);
+  Shader(const char *name, bool vertex_shader = true);
+  Shader(const char *name, const char *code, bool vertex_shader = true);
   ~Shader();
 
-  GLuint GetID() const { return shader_id; }
-  bool IsReady() const { return ready; }
-
-  bool Create();
-  bool Create(const char *code);
-
-  void Compile(const char *code, int len);
+  inline GLuint GetID() const { return shader_id; }
+  inline bool IsReady() const { return ready; }
 
   void PrintInfoLog();
 };
@@ -64,8 +69,10 @@ protected:
   /// Uniform variable locations in the linked program.
   struct
   {
-    GLint tex0; ///< Texture sampler 0
+    GLint tex0, tex1; ///< Texture units
     GLint t;
+    GLint eye_pos;
+    GLint tangent;
   } loc;
 
 public:
@@ -77,10 +84,43 @@ public:
   void AttachShader(Shader *s);
   void Link();
   void Use();
-  void SetUniforms(float t);
+  void SetUniforms();
+  void SetAttributes(shader_attribs_t *a);
 
   void PrintInfoLog();
 };
 
+#else // GL_VERSION_2_0
+
+// Inert dummy implementation
+class ShaderProg
+{
+  static void DisableShaders() {};
+  void Use() {};
+};
+
 #endif // GL_VERSION_2_0
+
+
+/// \brief Cache for Shaders
+class shader_cache_t : public cache_t<Shader>
+{
+protected:
+  virtual Shader *Load(const char *name) { return NULL; };
+};
+
+extern shader_cache_t shaders;
+
+
+/// \brief Cache for ShaderProgs
+class shaderprog_cache_t : public cache_t<ShaderProg>
+{
+protected:
+  virtual ShaderProg *Load(const char *name) { return new ShaderProg(name); };
+};
+
+extern shaderprog_cache_t shaderprogs;
+
+
+
 #endif

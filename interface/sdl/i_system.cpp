@@ -246,9 +246,19 @@ void I_GetEvent()
 }
 
 
+void GrabInput_OnChange()
+{
+  if (cv_grabinput.value)
+    I_GrabMouse();
+  else
+    I_UngrabMouse();
+}
+
+consvar_t cv_grabinput = {"grabinput", "1", CV_SAVE | CV_CALL, CV_OnOff, GrabInput_OnChange};
+
 void I_GrabMouse()
 {
-  if (SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_OFF)
+  if (cv_grabinput.value && SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_OFF)
     SDL_WM_GrabInput(SDL_GRAB_ON);
 
   SDL_ShowCursor(SDL_DISABLE);
@@ -482,8 +492,6 @@ void I_SysInit()
 
   // Window title
   SDL_WM_SetCaption(LEGACY_VERSION_BANNER, "Doom Legacy");
-
-  I_StartupGraphics(); // we need a window for grabbing input!
 }
 
 
@@ -598,10 +606,11 @@ void I_Quit()
   quitting = true;
 
   game.SV_Reset(true);
-  I_ShutdownSound();
-  I_ShutdownCD();
 
   M_SaveConfig(NULL);
+
+  I_ShutdownSound();
+  I_ShutdownCD();
   I_ShutdownJoystick();
   I_ShutdownGraphics();
   I_ShutdownSystem();
@@ -640,8 +649,9 @@ void I_Error(const char *error, ...)
   //game.net->QuitNetGame();
 
   I_ShutdownSound();
-  I_ShutdownGraphics();
+  I_ShutdownCD();
   I_ShutdownJoystick();
+  I_ShutdownGraphics();
   // shutdown everything else which was registered
   I_ShutdownSystem();
 

@@ -79,6 +79,7 @@ extern consvar_t cv_cam_height;
 extern consvar_t cv_cam_speed;
 
 // client input (g_input.cpp)
+extern consvar_t cv_grabinput;
 extern consvar_t cv_controlperkey;
 extern consvar_t cv_usemouse[2];
 extern consvar_t cv_mousesensx[2];

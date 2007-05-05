@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -45,15 +44,8 @@
 planefunction_t         floorfunc;
 planefunction_t         ceilingfunc;
 
-//
-// opening
-//
 
-// Here comes the obnoxious "visplane".
-/*#define                 MAXVISPLANES 128 //SoM: 3/20/2000
-visplane_t*             visplanes;
-visplane_t*             lastvisplane;*/
-
+// From here came the obnoxious "visplane bug".
 //SoM: 3/23/2000: Use Boom visplane hashing.
 #define           MAXVISPLANES      128
 
@@ -71,15 +63,13 @@ planemgr_t              ffloor[MAXFFLOORS];
 int                     numffloors;
 
 //SoM: 3/23/2000: Boom visplane hashing routine.
-inline unsigned visplane_hash(int picnum, int lightlevel, fixed_t height)
+inline unsigned visplane_hash(Material *pic, int lightlevel, fixed_t height)
 {
-  return unsigned(picnum*3 + lightlevel + height.value()*7) & (MAXVISPLANES-1);
+  return unsigned(long(pic)*3 + lightlevel + height.value()*7) & (MAXVISPLANES-1);
 }
 
-// ?
-/*#define MAXOPENINGS     MAXVIDWIDTH*128
-short                   openings[MAXOPENINGS];
-short*                  lastopening;*/
+
+//#define MAXOPENINGS     MAXVIDWIDTH*128
 
 //SoM: 3/23/2000: Use boom opening limit removal
 size_t maxopenings;
@@ -169,7 +159,8 @@ static int bgofs;
 static int wtofs=0;
 #endif
 
-static Texture *ds_tex; ///< current span texture
+// current span texture properties
+static fixed_t ds_tex_xscale, ds_tex_yscale; 
 
 void R_MapPlane(int y, int x1, int x2) // t1
 {
@@ -189,8 +180,8 @@ void R_MapPlane(int y, int x1, int x2) // t1
     {
       cachedheight[y] = planeheight;
       distance = cacheddistance[y] = planeheight * yslope[y];
-      ds_xstep = cachedxstep[y] = distance * basexscale * ds_tex->xscale;
-      ds_ystep = cachedystep[y] = distance * baseyscale * ds_tex->yscale;
+      ds_xstep = cachedxstep[y] = distance * basexscale * ds_tex_xscale;
+      ds_ystep = cachedystep[y] = distance * baseyscale * ds_tex_yscale;
     }
   else
     {
@@ -202,8 +193,8 @@ void R_MapPlane(int y, int x1, int x2) // t1
   angle_t angle = (currentplane->viewangle + xtoviewangle[x1])>>ANGLETOFINESHIFT;
   // SoM: Wouldn't it be faster just to add viewx and viewy to the plane's
   // x/yoffs anyway?? (Besides, it serves my purpose well for portals!)
-  ds_xfrac = /*viewx +*/ ((finecosine[angle] * length) + xoffs) * ds_tex->xscale;
-  ds_yfrac = /*-viewy*/ (yoffs - (finesine[angle] * length)) * ds_tex->yscale;
+  ds_xfrac = /*viewx +*/ ((finecosine[angle] * length) + xoffs) * ds_tex_xscale;
+  ds_yfrac = /*-viewy*/ (yoffs - (finesine[angle] * length)) * ds_tex_yscale;
 
 #ifdef OLDWATER
   if (itswater)
@@ -313,8 +304,6 @@ void Rend::R_ClearPlanes()
     }
 #endif
 
-    //lastvisplane = visplanes;
-
     //SoM: 3/23/2000
     for (i=0;i<MAXVISPLANES;i++)
       for (*freehead = visplanes[i], visplanes[i] = NULL; *freehead; )
@@ -355,54 +344,55 @@ static visplane_t *new_visplane(unsigned hash)
 //               meme hauteur, meme flattexture, meme lightlevel.
 //               Sinon en alloue un autre.
 //               Merde. Documentation en francais.
-visplane_t* Rend::R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff,
-			      fadetable_t* planecolormap, ffloor_t* ffloor)
+// TODO  R_FindPlane could use some cleanup/redesign...
+visplane_t* Rend::R_FindPlane(fixed_t height, Material *pic, int lightlevel, fixed_t xoff, fixed_t yoff,
+			      fadetable_t* planecolormap, ffloor_t* ffloor, bool sky)
 {
-    visplane_t* check;
-    unsigned    hash; //SoM: 3/23/2000
+  visplane_t* check;
+  unsigned    hash; //SoM: 3/23/2000
 
-    xoff += viewx; // SoM
-    yoff = -viewy + yoff;
+  xoff += viewx; // SoM
+  yoff = -viewy + yoff;
 
-    if (picnum == skyflatnum)
+  if (sky)
     {
-        height = 0;                     // all skys map together
-        lightlevel = 0;
+      height = 0;                     // all skys map together
+      lightlevel = 0;
     }
 
+  //SoM: 3/23/2000: New visplane algorithm uses hash table -- killough
+  hash = visplane_hash(pic,lightlevel,height);
 
-    //SoM: 3/23/2000: New visplane algorithm uses hash table -- killough
-    hash = visplane_hash(picnum,lightlevel,height);
+  for (check = visplanes[hash]; check; check = check->next)
+    if (height == check->height &&
+	pic == check->pic &&
+	lightlevel == check->lightlevel &&
+	xoff == check->xoffs &&
+	yoff == check->yoffs &&
+	planecolormap == check->extra_colormap &&
+	!ffloor && !check->ffloor &&
+	check->viewz == viewz &&
+	check->viewangle == viewangle)
+      return check;
 
-    for (check=visplanes[hash]; check; check=check->next)
-      if (height == check->height &&
-          picnum == check->picnum &&
-          lightlevel == check->lightlevel &&
-          xoff == check->xoffs &&
-          yoff == check->yoffs &&
-          planecolormap == check->extra_colormap &&
-          !ffloor && !check->ffloor &&
-          check->viewz == viewz &&
-          check->viewangle == viewangle)
-        return check;
+  check = new_visplane(hash);
 
-    check = new_visplane(hash);
+  check->sky = sky;
+  check->height = height;
+  check->pic = pic;
+  check->lightlevel = lightlevel;
+  check->minx = vid.width;
+  check->maxx = -1;
+  check->xoffs = xoff;
+  check->yoffs = yoff;
+  check->extra_colormap = planecolormap;
+  check->ffloor = ffloor;
+  check->viewz = viewz;
+  check->viewangle = viewangle;
 
-    check->height = height;
-    check->picnum = picnum;
-    check->lightlevel = lightlevel;
-    check->minx = vid.width;
-    check->maxx = -1;
-    check->xoffs = xoff;
-    check->yoffs = yoff;
-    check->extra_colormap = planecolormap;
-    check->ffloor = ffloor;
-    check->viewz = viewz;
-    check->viewangle = viewangle;
+  memset (check->top, 0xff, sizeof(check->top));
 
-    memset (check->top, 0xff, sizeof(check->top));
-
-    return check;
+  return check;
 }
 
 
@@ -453,11 +443,12 @@ visplane_t*  R_CheckPlane( visplane_t*   pl,
       pl->minx = unionl, pl->maxx = unionh;
     else
       {
-        unsigned hash = visplane_hash(pl->picnum, pl->lightlevel, pl->height);
+        unsigned hash = visplane_hash(pl->pic, pl->lightlevel, pl->height);
         visplane_t *new_pl = new_visplane(hash);
   
+	new_pl->sky = pl->sky;
         new_pl->height = pl->height;
-        new_pl->picnum = pl->picnum;
+        new_pl->pic = pl->pic;
         new_pl->lightlevel = pl->lightlevel;
         new_pl->xoffs = pl->xoffs;           // killough 2/28/98
         new_pl->yoffs = pl->yoffs;
@@ -687,18 +678,13 @@ void Rend::R_DrawPlanes()
 {
   visplane_t*         pl;
   int  x, i;
-  Texture *skytex = m->skytexture;
-
-#ifdef OLDWATER
-  //added:18-02-98:WATER!
-  bool             watertodraw;
-#endif
+  Material *skytex = m->skytexture;
 
   //
   // DRAW NON-WATER VISPLANES FIRST
   //
 #ifdef OLDWATER
-  watertodraw = false;
+  bool watertodraw = false;
   itswater = false;
 #endif
 
@@ -716,10 +702,10 @@ void Rend::R_DrawPlanes()
 #endif
 
         // sky flat
-        if (pl->picnum == skyflatnum)
+        if (pl->sky)
 	  {
             //added:12-02-98: use correct aspect ratio scale
-            dc_iscale = (1 / pspriteyscale) * skytex->yscale;
+            dc_iscale = (1 / pspriteyscale) * skytex->tex[0].yscale;
 
 // Kik test non-moving sky .. weird
 // cy = centery;
@@ -737,7 +723,7 @@ void Rend::R_DrawPlanes()
 #endif
 	      dc_colormap = base_colormap;
             dc_texturemid = skytexturemid;
-            dc_texheight = skytex->height;
+            dc_texheight = skytex->tex[0].t->height;
             for (x=pl->minx ; x <= pl->maxx ; x++)
 	      {
                 dc_yl = pl->top[x];
@@ -863,13 +849,17 @@ void Rend::R_DrawSinglePlane(visplane_t* pl, bool handlesource)
 
   if (handlesource)
     {
-      ds_tex = tc[pl->picnum];
-      if (!ds_tex)
+      Material *m = pl->pic;
+      if (!m)
 	return; // HACK, should be done more intelligently (earlier!)
 
-      ds_source = ds_tex->GetData();
-      ds_xbits = ds_tex->w_bits;
-      ds_ybits  = ds_tex->h_bits;
+      ds_tex_xscale = m->tex[0].xscale;
+      ds_tex_yscale = m->tex[0].yscale;
+
+      Texture *t = m->tex[0].t;
+      ds_source = t->GetData();
+      ds_xbits  = t->w_bits;
+      ds_ybits  = t->h_bits;
     }
 
   xoffs = pl->xoffs;

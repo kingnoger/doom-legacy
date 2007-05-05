@@ -36,6 +36,7 @@
 #include "info.h"
 #include "tables.h"
 #include "w_wad.h"
+#include "z_zone.h"
 
 #include "hardware/md3.h"
 
@@ -408,11 +409,7 @@ sprite_t::~sprite_t()
 //                           spritecache_t
 //==========================================================================
 
-spritecache_t sprites(PU_SPRITE);
-
-spritecache_t::spritecache_t(memtag_t tag)
-  : cache_t(tag)
-{}
+spritecache_t sprites;
 
 
 // used when building a sprite from lumps
@@ -428,7 +425,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
   if (frame > maxframe)
     maxframe = frame;
 
-  Texture *t = tc.GetPtr(name, TEX_sprite);
+  Material *mat = materials.Get(name, TEX_sprite);
 
   if (rot == 0)
     {
@@ -444,7 +441,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
       sprtemp[frame].rotate = 0;
       for (int r = 0; r < 8; r++)
         {
-          sprtemp[frame].tex[r] = t;
+          sprtemp[frame].tex[r] = mat;
           sprtemp[frame].flip[r] = flip;
         }
     }
@@ -458,14 +455,14 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
       sprtemp[frame].rotate = 1;
       rot--; // make 0 based
 
-      if (sprtemp[frame].tex[rot] != (Texture *)(-1) && devparm)
+      if (sprtemp[frame].tex[rot] != (Material *)(-1) && devparm)
         CONS_Printf ("R_InitSprites: Sprite %s : %c : %c "
                      "has two lumps mapped to it\n",
                      name, 'A'+frame, '1'+rot);
 
       // lumppat & lumpid are the same for original Doom, but different
       // when using sprites in pwad : the lumppat points the new graphics
-      sprtemp[frame].tex[rot] = t;
+      sprtemp[frame].tex[rot] = mat;
       sprtemp[frame].flip[rot] = flip;
     }
 }
@@ -473,7 +470,7 @@ static void R_InstallSpriteLump(const char *name, int frame, int rot, bool flip)
 
 
 // We assume that the sprite is in Doom sprite format
-cacheitem_t *spritecache_t::Load(const char *p)
+sprite_t *spritecache_t::Load(const char *p)
 {
   // seeks a S_START lump in each file, adds any
   // consequental lumps starting with p to the sprite
@@ -564,7 +561,7 @@ cacheitem_t *spritecache_t::Load(const char *p)
         for (l = 0; l < 8; l++)
           // we test the patch lump, or the id lump whatever
           // if it was not loaded the two are -1
-          if (sprtemp[i].tex[l] == (Texture *)(-1))
+          if (sprtemp[i].tex[l] == (Material *)(-1))
             I_Error("Sprite %s frame %c is missing rotations", p, i+'A');
         break;
       }
@@ -845,7 +842,7 @@ bool spritepres_t::Draw(const Actor *p)
     
   spriteframe_t *sprframe = &spr->spriteframes[frame];
 
-  Texture  *t;
+  Material *mat;
   bool      flip;
 
   // decide which patch to use for sprite relative to player
@@ -855,13 +852,13 @@ bool spritepres_t::Draw(const Actor *p)
       angle_t ang = R_PointToAngle2(fixed_t(oglrenderer->x), fixed_t(oglrenderer->y), p->pos.x, p->pos.y);
       unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
 
-      t = sprframe->tex[rot];
+      mat = sprframe->tex[rot];
       flip = sprframe->flip[rot];
     }
   else
     {
       // use single rotation for all views
-      t = sprframe->tex[0];
+      mat = sprframe->tex[0];
       flip = sprframe->flip[0];
     }
 
@@ -888,7 +885,7 @@ bool spritepres_t::Draw(const Actor *p)
   */
 
   // hardware renderer part
-  oglrenderer->DrawSpriteItem(p->pos, t, flip);
+  oglrenderer->DrawSpriteItem(p->pos, mat, flip);
 
 
   //CONS_Printf("spritepres_t::Draw: Not yet implemented\n");

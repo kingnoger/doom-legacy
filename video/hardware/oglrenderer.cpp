@@ -40,8 +40,9 @@
 #include "r_sprite.h"
 #include "am_map.h"
 #include "w_wad.h" // Need file cache to get playpal.
+#include "z_zone.h"
 
-extern int skyflatnum;
+
 extern trace_t trace;
 
 void MD3_InitNormLookup();
@@ -59,7 +60,7 @@ OGLRenderer::OGLRenderer()
   screen = NULL;
   curssec = NULL;
 
-  palette = static_cast<byte*>(fc.CacheLumpName("PLAYPAL", PU_STATIC));
+  palette = static_cast<RGB_t*>(fc.CacheLumpName("PLAYPAL", PU_STATIC));
 
   mp = NULL;
 
@@ -91,6 +92,7 @@ OGLRenderer::OGLRenderer()
 OGLRenderer::~OGLRenderer()
 {
   CONS_Printf("Closing OpenGL renderer.\n");
+  Z_Free(palette);
   // No need to release screen. SDL does it automatically.
 }
 
@@ -106,9 +108,10 @@ bool OGLRenderer::WriteScreenshot(const char *fname) { return false; }
 bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen) { return false; }
 void OGLRenderer::Setup2DMode() {}
 void OGLRenderer::Setup3DMode() {}
-void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, GLuint tex, GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright) {}
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex) {}
-void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex) {}
+void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, Material *mat,
+				GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright) {}
+void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat) {}
+void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *mat) {}
 void OGLRenderer::ClearAutomap() {}
 void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {}
 void OGLRenderer::Render3DView(PlayerInfo *player) {}
@@ -140,6 +143,40 @@ void OGLRenderer::InitGLState()
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_CULL_FACE);
+
+
+  //glEnable(GL_NORMALIZE); // TODO expensive...
+
+  // TEST lighting
+  //glEnable(GL_LIGHTING);
+  //glEnable(GL_COLOR_MATERIAL);
+  //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); // like this we could use glColor to do lighting...HACKy
+
+  GLfloat mat_ad[]  = { 1.0, 1.0, 1.0, 1.0 };
+
+  //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, );
+  //glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, );
+  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_ad);
+  //glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, );
+  //glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 0.0);
+  //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, );
+
+  GLfloat lmodel_ambient[] = { 1.0, 1.0, 1.0, 1.0 };
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+  //glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+  //glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_FALSE);
+
+  // TEST positional/directional light
+  //glEnable(GL_LIGHT0);
+  GLfloat light_ambient[]  = { 0.0, 0.0, 0.0, 1.0 };
+  GLfloat light_diffuse[]  = { 1.0, 1.0, 1.0, 1.0 };
+  GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+  glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+
+  GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 }; // infinitely far away
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 
 
@@ -162,6 +199,7 @@ void OGLRenderer::ClearDrawColor()
 {
   glColor4f(1.0, 1.0, 1.0, 1.0);
 }
+
 
 
 // Writes a screen shot to the specified file. Writing is done in BMP
@@ -234,6 +272,10 @@ bool OGLRenderer::WriteScreenshot(const char *fname)
 
 bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 {
+  // Some platfroms silently destroy OpenGL textures when changing
+  // resolution. Unload them all, just in case.
+  materials.ClearGLTextures();
+
   Uint32 surfaceflags;
   int mindepth = 16;
   int temp;
@@ -298,8 +340,6 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 
   workinggl = true;
 
-  InitGLState();
-
   // ADD: currently we only use one viewport, so we set it here. When
   // multiple subwindows are added this should be set somewhere else.
   viewportw = screen->w;
@@ -312,14 +352,11 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   else 
     Setup3DMode();
 
+  InitGLState();
+
   // Clear any old GL errors.
   while (glGetError() != GL_NO_ERROR)
     ;
-
-#ifdef TEST_SHADERS
-  void TestShaders();
-  TestShaders();
-#endif
 
   return true;
 }
@@ -332,7 +369,7 @@ void OGLRenderer::Setup2DMode()
   consolemode = true;
   ClearDrawColor();
 
-  //glDisable(GL_LIGHTING);
+  glDisable(GL_LIGHTING);
   glDisable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -367,7 +404,7 @@ void OGLRenderer::Setup3DMode()
   consolemode = false;
   ClearDrawColor();
 
-  // glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -382,10 +419,10 @@ void OGLRenderer::Setup3DMode()
 }
 
 // Draws a square defined by the parameters. The square is filled by
-// the specified texture.
+// the specified Material.
 void OGLRenderer::Draw2DGraphic(GLfloat left, GLfloat bottom,
 				GLfloat right, GLfloat top,
-				GLuint tex,
+				Material *mat,
 				GLfloat texleft, GLfloat texbottom,
 				GLfloat texright, GLfloat textop)
 {
@@ -400,8 +437,7 @@ void OGLRenderer::Draw2DGraphic(GLfloat left, GLfloat bottom,
 
   //  printf("Drawing tex %d at (%.2f, %.2f) (%.2f, %.2f).\n", tex, top, left, bottom, right);
 
-  glBindTexture(GL_TEXTURE_2D, tex);
-
+  mat->GLUse();
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
   glVertex2f(left, bottom);
@@ -417,7 +453,7 @@ void OGLRenderer::Draw2DGraphic(GLfloat left, GLfloat bottom,
 // Just like the earlier one, except the coordinates are given in Doom
 // units. (screen is 320 wide and 200 high.)
 
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex, int flags)
+void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
 {
   // OpenGL origin is at the bottom left corner. Doom origin is at top left.
   // Texture coordinates follow the Doom convention.
@@ -440,37 +476,41 @@ void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Texture *tex, int flags)
       t = y / viewporth;
     }
 
+  Material::TextureRef &tr = mat->tex[0];
+
   // size scaling
   // assume offsets in world units
   if (flags & V_SSIZE)
     {
-      l -= tex->leftoffs / BASEVIDWIDTH;
-      r = l + tex->worldwidth / BASEVIDWIDTH;
+      l -= mat->leftoffs / BASEVIDWIDTH;
+      r = l + tr.worldwidth / BASEVIDWIDTH;
 
-      t -= tex->topoffs / BASEVIDHEIGHT;
-      b = t + tex->worldheight / BASEVIDHEIGHT;
+      t -= mat->topoffs / BASEVIDHEIGHT;
+      b = t + tr.worldheight / BASEVIDHEIGHT;
     }
   else
     {
-      l -= tex->leftoffs / viewportw;
-      r = l + tex->worldwidth / viewportw;
+      l -= mat->leftoffs / viewportw;
+      r = l + tr.worldwidth / viewportw;
 
-      t -= tex->topoffs / viewporth;
-      b = t + tex->worldheight / viewporth;
+      t -= mat->topoffs / viewporth;
+      b = t + tr.worldheight / viewporth;
     }
 
-  Draw2DGraphic(l, 1-b, r, 1-t, tex->GLPrepare());
+  Draw2DGraphic(l, 1-b, r, 1-t, mat);
 }
 
-void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Texture *tex)
+void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *mat)
 {
   //  CONS_Printf("w: %f, h: %f, texw: %f, texh: %f.\n", width, height, texwidth, texheight);
   //  CONS_Printf("xrepeat %.2f, yrepeat %.2f.\n", width/texwidth, height/texheight);
   // here we may ignore offsets (original Doom behavior)
+  Material::TextureRef &tr = mat->tex[0];
+
   Draw2DGraphic(x/BASEVIDWIDTH, 1-(y+height)/BASEVIDHEIGHT,
 		(x+width)/BASEVIDWIDTH, 1-y/BASEVIDHEIGHT,
-		tex->GLPrepare(),
-		0.0, height/tex->worldheight, width/tex->worldwidth, 0.0);
+		mat,
+		0.0, height/tr.worldheight, width/tr.worldwidth, 0.0);
 }
 
 
@@ -483,17 +523,11 @@ void OGLRenderer::ClearAutomap()
 /// Draws the specified map line to screen.
 void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
 {
-  GLfloat c[4];
-  
-  if(!consolemode)
+  if (!consolemode)
     I_Error("Trying to draw level map while in 3D mode.\n");
 
   // Set color.
-  c[0] = palette[3*color]/255.0;
-  c[1] = palette[3*color+1]/255.0;
-  c[2] = palette[3*color+2]/255.0;
-  c[3] = 1.0;
-  glColor4fv(c);
+  glColor3f(palette[color].r/255.0, palette[color].g/255.0, palette[color].b/255.0);
 
   // Do not use a texture.
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -527,8 +561,8 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
     {
       // render skybox
       // TODO proper sequental rotation so we can do CTF_Face -style maps!
-      theta = Degrees(player->pov->yaw + mp->skybox_pov->yaw);
-      phi = Degrees(player->pov->pitch);
+      phi = Degrees(player->pov->yaw + mp->skybox_pov->yaw);
+      theta = Degrees(player->pov->pitch);
 
       Render3DView(mp->skybox_pov);
       glClear(GL_DEPTH_BUFFER_BIT);
@@ -536,8 +570,8 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
     }
 
   // render main view
-  theta = Degrees(player->pov->yaw);
-  phi = Degrees(player->pov->pitch);
+  phi = Degrees(player->pov->yaw);
+  theta = Degrees(player->pov->pitch);
   Render3DView(player->pov);
 
   // render crosshair
@@ -577,20 +611,20 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 
       Setup2DMode();
 
-      extern Texture* crosshair[];
+      extern Material *crosshair[];
       if (LocalPlayers[0].crosshair) // FIXME
 	{
 	  int c = LocalPlayers[0].crosshair & 3;
-	  Texture *t = crosshair[c-1];
+	  Material *mat = crosshair[c-1];
 
 	  GLfloat top, left, bottom, right;
 
-	  left   = (chx - t->leftoffs) / viewportw;
-	  right  = left + t->worldwidth / viewportw;
-	  top    = (chy + t->topoffs) / viewporth;
-	  bottom = top - t->worldheight / viewporth;
+	  left   = (chx - mat->leftoffs) / viewportw;
+	  right  = left + mat->worldwidth / viewportw;
+	  top    = (chy + mat->topoffs) / viewporth;
+	  bottom = top - mat->worldheight / viewporth;
 
-	  Draw2DGraphic(left, bottom, right, top, t->GLPrepare());
+	  Draw2DGraphic(left, bottom, right, top, mat);
 	}
     }
   else
@@ -617,8 +651,8 @@ void OGLRenderer::Render3DView(Actor *pov)
   z = pov->GetViewZ().Float();
 
   // Set up camera to look through pov's eyes.
-  glRotatef(-90.0-phi,  1.0, 0.0, 0.0);
-  glRotatef(90.0-theta, 0.0, 0.0, 1.0);
+  glRotatef(-90.0 - theta,  1.0, 0.0, 0.0);
+  glRotatef(90.0 - phi, 0.0, 0.0, 1.0);
   glTranslatef(-x, -y, -z);
 
   curssec = pov->subsector;
@@ -647,7 +681,7 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
 	I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
 #endif
 
-      Texture *t = sprframe->tex[0];
+      Material *mat = sprframe->tex[0];
 
       //added:02-02-98:spriteoffset should be abs coords for psprites, based on 320x200
       float tx = psp->sx.Float();// - t->leftoffs;
@@ -668,7 +702,7 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
       // local light
       */
       // TODO extralight, extra_colormap, planelights
-      Draw2DGraphic_Doom(tx, ty, t, V_SCALE);
+      Draw2DGraphic_Doom(tx, ty, mat, V_SCALE);
     }
 }
 
@@ -793,15 +827,12 @@ void OGLRenderer::RenderBSPNode(int nodenum)
 }
 
 /// Draws one single GL subsector polygon that is either a floor or a ceiling. 
-void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor, GLfloat xoff, GLfloat yoff)
+void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material *mat, bool isFloor, GLfloat xoff, GLfloat yoff)
 {
-  int curseg;
-  int firstseg;
-  int segcount;
   int loopstart, loopend, loopinc;
   
-  firstseg = ss->first_seg;
-  segcount = ss->num_segs;
+  int firstseg = ss->first_seg;
+  int segcount = ss->num_segs;
 
   // GL subsector polygons are clockwise when viewed from above.
   // OpenGL polygons are defined counterclockwise. Thus we need to go
@@ -816,11 +847,11 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     loopinc = 1;
   }
 
-  glBindTexture(GL_TEXTURE_2D, tex->GLPrepare());
-  
   glNormal3f(0.0, 0.0, -loopinc);
+
+  mat->GLUse();
   glBegin(GL_POLYGON);
-  for(curseg = loopstart; curseg != loopend; curseg += loopinc) {
+  for (int curseg = loopstart; curseg != loopend; curseg += loopinc) {
     seg_t *seg = &mp->segs[curseg];
     GLfloat x, y, tx, ty;
     vertex_t *v;
@@ -832,8 +863,8 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
     x = v->x.Float();
     y = v->y.Float();
     
-    tx = (x+xoff)/tex->worldwidth;
-    ty = 1.0 - (y+yoff)/tex->worldheight;
+    tx = (x+xoff)/mat->worldwidth;
+    ty = 1.0 - (y+yoff)/mat->worldheight;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
@@ -849,50 +880,37 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
 // future render also 3D floors and polyobjs.
 void OGLRenderer::RenderGLSubsector(int num)
 {
-#ifdef TEST_SHADERS
-  extern ShaderProg *sprog;
-  sprog->Use();
-  sprog->SetUniforms(mp->maptic/60.0);
-#endif
-
   int curseg;
-  int firstseg;
-  int segcount;
-  subsector_t *ss;
-  sector_t *s;
+
   ffloor_t *ff;
-  Texture *ftex;
-  GLfloat c[4];
-  byte light;
-  if(num < 0 || num > mp->numsubsectors)
+  Material *fmat;
+  if (num < 0 || num > mp->numsubsectors)
     return;
 
-
-  ss = &mp->subsectors[num];
-  firstseg = ss->first_seg;
-  segcount = ss->num_segs;
-  s = ss->sector;
+  subsector_t *ss = &mp->subsectors[num];
+  int firstseg = ss->first_seg;
+  int segcount = ss->num_segs;
+  sector_t *s = ss->sector;
 
   // Set up sector lighting.
-  light = LightLevelToLum(s->lightlevel);
-  c[0] = light/255.0;
-  c[1] = light/255.0;
-  c[2] = light/255.0;
-  c[3] = 1.0;
-  glColor4fv(c);
-  
+  GLfloat light = LightLevelToLum(s->lightlevel) / 255.0;
+  //glColor3f(light, light, 0.1*light);
+  GLfloat lmodel_ambient[] = {light, light, light, 1.0};
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
+
+
   // Draw ceiling texture, skip sky flats.
-  ftex = tc[s->ceilingpic];
-  if (ftex && s->ceilingpic != skyflatnum)
-    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), ftex, false, s->ceiling_xoffs.Float(), s->ceiling_yoffs.Float());
+  fmat = s->ceilingpic;
+  if (fmat && !s->SkyCeiling())
+    RenderGlSsecPolygon(ss, s->ceilingheight.Float(), fmat, false, s->ceiling_xoffs.Float(), s->ceiling_yoffs.Float());
  
   // Then the floor.
-  ftex = tc[s->floorpic];
-  if(ftex && s->floorpic != skyflatnum)
-    RenderGlSsecPolygon(ss, s->floorheight.Float(), ftex, true, s->floor_xoffs.Float(), s->floor_yoffs.Float());
+  fmat = s->floorpic;
+  if (fmat && !s->SkyFloor())
+    RenderGlSsecPolygon(ss, s->floorheight.Float(), fmat, true, s->floor_xoffs.Float(), s->floor_yoffs.Float());
 
   // Draw the walls of this subsector.
-  for(curseg=firstseg; curseg<firstseg+segcount; curseg++)
+  for (curseg=firstseg; curseg<firstseg+segcount; curseg++)
     RenderGLSeg(curseg);
 
   // A quick hack: draw 3D floors here. To do it Right, they (and
@@ -903,22 +921,22 @@ void OGLRenderer::RenderGLSubsector(int num)
 
     GLfloat textop, texbottom, texleft, texright;
     GLfloat fsheight; // Height of this 3D floor.
-    ftex = tc[*ff->toppic];
-    RenderGlSsecPolygon(ss, ff->topheight->Float(), ftex, true);
-    ftex = tc[*ff->bottompic];
-    RenderGlSsecPolygon(ss, ff->bottomheight->Float(), ftex, false);
+    fmat = *ff->toppic;
+    RenderGlSsecPolygon(ss, ff->topheight->Float(), fmat, true);
+    fmat = *ff->bottompic;
+    RenderGlSsecPolygon(ss, ff->bottomheight->Float(), fmat, false);
 
     // Draw "edges" of 3D floor.
 
     // Sanity check.
     mline = ff->master;
-    if(mline == NULL)
+    if (mline == NULL)
       continue;
     mside = mline->sideptr[0];
-    if(mside == NULL)
+    if (mside == NULL)
       continue;
-    ftex = tc[mside->midtexture];
-    if(ftex == NULL)
+    fmat = mside->midtexture;
+    if (fmat == NULL)
       continue;
 
     // Calculate texture offsets. (They are the same for every edge.)
@@ -933,14 +951,12 @@ void OGLRenderer::RenderGLSubsector(int num)
     }
     texleft = mside->textureoffset.Float();
 
-
-    glBindTexture(GL_TEXTURE_2D, ftex->GLPrepare());
-    for(curseg=firstseg; curseg<firstseg+segcount; curseg++) {
-      seg_t *s;
+    fmat->GLUse();
+    for (curseg=firstseg; curseg<firstseg+segcount; curseg++) {
       vertex_t *fv;
       vertex_t *tv;
       fixed_t nx, ny;
-      s = &(mp->segs[curseg]);
+      seg_t *s = &(mp->segs[curseg]);
       texright = texleft + s->length;
       fv = s->v1;
       tv = s->v2;
@@ -953,19 +969,16 @@ void OGLRenderer::RenderGLSubsector(int num)
       DrawSingleQuad(tv, fv, 
 		     mside->sector->floorheight.Float(), 
 		     mside->sector->ceilingheight.Float(),
-		     texleft/ftex->worldwidth,
-		     texright/ftex->worldwidth,
-		     textop/ftex->worldheight,
-		     texbottom/ftex->worldheight);
+		     texleft/fmat->worldwidth,
+		     texright/fmat->worldwidth,
+		     textop/fmat->worldheight,
+		     texbottom/fmat->worldheight);
 
     }
 
 
   }
 
-#ifdef TEST_SHADERS
-  ShaderProg::DisableShaders();
-#endif
   // finally the actors
   RenderActors(s);
 }
@@ -1014,11 +1027,6 @@ void OGLRenderer::RenderActors(sector_t *sec)
 /// silently ignored.
 void OGLRenderer::RenderGLSeg(int num)
 {
-  seg_t *s;
-  line_t *ld;
-  vertex_t *fv;
-  vertex_t *tv;
-  fixed_t nx,ny;
   side_t *lsd; // Local sidedef.
   side_t *rsd; // Remote sidedef.
   sector_t *ls; // Local sector.
@@ -1028,29 +1036,31 @@ void OGLRenderer::RenderGLSeg(int num)
   GLfloat textop, texbottom, texleft, texright;
   GLfloat utexhei, ltexhei;
   GLfloat ls_height, tex_yoff;
-  Texture *uppertex, *middletex, *lowertex;
+  Material *uppertex, *middletex, *lowertex;
 
   if(num < 0 || num > mp->numsegs)
     return;
 
-  s = &(mp->segs[num]);
-  ld = s->linedef;
+  seg_t *s = &(mp->segs[num]);
+  line_t *ld = s->linedef;
   // Minisegs don't have wall textures so no point in drawing them.
-  if(ld == NULL)
+  if (ld == NULL)
     return;
 
   // Mark this linedef as visited so it gets drawn on the automap.
   ld->flags |= ML_MAPPED;
 
-  fv = s->v1;
-  tv = s->v2;
+  vertex_t *fv = s->v1;
+  vertex_t *tv = s->v2;
 
   // Calculate surface normamp-> Should we account for degenerate
   // linedefs?
-  nx = tv->y - fv->y;
-  ny = fv->x - tv->x;
+  shader_attribs_t a; // TEST
+  a.tangent[0] = (tv->x - fv->x).Float();
+  a.tangent[1] = (tv->y - fv->y).Float();
+  a.tangent[2] = 0;
   
-  glNormal3f(nx.Float(), ny.Float(), 0.0);
+  glNormal3f(a.tangent[1], -a.tangent[0], 0.0);
 
   if(s->side == 0) {
     lsd = ld->sideptr[0];
@@ -1082,9 +1092,9 @@ void OGLRenderer::RenderGLSeg(int num)
   }
 
   tex_yoff = lsd->rowoffset.Float();
-  uppertex = tc[lsd->toptexture];
-  middletex = tc[lsd->midtexture];
-  lowertex = tc[lsd->bottomtexture];
+  uppertex = lsd->toptexture;
+  middletex = lsd->midtexture;
+  lowertex = lsd->bottomtexture;
 
   // Texture X offsets.
   texleft = lsd->textureoffset.Float() + s->offset.Float();
@@ -1104,8 +1114,8 @@ void OGLRenderer::RenderGLSeg(int num)
 
       // If the front and back ceilings are sky, do not draw this
       // upper texture.
-      if(ls->ceilingpic != skyflatnum || rs->ceilingpic != skyflatnum) {
-	glBindTexture(GL_TEXTURE_2D, uppertex->GLPrepare());
+      if (!ls->SkyCeiling() || !rs->SkyCeiling()) {
+	uppertex->GLUse();
 	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, 
 		       texleft/uppertex->worldwidth,
 		       texright/uppertex->worldwidth,
@@ -1123,7 +1133,7 @@ void OGLRenderer::RenderGLSeg(int num)
 	textop = tex_yoff;
 	texbottom = textop + ltexhei;
       }
-      glBindTexture(GL_TEXTURE_2D, lowertex->GLPrepare());
+      lowertex->GLUse();
       DrawSingleQuad(fv, tv, ls_floor, rs_floor,
 		     texleft/lowertex->worldwidth,
 		     texright/lowertex->worldwidth,
@@ -1150,7 +1160,7 @@ void OGLRenderer::RenderGLSeg(int num)
 	  top = rs_ceil;
 	bottom = top - middletex->worldheight;
       }
-      glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
+      middletex->GLUse();
       DrawSingleQuad(fv, tv, bottom, top,
 		     texleft/middletex->worldwidth,
 		     texright/middletex->worldwidth,
@@ -1167,7 +1177,11 @@ void OGLRenderer::RenderGLSeg(int num)
       textop = tex_yoff;
       texbottom = textop + ls_height;
     }
-    glBindTexture(GL_TEXTURE_2D, middletex->GLPrepare());
+    middletex->GLUse();
+
+    if (middletex->shader)
+      middletex->shader->SetAttributes(&a); // TEST
+
     DrawSingleQuad(fv, tv, ls_floor, ls_ceil,
 		   texleft/middletex->worldwidth,
 		   texright/middletex->worldwidth,
@@ -1198,14 +1212,14 @@ void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfl
 // the 3D view. Translations and rotations are done with OpenGL
 // matrices.
 
-void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip)
+void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, bool flip)
 {
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
   GLboolean isAlpha; // Alpha test enabled.
 
   // You can't draw the invisible.
-  if(!t)
+  if (!mat)
     return;
 
   // Rendering sprite items requires skipping totally transparent
@@ -1215,8 +1229,6 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
   glGetBooleanv(GL_ALPHA_TEST, &isAlpha);
   if(!isAlpha)
     glEnable(GL_ALPHA_TEST);
-
-  glBindTexture(GL_TEXTURE_2D, t->GLPrepare());
 
   if(flip) {
     texleft = 1.0;
@@ -1232,21 +1244,22 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool fli
 
   //left = t->width/(2.0*xscale);
   //right = -left;
-  right = -t->leftoffs;
-  left = right + t->worldwidth;
+  right = -mat->leftoffs;
+  left = right + mat->worldwidth;
  
   bottom = 0.0;
-  top = t->worldheight; // HACK
-  //top = t->topoffs; // FIXME this is correct but looks stupid???
+  top = mat->worldheight; // HACK
+  //top = mat->topoffs; // FIXME this is correct but looks stupid???
 
 
   glMatrixMode(GL_MODELVIEW);
   glPushMatrix();
 
   glTranslatef(pos.x.Float(), pos.y.Float(), pos.z.Float());
-  glRotatef(theta, 0.0, 0.0, 1.0);
+  glRotatef(phi, 0.0, 0.0, 1.0);
   glNormal3f(-1.0, 0.0, 0.0);
 
+  mat->GLUse();
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
   glVertex3f(0.0, left, bottom);
@@ -1296,15 +1309,13 @@ bool OGLRenderer::CheckVis(int fromss, int toss)
 void OGLRenderer::DrawSimpleSky()
 {
   GLfloat left, right, top, bottom, texleft, texright, textop, texbottom;
-  GLfloat fovx;
-  GLboolean isdepth;
 
-  glMatrixMode(GL_PROJECTION);
-
-  isdepth = 0;
+  GLboolean isdepth = 0;
   glGetBooleanv(GL_DEPTH_TEST, &isdepth);
   if(isdepth)
     glDisable(GL_DEPTH_TEST);
+
+  glMatrixMode(GL_PROJECTION);
   glPushMatrix();
   glLoadIdentity();
   gluOrtho2D(0.0, 1.0, 0.0, 1.0);
@@ -1312,7 +1323,6 @@ void OGLRenderer::DrawSimpleSky()
   glPushMatrix();
   glLoadIdentity();
 
-  glBindTexture(GL_TEXTURE_2D, mp->skytexture->GLPrepare());
   textop = 0.0;   // And yet again these should be the other way around.
   texbottom = 1.0;
   top = 1.0;
@@ -1320,12 +1330,13 @@ void OGLRenderer::DrawSimpleSky()
   left = 0.0;
   right = 1.0;
 
-  fovx = fov*screenar;
+  GLfloat fovx = fov*screenar;
   fovx *= 2.0; // I just love magic numbers. Don't you?
 
-  texleft = (2.0*theta + fovx)/720.0;
-  texright = (2.0*theta - fovx)/720.0;
+  texleft = (2.0*phi + fovx)/720.0;
+  texright = (2.0*phi - fovx)/720.0;
 
+  mp->skytexture->GLUse();
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
   glVertex2f(left, bottom);

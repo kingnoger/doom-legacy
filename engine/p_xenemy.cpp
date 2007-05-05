@@ -756,7 +756,7 @@ void A_SerpentHide(DActor *actor)
 void A_SerpentChase(DActor *actor)
 {
   int delta;
-  fixed_t oldX, oldY, oldFloor;
+  fixed_t oldX, oldY;
 
   if(actor->reactiontime)
     {
@@ -843,7 +843,7 @@ void A_SerpentChase(DActor *actor)
   //
   oldX = actor->pos.x;
   oldY = actor->pos.y;
-  oldFloor = actor->subsector->sector->floorpic;
+  Material *oldFloor = actor->subsector->sector->floorpic;
   if (--actor->movecount<0 || !actor->P_Move())
     {
       actor->P_NewChaseDir();

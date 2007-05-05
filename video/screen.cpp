@@ -270,7 +270,7 @@ void Video::Startup()
   I_StartupGraphics();
 
   modenum = 0; // not exactly true, but doesn't matter here.
-  setmodeneeded = 0;
+  setmodeneeded = 8; // 320x200, windowed
 
   LoadPalette("PLAYPAL");
   SetPalette(0);
@@ -283,11 +283,12 @@ void Video::Startup()
     }
 
   // create palette conversion colormaps if necessary (palette must be set!)
-  tc.InitPaletteConversion();
+  materials.InitPaletteConversion();
 
   buffer = NULL;
 
-  Recalc();
+  //Recalc();
+  SetMode();
 }
 
 

@@ -69,7 +69,7 @@ void Map::InitLightning()
   int count = 0;
   for (int i = 0; i < numsectors; i++)
     {
-      if(sectors[i].ceilingpic == skyflatnum
+      if (sectors[i].SkyCeiling()
 	 || sectors[i].special == SS_IndoorLightning1
 	 || sectors[i].special == SS_IndoorLightning2)
 	count++;
@@ -114,7 +114,7 @@ void Map::LightningFlash()
 	  s = sectors;
 	  for (i = 0; i < numsectors; i++, s++)
 	    {
-	      if (s->ceilingpic == skyflatnum 
+	      if (s->SkyCeiling()
 		  || s->special == SS_IndoorLightning1
 		  || s->special == SS_IndoorLightning2)
 		{
@@ -132,7 +132,7 @@ void Map::LightningFlash()
 	  s = sectors;
 	  for (i = 0; i < numsectors; i++, s++)
 	    {
-	      if (s->ceilingpic == skyflatnum
+	      if (s->SkyCeiling()
 		  || s->special == SS_IndoorLightning1
 		  || s->special == SS_IndoorLightning2)
 		{
@@ -140,7 +140,7 @@ void Map::LightningFlash()
 		  lite++;
 		}
 	    }
-	  skytexture = tc.GetPtr(info->sky1.c_str(), TEX_wall); // set default sky
+	  skytexture = materials.Get(info->sky1.c_str(), TEX_wall); // set default sky
 	}
       return;
     }
@@ -157,7 +157,7 @@ void Map::LightningFlash()
 
   for (i = 0; i < numsectors; i++, s++)
     {
-      if (s->ceilingpic == skyflatnum
+      if (s->SkyCeiling()
 	  || s->special == SS_IndoorLightning1
 	  || s->special == SS_IndoorLightning2)
 	{
@@ -184,7 +184,7 @@ void Map::LightningFlash()
 	}
     }
 
-  skytexture = tc.GetPtr(info->sky2.c_str(), TEX_wall); // set alternate sky
+  skytexture = materials.Get(info->sky2.c_str(), TEX_wall); // set alternate sky
   S_StartAmbSound(NULL, SFX_THUNDER_CRASH);
 
   // Calculate the next lighting flash

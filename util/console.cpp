@@ -395,11 +395,11 @@ void Console::Init()
   con_hudlines = CON_MAXHUDLINES;
 
   // load console background pic
-  con_backpic = tc.GetPtr("CONSBACK");
+  con_backpic = materials.Get("CONSBACK");
 
   // borders MUST be there
-  con_lborder  = tc.GetPtr("CBLEFT");
-  con_rborder = tc.GetPtr("CBRIGHT");
+  con_lborder  = materials.Get("CBLEFT");
+  con_rborder = materials.Get("CBRIGHT");
 
   cons_msgtimeout.Reg();
   cons_speed.Reg();

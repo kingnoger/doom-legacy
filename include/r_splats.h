@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -41,10 +40,10 @@ enum splatdrawmode_e
 };
 
 
-/// \brief Textures drawn on top of wall segs
+/// \brief Decal textures drawn on top of wall segs
 struct wallsplat_t
 {
-  class Texture *tex;  ///< splat texture
+  class Material *mat; ///< splat material
   vertex_t    v1, v2;  ///< vertices along the linedef
   fixed_t     top;
   fixed_t     offset;  ///< offset in columns<<FRACBITS from start of linedef to start of splat

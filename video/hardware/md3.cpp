@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Quake III MD3 model class for Doom Legacy
+/// \brief Quake III MD3 models.
 
 #include <string.h>
 #include <math.h>
@@ -37,9 +37,6 @@
 #include "z_zone.h"
 #include "hardware/md3.h"
 
-// TODO malloc->Z_Malloc
-
-modelcache_t models(PU_MODEL);
 
 
 const double pi = 3.1415926536; // M_PI;
@@ -61,11 +58,13 @@ void MD3_InitNormLookup()
       }
 }
 
-modelcache_t::modelcache_t(memtag_t tag)
-  : cache_t(tag)
-{}
+//======================================================
+// modelcache_t
+//======================================================
 
-cacheitem_t *modelcache_t::Load(const char *p)
+modelcache_t models;
+
+MD3_player *modelcache_t::Load(const char *p)
 {
   // TODO maybe check the existence of the model first?
 
@@ -82,12 +81,12 @@ cacheitem_t *modelcache_t::Load(const char *p)
   return t;
 }
 
+//======================================================
+// TGATexture class
+//======================================================
 
-
-//====================================================
-
-/// \brief Class for TGA Textures
-class TGATexture : public LumpTexture
+TGATexture::TGATexture(const char *n, int l)
+  : LumpTexture(n, l, 0, 0)
 {
   // Loads 24 and 32bpp (alpha channel) TGA textures
   // TGA format is little-endian (LSB)
@@ -96,7 +95,7 @@ class TGATexture : public LumpTexture
     byte IDlength;  // image ID field lenght
     byte colormaptype; // 0 = no color maps used, 1 = color map included
     byte imagetype; // 2 = uncompressed truecolor
-    byte colormapspec[5]; 
+    byte colormapspec[5];
     Uint16 xorigin;
     Uint16 yorigin;
     Uint16 width;
@@ -104,53 +103,51 @@ class TGATexture : public LumpTexture
     byte bpp;
     byte imagedescriptor;  // bit flags
     // image ID
-    // color map
-    // data
-    // and other fields follow...
+    // color map data
+    // image data
+    // possibly some other fields
   };
 
-  int bpp;
-
-protected:
-  virtual void GLGetData();
-
-public:
-  TGATexture(const char *name, int lump);
-  virtual byte *GetData() { return NULL; };
-};
-
-
-TGATexture::TGATexture(const char *filename, int l)
-  : LumpTexture(filename, l, 0, 0)
-{
   TGAheader h;
 
-  FILE *file = fopen(filename, "rb");
-  if (!file)
+  // read header
+  if (fc.ReadLumpHeader(lump, &h, sizeof(TGAheader)) != sizeof(TGAheader))
     {
-      I_Error("TGA file could not be opened.\n");
+      I_Error("Error reading header from TGA lump '%s'.\n", n);
       return;
     }
-
-  // read header 
-  fread(&h, sizeof(TGAheader), 1, file);
-  fclose(file);
-
-  //cout << "TGA: IDl = " << h.IDlength << ", cmt = " << h.colormaptype << ", it = " << h.imagetype << endl;
 
   // Only support uncompressed truecolor images with no color maps
-  if (h.IDlength != 0 || h.imagetype != 2 || h.colormaptype != 0 || h.bpp < 24)
+  if (h.imagetype != 2 || h.colormaptype != 0 || h.bpp < 24)
     {
-      I_Error("Unsupported TGA file type.\n");
+      I_Error("Unsupported TGA file type '%s'.\n", n);
       return;
     }
+
+  imageoffset = sizeof(TGAheader) + h.IDlength + 0;
 
   // Get the width, height, and color depth
   width = SHORT(h.width);
   height = SHORT(h.height);
   bpp = h.bpp;
 
+  int imagesize = width * height * (bpp / 8);
+  if (fc.LumpLength(lump) < imageoffset + imagesize)
+    {
+      I_Error("Corrupted TGA lump '%s'\n", n);
+      return;
+    }
+	
   Initialize();
+}
+
+
+TGATexture::~TGATexture()
+{
+  if (data)
+    Z_Free(data);
+  
+  pixels = NULL; // data is the primary pointer, not pixels
 }
 
 
@@ -158,31 +155,27 @@ void TGATexture::GLGetData()
 {
   if (!pixels)
     {
-      FILE *file = fopen(name, "rb");
-      if (!file)
-	{
-	  I_Error("TGA file could not be opened.\n");
-	  return;
-	}
-
-      int imagesize = width * height * (bpp / 8);
-      // allocate space for RGBA data, owner is pixels
-      Z_Malloc(imagesize, PU_TEXTURE, (void **)(&pixels));
-
-      fread(pixels, imagesize, 1, file);
-      fclose(file);
+      data = static_cast<byte *>(fc.CacheLumpNum(lump, PU_TEXTURE));
+      pixels = &data[imageoffset];
 
       // TGAs are stored BGR and not RGB
       // 32 bit TGA files have alpha channel and get loaded differently
       if (bpp == 24)
-	format = GL_BGR;
+	gl_format = GL_BGR;
       else
-	format = GL_BGRA;
+	gl_format = GL_BGRA;
     }
 }
 
+
+byte *TGATexture::GetData()
+{
+  return NULL; // TODO
+};
+
+
 //======================================================
-// MD3 class implementation
+// MD3_t class
 //======================================================
 
 // constructor
@@ -286,7 +279,7 @@ bool MD3_t::Load(const string& filename)
       // and vertices (count == numVertices * numFrames)
       meshes[i].vertices = reinterpret_cast<MD3_mesh_vertex*>(meshbase + meshes[i].header.ofsVertices);
 
-      meshes[i].texture = NULL;
+      meshes[i].material = NULL;
       meshbase += meshes[i].header.ofsEND;
     }
 
@@ -338,7 +331,7 @@ bool MD3_t::LoadSkinFile(const string& path, const string& filename)
 	    {
 	      // check it the two names are the same
 	      if (strcasecmp(meshes[i].header.name, meshname) == 0)
-		meshes[i].texture = tc.GetPtr(tname.c_str(), TEX_lod, false); // TEST use long names!
+		meshes[i].material = materials.Get(tname.c_str(), TEX_lod);
 	    }
 	}
     }
@@ -372,15 +365,17 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
   MD3_mesh *mesh = meshes;
   for (int m=0; m<header.numMeshes; m++, mesh++)
     {
+      if (!mesh->material)
+	continue;
+
       // pointers to the vertex data of the frames
       MD3_mesh_vertex *cv = &mesh->vertices[st->frame * mesh->header.numVertices];
       MD3_mesh_vertex *nv = &mesh->vertices[st->nextframe * mesh->header.numVertices];
 
-      if (mesh->texture)
-	glBindTexture(GL_TEXTURE_2D, mesh->texture->GLPrepare());
-
       int i, j, k, n = mesh->header.numTriangles;
       GLfloat s, t;
+
+      mesh->material->GLUse();
       glBegin(GL_TRIANGLES);
       for (i=0; i<n; i++)
 	{
@@ -486,7 +481,7 @@ MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st, float pitch)
 }
 
 //===============================================================
-// MD3_player class implementation
+// MD3_player class
 //===============================================================
 
 MD3_player::MD3_player(const char *n)
@@ -583,7 +578,7 @@ bool MD3_player::LoadAnim(const string& filename)
 
 
 //==================================================
-//    modelpres_t implementation
+// modelpres_t class
 //==================================================
 
 modelpres_t::modelpres_t(const char *name, int col, const char *skin)

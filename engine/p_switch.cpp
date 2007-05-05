@@ -127,7 +127,7 @@ switchdef_t HexenSwitchList[] =
 
 struct switchlist_t
 {
-  int tex;
+  Material *tex;
   short sound;
 };
 
@@ -175,11 +175,11 @@ void P_InitSwitchList()
 	  if (n > nameset)
 	    continue;
 
-	  temp.tex = tc.GetID(ss[i].name1);
+	  temp.tex = materials.Get(ss[i].name1, TEX_wall);
 	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 
-	  temp.tex = tc.GetID(ss[i].name2);
+	  temp.tex = materials.Get(ss[i].name2, TEX_wall);
 	  temp.sound = sfx_switchon; // default
 	  switchlist.push_back(temp);
 	}
@@ -193,11 +193,11 @@ void P_InitSwitchList()
       if (sd[i].episode > nameset)
 	continue;
 
-      temp.tex = tc.GetID(sd[i].name1);
+      temp.tex = materials.Get(sd[i].name1, TEX_wall);
       temp.sound = sd[i].sound;
       switchlist.push_back(temp);
 
-      temp.tex = tc.GetID(sd[i].name2);
+      temp.tex = materials.Get(sd[i].name2, TEX_wall);
       temp.sound = sd[i].sound; // could have different on/off sounds
       switchlist.push_back(temp);
     }
@@ -206,7 +206,7 @@ void P_InitSwitchList()
 
 
 // Start a button counting down till it turns off.
-button_t::button_t(line_t *l, button_e w, int tex, int time)
+button_t::button_t(line_t *l, button_e w, Material *tex, int time)
 {
   l->thinker = this;
 
@@ -256,7 +256,7 @@ void Map::ChangeSwitchTexture(line_t *line, int useAgain)
   if (!line->sideptr[0])
     return; // to be safe (and for scripts executing line specials with junk linedefs)
 
-  int     texTop, texMid, texBot;
+  Material *texTop, *texMid, *texBot;
   int     i, n = switchlist.size();
   button_t::button_e loc = button_t::none;
 

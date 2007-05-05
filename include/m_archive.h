@@ -131,6 +131,8 @@ public:
   LArchive &operator<<(string &s);
   LArchive &operator<<(char *&s); // Z_Mallocs the memory for the c-string when retrieving
 
+  LArchive &operator<<(class Material *&m);
+
   bool HasStored(void *p, unsigned &id);
   bool GetPtr(unsigned id, void *&p);
   void SetPtr(unsigned id, void *p);

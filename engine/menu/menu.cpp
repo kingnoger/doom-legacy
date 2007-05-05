@@ -590,21 +590,21 @@ static void M_DrawThermo(int x, int y, consvar_t *cv)
       centerlump[1] = "M_THERMM";
       cursorlump    = "M_THERMO";
     }
-  Texture *p = tc.GetPtr(leftlump);
+  Material *p = materials.Get(leftlump);
   p->Draw(xx, y, V_SCALE);
 
   xx += int(p->worldwidth - p->leftoffs);
   for (int i=0;i<16;i++)
     {
-      tc.GetPtr(centerlump[i & 1])->Draw(xx, y, V_SCALE);
+      materials.Get(centerlump[i & 1])->Draw(xx, y, V_SCALE);
       xx += 8;
     }
-  tc.GetPtr(rightlump)->Draw(xx,y,0 | V_SCALE);
+  materials.Get(rightlump)->Draw(xx,y,0 | V_SCALE);
 
   xx = (cv->value - cv->PossibleValue[0].value) * (15*8) /
     (cv->PossibleValue[1].value - cv->PossibleValue[0].value);
 
-  tc.GetPtr(cursorlump)->Draw((x+8) + xx, raven ? y+7 : y, V_SCALE);
+  materials.Get(cursorlump)->Draw((x+8) + xx, raven ? y+7 : y, V_SCALE);
 }
 
 
@@ -616,28 +616,28 @@ static void M_DrawSlider(int x, int y, int range)
   if (range > 100)
     range = 100;
 
-  tc.GetPtr("M_SLIDEL")->Draw(x-8, y, 0 | V_SCALE);
+  materials.Get("M_SLIDEL")->Draw(x-8, y, 0 | V_SCALE);
 
   for (int i=0 ; i<SLIDER_RANGE ; i++)
-    tc.GetPtr("M_SLIDEM")->Draw(x+i*8, y, 0 | V_SCALE);
+    materials.Get("M_SLIDEM")->Draw(x+i*8, y, 0 | V_SCALE);
 
-  tc.GetPtr("M_SLIDER")->Draw(x+SLIDER_RANGE*8, y, 0 | V_SCALE);
+  materials.Get("M_SLIDER")->Draw(x+SLIDER_RANGE*8, y, 0 | V_SCALE);
 
   // draw the slider cursor
   current_colormap = whitemap;
-  tc.GetPtr("M_SLIDEC")->Draw(x + ((SLIDER_RANGE-1)*8*range)/100, y, V_SCALE | V_MAP);
+  materials.Get("M_SLIDEC")->Draw(x + ((SLIDER_RANGE-1)*8*range)/100, y, V_SCALE | V_MAP);
 }
 
 
 /*
 void M_DrawEmptyCell(Menu *menu, int item)
 {
-  tc.GetPtr("M_CELL1")->Draw(menu->x - 10, menu->y+item*LINEHEIGHT - 1, 0 | V_SCALE);
+  materials.Get("M_CELL1")->Draw(menu->x - 10, menu->y+item*LINEHEIGHT - 1, 0 | V_SCALE);
 }
 
 void M_DrawSelCell(Menu *menu, int item)
 {
-  tc.GetPtr("M_CELL2")->Draw(menu->x - 10, menu->y+item*LINEHEIGHT - 1, 0 | V_SCALE);
+  materials.Get("M_CELL2")->Draw(menu->x - 10, menu->y+item*LINEHEIGHT - 1, 0 | V_SCALE);
 }
 */
 
@@ -726,7 +726,7 @@ void Menu::DrawTitle()
     }
   else if (titlepic)
     {
-      Texture *p = tc.GetPtr(titlepic);
+      Material *p = materials.Get(titlepic);
 
       //int xtitle = 94;
       //int ytitle = 2;
@@ -781,7 +781,7 @@ void Menu::DrawMenu()
               h = FONTBHEIGHT;
             }
           else if (items[i].pic && items[i].pic[0])
-	    tc.GetPtr(items[i].pic)->Draw(x, dy, flags);
+	    materials.Get(items[i].pic)->Draw(x, dy, flags);
           break;
 
 	  // then the "short" ones:
@@ -957,8 +957,8 @@ void Menu::HereticMainMenuDrawer()
 {
   int frame = (NowTic/3)%18;
 
-  tc.GetPtrNum(SkullBaseLump+(17-frame))->Draw(40, 10, 0 | V_SCALE);
-  tc.GetPtrNum(SkullBaseLump+frame)->Draw(232, 10, 0 | V_SCALE);
+  materials.GetLumpnum(SkullBaseLump+(17-frame))->Draw(40, 10, 0 | V_SCALE);
+  materials.GetLumpnum(SkullBaseLump+frame)->Draw(232, 10, 0 | V_SCALE);
 
   DrawMenu();
 }
@@ -967,8 +967,8 @@ void Menu::HexenMainMenuDrawer()
 {
   int frame = (NowTic/5) % 7;
 
-  tc.GetPtrNum(SkullBaseLump+(frame+2)%7)->Draw(37, 80,  0 | V_SCALE);
-  tc.GetPtrNum(SkullBaseLump+frame)->Draw(278, 80, 0 | V_SCALE);
+  materials.GetLumpnum(SkullBaseLump+(frame+2)%7)->Draw(37, 80,  0 | V_SCALE);
+  materials.GetLumpnum(SkullBaseLump+frame)->Draw(278, 80, 0 | V_SCALE);
 
   DrawMenu();
 }
@@ -1138,8 +1138,8 @@ void Menu::DrawClass()
   int cl = itemOn;
   int p = fc.GetNumForName(walkLumpName[cl]) + ((NowTic/5)& 3);
 
-  tc.GetPtr(boxLumpName[cl])->Draw(174, 50, 0 | V_SCALE);
-  tc.GetPtrNum(p)->Draw(174+24, 50+12, 0 | V_SCALE);
+  materials.Get(boxLumpName[cl])->Draw(174, 50, 0 | V_SCALE);
+  materials.GetLumpnum(p)->Draw(174+24, 50+12, 0 | V_SCALE);
 
   DrawMenu();
 }
@@ -1235,18 +1235,18 @@ Menu LoadDef("M_LOADG", "Load Game", &MainMenuDef, ITEMS(LoadGame_MI), 80, 54,
 static void M_DrawSaveLoadBorder(int x,int y)
 {
   if (game.mode >= gm_heretic)
-    tc.GetPtr("M_FSLOT")->Draw(x-8, y-4, 0 | V_SCALE);
+    materials.Get("M_FSLOT")->Draw(x-8, y-4, 0 | V_SCALE);
   else
     {
-      tc.GetPtr("M_LSLEFT")->Draw(x-8,y+7,0 | V_SCALE);
+      materials.Get("M_LSLEFT")->Draw(x-8,y+7,0 | V_SCALE);
 
       for (int i = 0;i < 24;i++)
         {
-          tc.GetPtr("M_LSCNTR")->Draw(x,y+7,0 | V_SCALE);
+          materials.Get("M_LSCNTR")->Draw(x,y+7,0 | V_SCALE);
           x += 8;
         }
 
-      tc.GetPtr("M_LSRGHT")->Draw(x,y+7,0 | V_SCALE);
+      materials.Get("M_LSRGHT")->Draw(x,y+7,0 | V_SCALE);
     }
 }
 
@@ -2511,12 +2511,12 @@ void Menu::DrawReadThis1()
   switch (game.mode)
     {
     case gm_doom2:
-      tc.GetPtr("HELP")->Draw(0,0,0 | V_SCALE);
+      materials.Get("HELP")->Draw(0,0,0 | V_SCALE);
       break;
     case gm_doom1:
     case gm_heretic:
     case gm_hexen:
-      tc.GetPtr("HELP1")->Draw(0,0,0 | V_SCALE);
+      materials.Get("HELP1")->Draw(0,0,0 | V_SCALE);
       break;
     default:
       break;
@@ -2545,12 +2545,12 @@ void Menu::DrawReadThis2()
     {
     case gm_doom2:
       // This hack keeps us from having to change menus.
-      tc.GetPtr("CREDIT")->Draw(0,0,0 | V_SCALE);
+      materials.Get("CREDIT")->Draw(0,0,0 | V_SCALE);
       break;
     case gm_doom1:
     case gm_heretic:
     case gm_hexen:
-      tc.GetPtr("HELP2")->Draw(0,0,0 | V_SCALE);
+      materials.Get("HELP2")->Draw(0,0,0 | V_SCALE);
       break;
     default:
       break;
@@ -2637,7 +2637,7 @@ void M_QuickLoad()
 // static class members
 font_t  *Menu::font;
 short    Menu::AnimCount;
-Texture *Menu::pointer[2];
+Material *Menu::pointer[2];
 int      Menu::which_pointer;
 int      Menu::SkullBaseLump;
 tic_t    Menu::NowTic;
@@ -3254,8 +3254,8 @@ void Menu::Init()
     {
     case gm_doom1:
     case gm_doom2:
-      pointer[0] = tc.GetPtr("M_SKULL1");
-      pointer[1] = tc.GetPtr("M_SKULL2");
+      pointer[0] = materials.Get("M_SKULL1");
+      pointer[1] = materials.Get("M_SKULL2");
       MainMenuDef.drawroutine = &Menu::DrawMenu;
       SkillDef.items = Skill_MI;
       break;
@@ -3264,8 +3264,8 @@ void Menu::Init()
       MainMenuDef.titlepic = "M_HTIC";
       MainMenuDef.drawroutine = &Menu::HereticMainMenuDrawer;
       SkullBaseLump = fc.GetNumForName("M_SKL00");
-      pointer[0] = tc.GetPtr("M_SLCTR1");
-      pointer[1] = tc.GetPtr("M_SLCTR2");
+      pointer[0] = materials.Get("M_SLCTR1");
+      pointer[1] = materials.Get("M_SLCTR2");
       SkillDef.items = HereticSkill_MI;
       break;
 
@@ -3273,8 +3273,8 @@ void Menu::Init()
       MainMenuDef.titlepic = "M_HTIC";
       MainMenuDef.drawroutine = &Menu::HexenMainMenuDrawer;
       SkullBaseLump = fc.GetNumForName("FBULA0");
-      pointer[0] = tc.GetPtr("M_SLCTR1");
-      pointer[1] = tc.GetPtr("M_SLCTR2");
+      pointer[0] = materials.Get("M_SLCTR1");
+      pointer[1] = materials.Get("M_SLCTR2");
       break;
 
     default: // use legacy.wad menu graphics

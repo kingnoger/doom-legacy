@@ -313,8 +313,8 @@ void R_InitViewBuffer(int width, int height)
 //
 //  Window border and background textures
 //
-Texture *window_border[8];
-Texture *window_background; // used to fill the space around the viewport
+Material *window_border[8];
+Material *window_background; // used to fill the space around the viewport
 
 void R_InitViewBorder()
 {
@@ -327,27 +327,27 @@ void R_InitViewBorder()
     bname = Raven_borders;
 
   for (int i=0; i<8; i++)
-    window_border[i] = tc.GetPtr(bname[i]);
+    window_border[i] = materials.Get(bname[i]);
 
   // choose and cache the default bg texture
   switch (game.mode)
     {
     case gm_doom2:
       // DOOM II border patch, original was GRNROCK
-      window_background = tc.GetPtr("GRNROCK", TEX_floor);
+      window_background = materials.Get("GRNROCK", TEX_floor);
       break;
     case gm_heretic:
       if (fc.FindNumForName("e2m1") == -1)
-        window_background = tc.GetPtr("FLOOR04", TEX_floor);
+        window_background = materials.Get("FLOOR04", TEX_floor);
       else
-        window_background = tc.GetPtr("FLAT513", TEX_floor);
+        window_background = materials.Get("FLAT513", TEX_floor);
       break;
     case gm_hexen:
-      window_background = tc.GetPtr("F_022", TEX_floor);
+      window_background = materials.Get("F_022", TEX_floor);
       break;
     default:
       // DOOM border patch.
-      window_background = tc.GetPtr("FLOOR7_2", TEX_floor);
+      window_background = materials.Get("FLOOR7_2", TEX_floor);
     }
 }
 
@@ -370,7 +370,7 @@ void R_FillBackScreen()
   if ((scaledviewwidth == vid.width)&&(viewheight==vid.height))
     return;
 
-  Texture *t = window_background;
+  Material *t = window_background;
 
   for (y=0; y<vid.height; y += t->worldheight)
     for (x=0; x<vid.width; x += t->worldwidth)

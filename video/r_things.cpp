@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -143,7 +143,7 @@ struct vissprite_t
 
   /// sprite top edge z relative to viewer in world coords
   fixed_t   sprite_top;
-  Texture  *tex;
+  Material  *mat;
 
   /// clipping away some of the lower part of the sprite
   fixed_t floorclip;
@@ -221,7 +221,7 @@ void spritepres_t::Project(Actor *p)
 
   spriteframe_t *sprframe = &spr->spriteframes[frame];
 
-  Texture  *t;
+  Material  *mat;
   bool      flip;
 
   // decide which patch to use for sprite relative to player
@@ -231,15 +231,17 @@ void spritepres_t::Project(Actor *p)
       angle_t ang = R.R_PointToAngle(p->pos.x, p->pos.y); // uses viewx,viewy
       unsigned rot = (ang - p->yaw + unsigned(ANG45/2) * 9) >> 29;
 
-      t = sprframe->tex[rot];
+      mat = sprframe->tex[rot];
       flip = sprframe->flip[rot];
     }
   else
     {
       // use single rotation for all views
-      t = sprframe->tex[0];
+      mat = sprframe->tex[0];
       flip = sprframe->flip[0];
     }
+
+  Material::TextureRef &tr = mat->tex[0];
 
   // software renderer part
   // aspect ratio stuff :
@@ -247,14 +249,14 @@ void spritepres_t::Project(Actor *p)
   fixed_t  yscale = projectiony / proj_tz; //added:02-02-98:aaargll..if I were a math-guy!!!
 
   // calculate edges of the shape
-  proj_tx -= t->leftoffs; // left edge of sprite, world
+  proj_tx -= mat->leftoffs; // left edge of sprite, world
   int x1 = (centerxfrac + (proj_tx * xscale)).floor(); // in screen coords
 
   // off the right side?
   if (x1 > viewwidth)
     return;
 
-  proj_tx += t->worldwidth;
+  proj_tx += mat->worldwidth;
   int x2 = (centerxfrac + (proj_tx * xscale)).floor() - 1;
 
   // off the left side
@@ -262,7 +264,7 @@ void spritepres_t::Project(Actor *p)
     return;
 
   //SoM: 3/17/2000: Disregard sprites that are out of view..
-  fixed_t gzt = p->pos.z + t->topoffs; // top edge of sprite, world units
+  fixed_t gzt = p->pos.z + mat->topoffs; // top edge of sprite, world units
   int light = 0;
 
   sector_t *sec = p->subsector->sector;
@@ -314,7 +316,7 @@ void spritepres_t::Project(Actor *p)
   vis->pz = p->Feet();
   vis->pzt = p->Top();
 
-  vis->gz = gzt - t->worldheight;
+  vis->gz = gzt - mat->worldheight;
   vis->gzt = gzt;
   vis->sprite_top = vis->gzt - R.viewz - p->floorclip;
 
@@ -334,20 +336,20 @@ void spritepres_t::Project(Actor *p)
 
   if (flip)
     {
-      vis->startfrac = t->width - fixed_epsilon; // TODO what about x2?
-      vis->xiscale = -t->xscale / xscale;
+      vis->startfrac = tr.t->width - fixed_epsilon; // TODO what about x2?
+      vis->xiscale = -tr.xscale / xscale;
     }
   else
     {
       vis->startfrac = 0;
-      vis->xiscale = t->xscale / xscale;
+      vis->xiscale = tr.xscale / xscale;
     }
 
   if (vis->x1 > x1)
     vis->startfrac += (vis->x1 - x1) * vis->xiscale;
 
   // texture to use
-  vis->tex = t;
+  vis->mat = mat;
 
   // determine the lightlevel & special effects
 
@@ -529,12 +531,13 @@ void vissprite_t::DrawVisSprite()
   windowtop = windowbottom = sprbotscreen = fixed_t::FMAX;
 
   // initialize drawers
-  dc_iscale = tex->yscale / yscale;
-  dc_texturemid = sprite_top * tex->yscale;
+  float temp = mat->tex[0].yscale;
+  dc_iscale = temp / yscale;
+  dc_texturemid = sprite_top * temp;
   dc_texheight = 0; // clever way of drawing nonrepeating textures
 
   if (floorclip != 0)
-    sprbotscreen = sprtopscreen + (tex->worldheight*yscale) -(floorclip * spryscale);
+    sprbotscreen = sprtopscreen + (mat->worldheight*yscale) -(floorclip * spryscale);
 
   fixed_t frac = startfrac;
   for (dc_x = x1; dc_x <= x2; dc_x++, frac += xiscale)
@@ -544,8 +547,8 @@ void vissprite_t::DrawVisSprite()
       if (texturecolumn < 0 || texturecolumn >= t->width)
         I_Error ("R_DrawSpriteRange: bad texturecolumn");
 #endif
-      if (tex->Masked())
-	R_DrawMaskedColumn(tex->GetMaskedColumn(frac));
+      if (mat->Masked())
+	R_DrawMaskedColumn(mat->GetMaskedColumn(frac));
       // TODO unmasked drawer...
     }
 
@@ -724,7 +727,8 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
     I_Error("sprframes NULL for state %d\n", psp->state - weaponstates);
 #endif
 
-  Texture *t = sprframe->tex[0];
+  Material *mat = sprframe->tex[0];
+  Material::TextureRef &tr = mat->tex[0];
 
   // calculate edges of the shape
 
@@ -733,14 +737,14 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   //added:02-02-98:spriteoffset should be abs coords for psprites, based on
   //               320x200
-  tx -= t->leftoffs;
+  tx -= mat->leftoffs;
   int x1 = (centerxfrac + (tx * pspritescale)).floor();
 
   // off the right side
   if (x1 > viewwidth)
     return;
 
-  tx += t->worldwidth;
+  tx += tr.worldwidth;
   int x2 = (centerxfrac + (tx * pspritescale)).floor() - 1;
 
   // off the left side
@@ -755,7 +759,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
   else
     vis->sprite_top = BASEYCENTER;
 
-  vis->sprite_top += - psp->sy + t->topoffs + 0.5f;
+  vis->sprite_top += - psp->sy + mat->topoffs + 0.5f;
   vis->floorclip = 0;
 
   /*
@@ -772,19 +776,19 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   if (sprframe->flip[0])
     {
-      vis->xiscale = -pspriteiscale * t->xscale;
-      vis->startfrac = t->width - fixed_epsilon; // TODO what about x2?
+      vis->xiscale = -pspriteiscale * tr.xscale;
+      vis->startfrac = tr.t->width - fixed_epsilon; // TODO what about x2?
     }
   else
     {
-      vis->xiscale = pspriteiscale * t->xscale;
+      vis->xiscale = pspriteiscale * tr.xscale;
       vis->startfrac = 0;
     }
 
   if (vis->x1 > x1)
     vis->startfrac += (vis->x1 - x1) * vis->xiscale;
 
-  vis->tex = t;
+  vis->mat = mat;
   vis->transmap = NULL;
   vis->translationmap = NULL;
 

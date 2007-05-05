@@ -186,10 +186,10 @@ static int st_mana1, st_mana2;
 //  Legacy status bar overlay
 //=========================================
 
-static Texture *sbohealth;
-static Texture *sbofrags;
-static Texture *sboarmor;
-static Texture *PatchAmmoPic[NUMAMMO + 1];
+static Material *sbohealth;
+static Material *sbofrags;
+static Material *sboarmor;
+static Material *PatchAmmoPic[NUMAMMO + 1];
 
 
 //=========================================
@@ -201,24 +201,24 @@ static Texture *PatchAmmoPic[NUMAMMO + 1];
 // "WINUM0", large, red, minus is base-2, '%' is base-1
 
 // "STTNUM0", large, red, minus is base-1, '%' is base+10
-static Texture *PatchBNum[11]; // 0-9, big numbers, STTMINUS
-static Texture *tallpercent; // big % sign
+static Material *PatchBNum[11]; // 0-9, big numbers, STTMINUS
+static Material *tallpercent; // big % sign
 
 // "STYSNUM0", small, yellow, no minus
-static Texture *PatchSNum[11];
+static Material *PatchSNum[11];
 
 // "STGNUM0", small, dark gray, no minus
-static Texture *PatchArms[6][2]; // weapon ownership patches
+static Material *PatchArms[6][2]; // weapon ownership patches
 
-static Texture *PatchArmsBack; // arms background
-static Texture *PatchFaces[ST_NUMFACES]; // marine face patches
-static Texture *PatchFaceBack; // face background
+static Material *PatchArmsBack; // arms background
+static Material *PatchFaces[ST_NUMFACES]; // marine face patches
+static Material *PatchFaceBack; // face background
 
-static Texture *PatchKeys[NUMKEYS]; // 3 key-cards, 3 skulls
-static Texture *PatchSTATBAR;
-static Texture *PatchKEYBAR;
+static Material *PatchKeys[NUMKEYS]; // 3 key-cards, 3 skulls
+static Material *PatchSTATBAR;
+static Material *PatchKEYBAR;
 
-// ammo type pics (Texture's)
+// ammo type pics (Material's)
 static const char DHAmmoPics[NUMAMMO + 1][10] =
 {
   {"SBOAMMO1"}, //{"CLIPA0"},  // 0, bullets
@@ -241,19 +241,19 @@ static const char DHAmmoPics[NUMAMMO + 1][10] =
 // Heretic status bar graphics
 //=========================================
 
-static Texture *PatchGod[2];
-static Texture *PatchBARBACK;
-static Texture *PatchLTFCTOP;
-static Texture *PatchRTFCTOP;
-static Texture *PatchARMCLEAR;
+static Material *PatchGod[2];
+static Material *PatchBARBACK;
+static Material *PatchLTFCTOP;
+static Material *PatchRTFCTOP;
+static Material *PatchARMCLEAR;
 
-static Texture *Patch_InvBar[13];
-static Texture *PatchARTI[NUMARTIFACTS];
-static Texture *Patch_ChainSlider[5];
+static Material *Patch_InvBar[13];
+static Material *PatchARTI[NUMARTIFACTS];
+static Material *Patch_ChainSlider[5];
 
 // Heretic numbers:
 // SMALLIN0, small yellow number
-static Texture *PatchINum[11];  // IN0, big yellow number
+static Material *PatchINum[11];  // IN0, big yellow number
 // FONTB16, big green numbers (of a font)
 // FONTA16, medium silver numbers (of a font)
 
@@ -273,18 +273,18 @@ int SpinSpeedLump;
 int SpinDefenseLump;
 int SpinMinotaurLump;
 
-Texture *PatchFlight[16];
-Texture *PatchBook[16];
-Texture *PatchSpeed[16];
-Texture *PatchDefense[16];
-Texture *PatchMinotaur[16];
+Material *PatchFlight[16];
+Material *PatchBook[16];
+Material *PatchSpeed[16];
+Material *PatchDefense[16];
+Material *PatchMinotaur[16];
 
 // Hexen extras
-static Texture *PatchH2BAR;
-static Texture *PatchH2TOP;
-static Texture *PatchMana1[2];
-static Texture *PatchMana2[2];
-static Texture *PatchKILLS;
+static Material *PatchH2BAR;
+static Material *PatchH2TOP;
+static Material *PatchMana1[2];
+static Material *PatchMana2[2];
+static Material *PatchKILLS;
 
 static const char ArtiPatchName[][10] =
 {
@@ -354,23 +354,23 @@ static void ST_SetClassData(int num, int cls)
         PatchPIECE3     = tc.CachePtrNum(fc.GetNumForName("WPIECEF3") + cls);
       */
 
-      Patch_ChainSlider[1] = tc.GetPtrNum(fc.GetNumForName("CHAIN") + cls);
+      Patch_ChainSlider[1] = materials.GetLumpnum(fc.GetNumForName("CHAIN") + cls);
 
       base = fc.GetNumForName("LIFEGEM");
       if (!game.multiplayer)
         // single player game uses red life gem
-        Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + 1);
+        Patch_ChainSlider[2] = materials.GetLumpnum(base + 4*cls + 1);
       else
-        Patch_ChainSlider[2] = tc.GetPtrNum(base + 4*cls + num % 4);
+        Patch_ChainSlider[2] = materials.GetLumpnum(base + 4*cls + num % 4);
     }
   else
     {
       // heretic
       if (!game.multiplayer)
         // single player game uses red life gem
-        Patch_ChainSlider[2] = tc.GetPtr("LIFEGEM2");
+        Patch_ChainSlider[2] = materials.Get("LIFEGEM2");
       else
-        Patch_ChainSlider[2] = tc.GetPtrNum(fc.GetNumForName("LIFEGEM0") + num % 4);
+        Patch_ChainSlider[2] = materials.GetLumpnum(fc.GetNumForName("LIFEGEM0") + num % 4);
     }
 }
 
@@ -380,72 +380,72 @@ void ST_LoadHexenData()
   int i;
   int startLump;
 
-  PatchH2BAR = tc.GetPtr("H2BAR");
-  PatchH2TOP = tc.GetPtr("H2TOP");
+  PatchH2BAR = materials.Get("H2BAR");
+  PatchH2TOP = materials.Get("H2TOP");
 
-  PatchSTATBAR = tc.GetPtr("STATBAR");
-  PatchKEYBAR = tc.GetPtr("KEYBAR");
+  PatchSTATBAR = materials.Get("STATBAR");
+  PatchKEYBAR = materials.Get("KEYBAR");
 
-  //PatchARTICLEAR = tc.GetPtr("ARTICLS");
-  PatchARMCLEAR = tc.GetPtr("ARMCLS");
-  //PatchMANACLEAR = tc.GetPtr("MANACLS");
+  //PatchARTICLEAR = materials.Get("ARTICLS");
+  PatchARMCLEAR = materials.Get("ARMCLS");
+  //PatchMANACLEAR = materials.Get("MANACLS");
   /*
-    PatchMANAVIAL1 = tc.GetPtr("MANAVL1");
-    PatchMANAVIAL2 = tc.GetPtr("MANAVL2");
-    PatchMANAVIALDIM1 = tc.GetPtr("MANAVL1D");
-    PatchMANAVIALDIM2 = tc.GetPtr("MANAVL2D");
+    PatchMANAVIAL1 = materials.Get("MANAVL1");
+    PatchMANAVIAL2 = materials.Get("MANAVL2");
+    PatchMANAVIALDIM1 = materials.Get("MANAVL1D");
+    PatchMANAVIALDIM2 = materials.Get("MANAVL2D");
   */
-  PatchMana1[0] = tc.GetPtr("MANADIM1");
-  PatchMana1[1] = tc.GetPtr("MANABRT1");
-  PatchMana2[0] = tc.GetPtr("MANADIM2");
-  PatchMana2[1] = tc.GetPtr("MANABRT2");
+  PatchMana1[0] = materials.Get("MANADIM1");
+  PatchMana1[1] = materials.Get("MANABRT1");
+  PatchMana2[0] = materials.Get("MANADIM2");
+  PatchMana2[1] = materials.Get("MANABRT2");
 
-  sbohealth = tc.GetPtr("SBOHEALT"); //"PTN2A0"
-  sbofrags  = tc.GetPtr("SBOFRAGS"); //"ARTISKLL"
-  sboarmor  = tc.GetPtr("SBOARMOR"); //"ARM1A0"
+  sbohealth = materials.Get("SBOHEALT"); //"PTN2A0"
+  sbofrags  = materials.Get("SBOFRAGS"); //"ARTISKLL"
+  sboarmor  = materials.Get("SBOARMOR"); //"ARM1A0"
 
-  Patch_InvBar[0] = tc.GetPtr("INVBAR");
-  Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
-  Patch_InvBar[2] = tc.GetPtr("SELECTBO");
-  Patch_InvBar[3] = tc.GetPtr("INVGEML1");
-  Patch_InvBar[4] = tc.GetPtr("INVGEML2");
-  Patch_InvBar[5] = tc.GetPtr("INVGEMR1");
-  Patch_InvBar[6] = tc.GetPtr("INVGEMR2");
-  Patch_InvBar[7] = tc.GetPtr("BLACKSQ");
+  Patch_InvBar[0] = materials.Get("INVBAR");
+  Patch_InvBar[1] = materials.Get("ARTIBOX");
+  Patch_InvBar[2] = materials.Get("SELECTBO");
+  Patch_InvBar[3] = materials.Get("INVGEML1");
+  Patch_InvBar[4] = materials.Get("INVGEML2");
+  Patch_InvBar[5] = materials.Get("INVGEMR1");
+  Patch_InvBar[6] = materials.Get("INVGEMR2");
+  Patch_InvBar[7] = materials.Get("BLACKSQ");
 
   // artifact inventory pics
   for (i=0; i <= NUMARTIFACTS; i++)
-    PatchARTI[i] = tc.GetPtr(ArtiPatchName[i]);
+    PatchARTI[i] = materials.Get(ArtiPatchName[i]);
 
   // artifact use flash
   startLump = fc.GetNumForName("USEARTIA");
-  for (i=0; i<5; i++) Patch_InvBar[i+8] = tc.GetPtrNum(startLump + i);
+  for (i=0; i<5; i++) Patch_InvBar[i+8] = materials.GetLumpnum(startLump + i);
 
   // ammo pics
   for (i=0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
+    PatchAmmoPic[i] = materials.Get(DHAmmoPics[i]);
 
   // keys
   startLump = fc.GetNumForName("KEYSLOT1");
   for (i=0; i<11; i++)
-    PatchKeys[i] = tc.GetPtrNum(startLump+i);
+    PatchKeys[i] = materials.GetLumpnum(startLump+i);
 
   // numbers
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
-    PatchINum[i] = tc.GetPtrNum(startLump+i);
-  PatchINum[10] = tc.GetPtr("NEGNUM");
+    PatchINum[i] = materials.GetLumpnum(startLump+i);
+  PatchINum[10] = materials.Get("NEGNUM");
 
   // BNum
   startLump = fc.GetNumForName("FONTB16");
   for (i = 0; i < 10; i++)
-    PatchBNum[i] = tc.GetPtrNum(startLump+i);
-  PatchBNum[10] = tc.GetPtrNum(startLump-3); //("FONTB13")
+    PatchBNum[i] = materials.GetLumpnum(startLump+i);
+  PatchBNum[10] = materials.GetLumpnum(startLump-3); //("FONTB13")
 
   //SNum
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
-    PatchSNum[i] = tc.GetPtrNum(startLump+i);
+    PatchSNum[i] = materials.GetLumpnum(startLump+i);
   PatchSNum[10] = PatchSNum[0]; // no minus available
 
   playpalette = fc.GetNumForName("PLAYPAL");
@@ -457,18 +457,18 @@ void ST_LoadHexenData()
 
   for (i=0; i<16; i++)
     {
-      PatchFlight[i] = tc.GetPtrNum(SpinFlyLump + i);
-      PatchSpeed[i] = tc.GetPtrNum(SpinSpeedLump + i);
-      PatchDefense[i] = tc.GetPtrNum(SpinDefenseLump + i);
-      PatchMinotaur[i] = tc.GetPtrNum(SpinMinotaurLump + i);
+      PatchFlight[i] = materials.GetLumpnum(SpinFlyLump + i);
+      PatchSpeed[i] = materials.GetLumpnum(SpinSpeedLump + i);
+      PatchDefense[i] = materials.GetLumpnum(SpinDefenseLump + i);
+      PatchMinotaur[i] = materials.GetLumpnum(SpinMinotaurLump + i);
     }
 
-  PatchKILLS = tc.GetPtr("KILLS");
+  PatchKILLS = materials.Get("KILLS");
 
   // health chain slider
   Patch_ChainSlider[0] = NULL;
-  Patch_ChainSlider[3] = tc.GetPtr("LFEDGE");
-  Patch_ChainSlider[4] = tc.GetPtr("RTEDGE");
+  Patch_ChainSlider[3] = materials.Get("LFEDGE");
+  Patch_ChainSlider[4] = materials.Get("RTEDGE");
   ST_SetClassData(0, 0);
 }
 
@@ -478,78 +478,78 @@ void ST_LoadHereticData()
   int startLump;
 
   // gargoyle eyes
-  PatchGod[0] = tc.GetPtr("GOD1");
-  PatchGod[1] = tc.GetPtr("GOD2");
+  PatchGod[0] = materials.Get("GOD1");
+  PatchGod[1] = materials.Get("GOD2");
 
-  PatchBARBACK = tc.GetPtr("BARBACK");
+  PatchBARBACK = materials.Get("BARBACK");
 
   if (cv_deathmatch.value)
-    PatchSTATBAR = tc.GetPtr("STATBAR");
+    PatchSTATBAR = materials.Get("STATBAR");
   else
-    PatchSTATBAR = tc.GetPtr("LIFEBAR");
+    PatchSTATBAR = materials.Get("LIFEBAR");
 
-  PatchLTFCTOP = tc.GetPtr("LTFCTOP");
-  PatchRTFCTOP = tc.GetPtr("RTFCTOP");
-  PatchARMCLEAR  = tc.GetPtr("ARMCLEAR");
+  PatchLTFCTOP = materials.Get("LTFCTOP");
+  PatchRTFCTOP = materials.Get("RTFCTOP");
+  PatchARMCLEAR  = materials.Get("ARMCLEAR");
 
   // inventory bar pics
-  Patch_InvBar[0] = tc.GetPtr("INVBAR");
-  Patch_InvBar[1] = tc.GetPtr("ARTIBOX");
-  Patch_InvBar[2] = tc.GetPtr("SELECTBO");
-  Patch_InvBar[3] = tc.GetPtr("INVGEML1");
-  Patch_InvBar[4] = tc.GetPtr("INVGEML2");
-  Patch_InvBar[5] = tc.GetPtr("INVGEMR1");
-  Patch_InvBar[6] = tc.GetPtr("INVGEMR2");
-  Patch_InvBar[7] = tc.GetPtr("BLACKSQ"); // useful?
+  Patch_InvBar[0] = materials.Get("INVBAR");
+  Patch_InvBar[1] = materials.Get("ARTIBOX");
+  Patch_InvBar[2] = materials.Get("SELECTBO");
+  Patch_InvBar[3] = materials.Get("INVGEML1");
+  Patch_InvBar[4] = materials.Get("INVGEML2");
+  Patch_InvBar[5] = materials.Get("INVGEMR1");
+  Patch_InvBar[6] = materials.Get("INVGEMR2");
+  Patch_InvBar[7] = materials.Get("BLACKSQ"); // useful?
 
   // artifact use flash
   startLump = fc.GetNumForName("USEARTIA");
-  for (i=0; i<5; i++) Patch_InvBar[i+8] = tc.GetPtrNum(startLump + i);
+  for (i=0; i<5; i++) Patch_InvBar[i+8] = materials.GetLumpnum(startLump + i);
 
   // artifact inventory pics
   for (i=0; i <= NUMARTIFACTS; i++)
-    PatchARTI[i] = tc.GetPtr(ArtiPatchName[i]);
+    PatchARTI[i] = materials.Get(ArtiPatchName[i]);
 
   // ammo pics
   //  for (i=0; i < am_heretic; i++)
   //  PatchAmmoPic[i] = NULL;
   //for (i=am_heretic; i <= NUMAMMO; i++)
   for (i = 0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
+    PatchAmmoPic[i] = materials.Get(DHAmmoPics[i]);
 
-  sbohealth = tc.GetPtr("SBOHEALT"); //"PTN2A0"
-  sbofrags  = tc.GetPtr("SBOFRAGS"); //"FACEB1"
-  sboarmor  = tc.GetPtr("SBOARMOR"); //"SHLDA0"
+  sbohealth = materials.Get("SBOHEALT"); //"PTN2A0"
+  sbofrags  = materials.Get("SBOFRAGS"); //"FACEB1"
+  sboarmor  = materials.Get("SBOARMOR"); //"SHLDA0"
 
   // keys
-  PatchKeys[11] = PatchKeys[14] = tc.GetPtr("BKEYICON");
-  PatchKeys[12] = PatchKeys[15] = tc.GetPtr("YKEYICON");
-  PatchKeys[13] = PatchKeys[16] = tc.GetPtr("GKEYICON");
+  PatchKeys[11] = PatchKeys[14] = materials.Get("BKEYICON");
+  PatchKeys[12] = PatchKeys[15] = materials.Get("YKEYICON");
+  PatchKeys[13] = PatchKeys[16] = materials.Get("GKEYICON");
 
   // health chain slider
-  Patch_ChainSlider[0] = tc.GetPtr("CHAINBAC");
-  Patch_ChainSlider[1] = tc.GetPtr("CHAIN");
-  Patch_ChainSlider[3] = tc.GetPtr("LTFACE");
-  Patch_ChainSlider[4] = tc.GetPtr("RTFACE");
+  Patch_ChainSlider[0] = materials.Get("CHAINBAC");
+  Patch_ChainSlider[1] = materials.Get("CHAIN");
+  Patch_ChainSlider[3] = materials.Get("LTFACE");
+  Patch_ChainSlider[4] = materials.Get("RTFACE");
   ST_SetClassData(0, 0);
 
   // INum
   startLump = fc.GetNumForName("IN0");
   for (i = 0; i < 10; i++)
-    PatchINum[i] = tc.GetPtrNum(startLump+i);
-  PatchINum[10] = tc.GetPtr("NEGNUM");
+    PatchINum[i] = materials.GetLumpnum(startLump+i);
+  PatchINum[10] = materials.Get("NEGNUM");
   // and "LAME"...
 
   // BNum
   startLump = fc.GetNumForName("FONTB16");
   for (i = 0; i < 10; i++)
-    PatchBNum[i] = tc.GetPtrNum(startLump+i);
-  PatchBNum[10] = tc.GetPtrNum(startLump-3); //("FONTB13")
+    PatchBNum[i] = materials.GetLumpnum(startLump+i);
+  PatchBNum[10] = materials.GetLumpnum(startLump-3); //("FONTB13")
 
   //SNum
   startLump = fc.GetNumForName("SMALLIN0");
   for (i = 0; i < 10; i++)
-    PatchSNum[i] = tc.GetPtrNum(startLump+i);
+    PatchSNum[i] = materials.GetLumpnum(startLump+i);
   PatchSNum[10] = PatchSNum[0]; // no minus available
 
   playpalette = fc.GetNumForName("PLAYPAL");
@@ -558,8 +558,8 @@ void ST_LoadHereticData()
 
   for (i=0; i<16; i++)
     {
-      PatchFlight[i] = tc.GetPtrNum(SpinFlyLump + i);
-      PatchBook[i] = tc.GetPtrNum(SpinBookLump + i);
+      PatchFlight[i] = materials.GetLumpnum(SpinFlyLump + i);
+      PatchBook[i] = materials.GetLumpnum(SpinBookLump + i);
     }
 }
 
@@ -587,23 +587,23 @@ void ST_loadFaceGraphics (char *facestr)
       for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
         {
           sprintf(namebuf, "ST%d%d", i, j);
-          PatchFaces[facenum++] = tc.GetPtr(namelump);
+          PatchFaces[facenum++] = materials.Get(namelump);
         }
       sprintf(namebuf, "TR%d0", i);        // turn right
-      PatchFaces[facenum++] = tc.GetPtr(namelump);
+      PatchFaces[facenum++] = materials.Get(namelump);
       sprintf(namebuf, "TL%d0", i);        // turn left
-      PatchFaces[facenum++] = tc.GetPtr(namelump);
+      PatchFaces[facenum++] = materials.Get(namelump);
       sprintf(namebuf, "OUCH%d", i);       // ouch!
-      PatchFaces[facenum++] = tc.GetPtr(namelump);
+      PatchFaces[facenum++] = materials.Get(namelump);
       sprintf(namebuf, "EVL%d", i);        // evil grin ;)
-      PatchFaces[facenum++] = tc.GetPtr(namelump);
+      PatchFaces[facenum++] = materials.Get(namelump);
       sprintf(namebuf, "KILL%d", i);       // pissed off
-      PatchFaces[facenum++] = tc.GetPtr(namelump);
+      PatchFaces[facenum++] = materials.Get(namelump);
     }
   strcpy (namebuf, "GOD0");
-  PatchFaces[facenum++] = tc.GetPtr(namelump);
+  PatchFaces[facenum++] = materials.Get(namelump);
   strcpy (namebuf, "DEAD0");
-  PatchFaces[facenum++] = tc.GetPtr(namelump);
+  PatchFaces[facenum++] = materials.Get(namelump);
 
   // face backgrounds for different player colors
   //added:08-02-98: uses only STFB0, which is remapped to the right
@@ -613,9 +613,9 @@ void ST_loadFaceGraphics (char *facestr)
   strcpy (namebuf, "B0");
   i = fc.FindNumForName(namelump);
   if (i != -1)
-    PatchFaceBack = tc.GetPtrNum(i);
+    PatchFaceBack = materials.GetLumpnum(i);
   else
-    PatchFaceBack = tc.GetPtr("STFB0");
+    PatchFaceBack = materials.Get("STFB0");
 
 }
 
@@ -629,27 +629,27 @@ void ST_LoadDoomData()
   for (i=0; i<10; i++)
     {
       sprintf(namebuf, "STTNUM%d", i);
-      PatchBNum[i] = tc.GetPtr(namebuf);
+      PatchBNum[i] = materials.Get(namebuf);
 
       sprintf(namebuf, "STYSNUM%d", i);
-      PatchSNum[i] = tc.GetPtr(namebuf);
+      PatchSNum[i] = materials.Get(namebuf);
     }
 
-  PatchBNum[10] = tc.GetPtr("STTMINUS");
+  PatchBNum[10] = materials.Get("STTMINUS");
   PatchSNum[10] = PatchSNum[0]; // no minus available
 
   // percent signs.
-  tallpercent = tc.GetPtr("STTPRCNT");
+  tallpercent = materials.Get("STTPRCNT");
 
   // key cards
   for (i=0; i<6; i++)
     {
       sprintf(namebuf, "STKEYS%d", i);
-      PatchKeys[i+11] = tc.GetPtr(namebuf);
+      PatchKeys[i+11] = materials.Get(namebuf);
     }
 
   // arms background box
-  PatchArmsBack = tc.GetPtr("STARMS");
+  PatchArmsBack = materials.Get("STARMS");
 
   // arms ownership widgets
   for (i=0;i<6;i++)
@@ -657,25 +657,25 @@ void ST_LoadDoomData()
       sprintf(namebuf, "STGNUM%d", i+2);
 
       // gray #
-      PatchArms[i][0] = tc.GetPtr(namebuf);
+      PatchArms[i][0] = materials.Get(namebuf);
 
       // yellow #
       PatchArms[i][1] = PatchSNum[i+2];
     }
 
   // status bar background bits
-  PatchSTATBAR = tc.GetPtr("STBAR");
+  PatchSTATBAR = materials.Get("STBAR");
 
   // the original Doom uses 'STF' as base name for all face graphics
   ST_loadFaceGraphics("STF");
 
   // ammo pics
   for (i = 0; i < NUMAMMO; i++)
-    PatchAmmoPic[i] = tc.GetPtr(DHAmmoPics[i]);
+    PatchAmmoPic[i] = materials.Get(DHAmmoPics[i]);
 
-  sbohealth = tc.GetPtr("SBOHEALT"); //"STIMA0"
-  sbofrags  = tc.GetPtr("SBOFRAGS"); //"M_SKULL1"
-  sboarmor  = tc.GetPtr("SBOARMOR"); //"ARM1A0"
+  sbohealth = materials.Get("SBOHEALT"); //"STIMA0"
+  sbofrags  = materials.Get("SBOFRAGS"); //"M_SKULL1"
+  sboarmor  = materials.Get("SBOARMOR"); //"ARM1A0"
 }
 
 

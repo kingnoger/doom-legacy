@@ -119,8 +119,8 @@ static int      finalewait;
 static bool endgame;
 static int  gameepisode;
 static std::string finaletext;
-static Texture *finalepic = NULL;
-static Texture *finaleflat = NULL;
+static Material *finalepic = NULL;
+static Material *finaleflat = NULL;
 
 static bool keypressed = false;
 
@@ -129,7 +129,7 @@ void F_StartFinale(const MapCluster *cd, bool enter, bool end)
 {
   endgame = end;
   gameepisode = cd->episode;
-  finaleflat = tc.GetPtr(cd->finalepic.c_str(), TEX_floor);
+  finaleflat = materials.Get(cd->finalepic.c_str(), TEX_floor);
 
   if (enter)
     finaletext = cd->entertext;
@@ -473,7 +473,7 @@ void D_PageDrawer(char *lumpname);
 void F_CastDrawer(int dummy)
 {
   // erase the entire screen to a background
-  //V_DrawPatch (0,0,0, tc.GetPtr ("BOSSBACK", PU_CACHE));
+  //V_DrawPatch (0,0,0, materials.Get ("BOSSBACK", PU_CACHE));
   D_PageDrawer("BOSSBACK");
 
   F_CastPrint(castorder[castnum].name);
@@ -481,7 +481,7 @@ void F_CastDrawer(int dummy)
   // draw the current frame in the middle of the screen
   sprite_t *sprdef = sprites.Get(sprnames[caststate->sprite]);
   spriteframe_t *sprframe = &sprdef->spriteframes[ caststate->frame & TFF_FRAMEMASK];
-  Texture *t = sprframe->tex[0];
+  Material *t = sprframe->tex[0];
   bool flip = sprframe->flip[0];
 
   t->Draw(BASEVIDWIDTH>>1,170,(flip ? V_FLIPX : 0) | V_SCALE);
@@ -495,8 +495,8 @@ void F_BunnyScroll()
   int         stage;
   static int  laststage;
 
-  Texture *p1 = tc.GetPtr("PFUB2");
-  Texture *p2 = tc.GetPtr("PFUB1");
+  Material *p1 = materials.Get("PFUB2");
+  Material *p2 = materials.Get("PFUB1");
 
   //V_MarkRect (0, 0, vid.width, vid.height);
 
@@ -525,7 +525,7 @@ void F_BunnyScroll()
     return;
   if (finalecount < 1180)
     {
-      tc.GetPtr("END0")->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
+      materials.Get("END0")->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
       laststage = 0;
       return;
     }
@@ -540,7 +540,7 @@ void F_BunnyScroll()
     }
 
   sprintf (name,"END%i",stage);
-  tc.GetPtr(name)->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
+  materials.Get(name)->Draw((320-13*8)/2, (200-8*8)/2, V_SCALE);
 }
 
 
@@ -558,17 +558,17 @@ void F_DoomDrawer(int dummy)
   switch (gameepisode)
     {
     case 1:
-      //tc.GetPtr("HELP2")->Draw(0,0,V_SCALE); // ordering info for shareware
-      tc.GetPtr("CREDIT")->Draw(0,0, V_SCALE); // id credits
+      //materials.Get("HELP2")->Draw(0,0,V_SCALE); // ordering info for shareware
+      materials.Get("CREDIT")->Draw(0,0, V_SCALE); // id credits
       break;
     case 2:
-      tc.GetPtr("VICTORY2")->Draw(0,0, V_SCALE); // deimos over hell
+      materials.Get("VICTORY2")->Draw(0,0, V_SCALE); // deimos over hell
       break;
     case 3:
       F_BunnyScroll();
       break;
     case 4:
-      tc.GetPtr("ENDPIC")->Draw(0,0,V_SCALE);
+      materials.Get("ENDPIC")->Draw(0,0,V_SCALE);
       break;
     }
 }
@@ -583,9 +583,9 @@ void F_DemonScroll()
   if (scrolled < 0)
     scrolled = 0;
 
-  tc.GetPtr("FINAL1")->Draw(0, scrolled*vid.dupy, V_SCALE);
+  materials.Get("FINAL1")->Draw(0, scrolled*vid.dupy, V_SCALE);
   if (scrolled>0)
-    tc.GetPtr("FINAL2")->Draw(0, (scrolled-200)*vid.dupy, V_SCALE);
+    materials.Get("FINAL2")->Draw(0, (scrolled-200)*vid.dupy, V_SCALE);
 }
 
 
@@ -600,7 +600,7 @@ void F_DrawUnderwater()
       underwawa = true;
       vid.SetPaletteLump("E2PAL");
     }
-  tc.GetPtr("E2END")->Draw(0, 0, V_SCALE);
+  materials.Get("E2END")->Draw(0, 0, V_SCALE);
 }
 
 
@@ -611,9 +611,9 @@ void F_HereticDrawer(int dummy)
     {
     case 1:
       if (fc.FindNumForName("E2M1") == -1)
-        tc.GetPtr("ORDER")->Draw(0, 0, V_SCALE);
+        materials.Get("ORDER")->Draw(0, 0, V_SCALE);
       else
-        tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
+        materials.Get("CREDIT")->Draw(0, 0, V_SCALE);
       break;
     case 2:
       F_DrawUnderwater();
@@ -623,7 +623,7 @@ void F_HereticDrawer(int dummy)
       break;
     case 4: // Just show credits screen for extended episodes
     case 5:
-      tc.GetPtr("CREDIT")->Draw(0, 0, V_SCALE);
+      materials.Get("CREDIT")->Draw(0, 0, V_SCALE);
       break;
     }
 }
@@ -633,7 +633,7 @@ void F_HexenStart(int stage)
   switch (stage)
     {
     case 0:
-      finalepic = tc.GetPtr("FINALE1");
+      finalepic = materials.Get("FINALE1");
       S.StartMusic("HALL", false);
       break;
 
@@ -647,7 +647,7 @@ void F_HexenStart(int stage)
       //finaletext = "win2msg",
       F_TextInit(0);
       finalestage->stage = 5;
-      finalepic = tc.GetPtr("FINALE2");
+      finalepic = materials.Get("FINALE2");
       S.StartMusic("ORB", false);
       break;
 
@@ -657,7 +657,7 @@ void F_HexenStart(int stage)
 
     case 4:
       // TODO fade in
-      finalepic = tc.GetPtr("FINALE3");
+      finalepic = materials.Get("FINALE3");
       S.StartMusic("CHESS", true);
       break;
 
@@ -680,8 +680,8 @@ void F_HexenDrawer(int stage)
     {
       int i = 0; // playerclass...
       if (game.multiplayer)
-        tc.GetPtr("CHESSALL")->Draw(20,0,V_SCALE);
+        materials.Get("CHESSALL")->Draw(20,0,V_SCALE);
       else
-        tc.GetPtrNum(base + i)->Draw(60,0,V_SCALE);
+        materials.GetLumpnum(base + i)->Draw(60,0,V_SCALE);
     }
 }

@@ -141,19 +141,19 @@ void D_PageDrawer(char *lumpname)
     {
       if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
         {
-          for (int y=0; y<vid.height; y += window_background->height)
-            for (int x=0; x<vid.width; x += window_background->width)
+          for (int y=0; y<vid.height; y += window_background->worldheight)
+            for (int x=0; x<vid.width; x += window_background->worldwidth)
               window_background->Draw(x,y,0);
         }
     }
 
   vid.scaledofs = vid.centerofs; // centering the scaled picture 
-  Texture *t = tc.GetPtr(lumpname);
+  Material *t = materials.Get(lumpname);
   t->Draw(0, 0, V_SCALE);
 
   if (game.mode >= gm_heretic && game.demosequence == 0 && game.pagetic <= 140)
     {
-      t = tc.GetPtr("ADVISOR");
+      t = materials.Get("ADVISOR");
       t->Draw(4, 160, V_SCALE);
     }
   vid.scaledofs = 0;
@@ -369,16 +369,16 @@ void GameInfo::Display()
   if (paused && !Menu::active)
     {
       int x, y = (BASEVIDHEIGHT-hud.stbarheight)/2;
-      Texture *tex;
+      Material *tex;
 
       if (game.mode < gm_heretic)
 	{
-	  tex = tc.GetPtr("M_PAUSE");
-	  x = (BASEVIDWIDTH - tex->width)/2;
+	  tex = materials.Get("M_PAUSE");
+	  x = (BASEVIDWIDTH - tex->worldwidth)/2;
 	}
       else
 	{
-	  tex = tc.GetPtr("PAUSED");
+	  tex = materials.Get("PAUSED");
 	  x = BASEVIDWIDTH/2;
 	}
 

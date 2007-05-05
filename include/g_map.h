@@ -110,8 +110,8 @@ public:
   class fadetable_t *fadetable; ///< colormaps the software renderer uses to simulate light levels
   bool R_SetFadetable(const char *name);
 
-  class Texture *skytexture; ///< current sky texture
-  class Actor   *skybox_pov; ///< default skybox viewpoint
+  class Material *skytexture; ///< current sky texture
+  class Actor    *skybox_pov; ///< default skybox viewpoint
   //@}
 
   /// \name Blockmap

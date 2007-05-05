@@ -22,55 +22,17 @@
 
 #include "hardware/oglshaders.h"
 
-#if defined(TEST_SHADERS) && !defined(GL_VERSION_2_0)
-#error Shaders require OpenGL 2.0!
-#endif
-
 #ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
 
 #include <GL/glu.h>
 #include "doomdef.h"
+#include "g_map.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "hardware/oglrenderer.hpp"
 
-ShaderProg *sprog = NULL;
-
-// simple test shaders
-const char *vshader = 
-"void main(){\
-gl_TexCoord[0] = gl_MultiTexCoord0;\
-gl_Position = ftransform();}";
-
-const char *fshader =
-"uniform sampler2D tex0; uniform float t;\
-void main(){\
-vec4 texel;\
-vec2 tc;\
-tc.s = gl_TexCoord[0].s+0.1*sin(t+gl_TexCoord[0].t);\
-tc.t = gl_TexCoord[0].t+0.1*(1-cos(t+gl_TexCoord[0].s));\
-texel = texture2D(tex0, tc);\
-gl_FragColor = vec4(texel.rgb, texel.a*abs(sin(t)));}";
-
-
-void TestShaders()
-{
-  static bool shaders_done = false;
-  if (!shaders_done)
-    {
-      sprog = new ShaderProg("xxxx");
-      Shader *v = new Shader("aaa", GL_VERTEX_SHADER);
-      Shader *f = new Shader("bbb", GL_FRAGMENT_SHADER);
-      v->Create(vshader);
-      f->Create(fshader);
-
-      sprog->AttachShader(v);
-      sprog->AttachShader(f);
-      sprog->Link();
-      sprog->SetUniforms(0);
-      shaders_done = true;
-    }
-}
-
+shader_cache_t shaders;
+shaderprog_cache_t shaderprogs;
 
 
 static void PrintError()
@@ -86,11 +48,28 @@ static void PrintError()
 
 
 
-Shader::Shader(const char *n, GLenum t)
+Shader::Shader(const char *n, bool vertex_shader)
   : cacheitem_t(n), shader_id(NOSHADER), ready(false)
 {
-  type = (t == GL_VERTEX_SHADER) ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER;
+  type = vertex_shader ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER;
+
+  int lump = fc.FindNumForName(name);
+  if (lump < 0)
+    return;
+
+  int len = fc.LumpLength(lump);
+  char *code = static_cast<char*>(fc.CacheLumpNum(lump, PU_DAVE));
+  Compile(code, len);
+  Z_Free(code);
 }
+
+Shader::Shader(const char *n, const char *code, bool vertex_shader)
+  : cacheitem_t(n), shader_id(NOSHADER), ready(false)
+{
+  type = vertex_shader ? GL_VERTEX_SHADER : GL_FRAGMENT_SHADER;
+  Compile(code, strlen(code));
+}
+
 
 Shader::~Shader()
 {
@@ -98,24 +77,6 @@ Shader::~Shader()
     glDeleteShader(shader_id);
 }
 
-bool Shader::Create()
-{
-  int lump = fc.FindNumForName(name);
-  if (lump < 0)
-    return false;
-
-  int len = fc.LumpLength(lump);
-  char *code = static_cast<char*>(fc.CacheLumpNum(lump, PU_STATIC));
-  Compile(code, len);
-  Z_Free(code);
-  return true;
-}
-
-bool Shader::Create(const char *code)
-{
-  Compile(code, strlen(code));
-  return true;
-}
 
 void Shader::Compile(const char *code, int len)
 {
@@ -142,7 +103,7 @@ void Shader::PrintInfoLog()
 
   if (len > 0)
     {
-      char *log = static_cast<char*>(Z_Malloc(len, PU_STATIC, NULL));
+      char *log = static_cast<char*>(Z_Malloc(len, PU_DAVE, NULL));
       int chars = 0;
       glGetShaderInfoLog(shader_id, len, &chars, log);
       CONS_Printf("Shader %s InfoLog:\n%s\n", name, log);
@@ -199,7 +160,16 @@ void ShaderProg::Link()
   if ((loc.tex0 = glGetUniformLocation(prog_id, "tex0")) == -1)
     CONS_Printf("var not found!\n");
 
+  if ((loc.tex1 = glGetUniformLocation(prog_id, "tex1")) == -1)
+    CONS_Printf("var not found!\n");
+
+  if ((loc.eye_pos = glGetUniformLocation(prog_id, "eye_pos")) == -1)
+    CONS_Printf("var not found!\n");
+
   if ((loc.t = glGetUniformLocation(prog_id, "t")) == -1)
+    CONS_Printf("var not found!\n");
+
+  if ((loc.eye_pos = glGetAttribLocation(prog_id, "tangent")) == -1)
     CONS_Printf("var not found!\n");
 }
 
@@ -208,18 +178,19 @@ void ShaderProg::Use()
   glUseProgram(prog_id);
 }
 
-void ShaderProg::SetUniforms(float t)
+void ShaderProg::SetUniforms()
 {
   // only call after linking!
   glUniform1i(loc.tex0, 0);
-  glUniform1f(loc.t, t);
+  glUniform1i(loc.tex1, 1);
+  glUniform3f(loc.eye_pos, oglrenderer->x, oglrenderer->y, oglrenderer->z);
+  glUniform1f(loc.t, oglrenderer->mp->maptic/60.0);
+}
 
-  /*
+void ShaderProg::SetAttributes(shader_attribs_t *a)
+{
   // then vertex attribute vars (TODO vertex attribute arrays) (can be changed anywhere)
-  GLint loc = glGetAttribLocation(prog_id, const GLchar *varname);
-  if (loc != -1)
-  glVertexAttrib2f(loc, f1, f2);
-  */  
+  glVertexAttrib3fv(loc.tangent, a->tangent); // FIXME TEST
 }
 
 void ShaderProg::PrintInfoLog()
@@ -229,7 +200,7 @@ void ShaderProg::PrintInfoLog()
 
   if (len > 0)
     {
-      char *log = static_cast<char*>(Z_Malloc(len, PU_STATIC, NULL));
+      char *log = static_cast<char*>(Z_Malloc(len, PU_DAVE, NULL));
       int chars = 0;
       glGetProgramInfoLog(prog_id, len, &chars, log);
       CONS_Printf("Program %s InfoLog:\n%s\n", name, log);
@@ -237,4 +208,7 @@ void ShaderProg::PrintInfoLog()
     }
 }
 
+#else
+#warning Shaders require OpenGL 2.0!
 #endif // GL_VERSION_2_0
+

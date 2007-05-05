@@ -31,6 +31,7 @@ extern "C"
 #include "r_data.h"
 #include "screen.h"
 #include "w_wad.h"
+#include "z_zone.h"
 
 
 JPEGTexture::JPEGTexture(const char *n, int l)
@@ -287,7 +288,7 @@ bool JPEGTexture::ReadData(bool read_image, bool sw_rend)
 		  row += num_scanlines;
 		}
 
-	      format = GL_RGB;
+	      gl_format = GL_RGB;
 	    }
 
 	  jpeg_finish_decompress(&cinfo);

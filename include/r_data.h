@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -23,9 +23,10 @@
 #ifndef r_data_h
 #define r_data_h 1
 
-#include<GL/gl.h>
+#include <GL/gl.h>
+#include <vector>
+#include <set>
 
-#include <map>
 #include "doomtype.h"
 #include "m_fixed.h"
 #include "z_cache.h"
@@ -64,7 +65,7 @@ typedef post_t column_t;
 
 
 
-/// \brief pic_t, a graphics format native to Legacy. Deprecated.
+/// \brief pic_t, a graphics format native to Legacy. No longer supported.
 ///
 /// a pic is an unmasked block of pixels, stored in horizontal way
 /*
@@ -89,85 +90,77 @@ struct pic_t
 };
 */
 
-
 //===============================================================================
 
 /// \brief ABC for all 2D bitmaps.
 ///
 /// Hasta la vista, old texture/flat system!
-/// This ABC represents one logical texture at runtime.
-/// It is usually built out of patch_t's and/or flats during loading.
-/// It may be static, animated, fractal, procedural etc.
-
+/// This ABC represents one bitmap texture at runtime.
+/// They are built out of patch_t's, flats and other image files during loading.
 class Texture : public cacheitem_t
 {
-  friend class texturecache_t;
-public:
-  int     id;    ///< unique texture ID  TODO temp solution, replace with pointers?
-  float   worldwidth, worldheight; ///< dimensions in world units
-  float   leftoffs, topoffs;       ///< internal image offsets in world units
-
-  short   width, height;           ///< bitmap dimensions in texels
-  byte    w_bits, h_bits;          ///< largest power-of-two sizes <= actual bitmap size
-  fixed_t xscale, yscale;          ///< texel-size / world-size
-
 protected:
   /// Indexed column-major data for sw renderer, built and accessed using GetData(), OR
   /// row-major data for OpenGL, built using GLGetData(), format in 'format'.
   /// NOTE: GLPrepare _must not_ be used on a Texture if any of the "sw renderer" functions are.
-  byte    *pixels;
-  GLenum   format; ///< Storage format of pixels for OpenGL.
-  GLuint   glid;   ///< OpenGL handle. Accessed using GLPrepare().
-  static const GLuint NOTEXTURE = 0;
+  byte *pixels;
 
 public:
-  /// To be called after bitmap size and scale are known
+  short  leftoffs, topoffs; ///< external image offsets in pixels (mostly unused)
+  short  width, height;  ///< bitmap dimensions in texels
+  byte   w_bits, h_bits; ///< largest power-of-two sizes <= actual bitmap size
+
+  /// To be called after bitmap size is known
   inline void Initialize()
   {
     for (w_bits = 0; 1 << (w_bits+1) <= width;  w_bits++);
     for (h_bits = 0; 1 << (h_bits+1) <= height; h_bits++);
-
-    worldwidth  = width / xscale.Float();
-    worldheight = height / yscale.Float();
   }
 
-public:
-  Texture(const char *name);
-  virtual ~Texture();
-
-  void *operator new(size_t size);
-  void  operator delete(void *mem);
-
-  /// sw renderer: True means that texture is available in column_t format using GetMaskedColumn
-  virtual bool Masked() { return false; };
-
-  /// sw renderer: Get masked indexed texture column data. if Masked() is false, returns NULL
-  virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; };
-
-  /// sw renderer: Get unmasked indexed texture column data.
-  virtual byte *GetColumn(fixed_t col);
-
-  /// sw renderer: Get indexed column-major texture data.
-  virtual byte *GetData() = 0;
-
+  /// \name OpenGL renderer
+  //@{
 protected:
+  GLenum   gl_format; ///< Storage format of pixels for OpenGL.
+  GLuint   gl_id;     ///< OpenGL handle. Accessed using GLPrepare().
+  static const GLuint NOTEXTURE = 0;
+
   /// Helper function for preparing OpenGL textures. Sets 'pixels' pointing to data in format described by 'format'.
   virtual void GLGetData();
 
 public:
   /// Creates an OpenGL texture if necessary, returns the handle. Uses the virtualized GLGetData().
-  virtual GLuint GLPrepare();
+  GLuint GLPrepare();
 
   /// Unloads the texture from OpenGL. 
   bool ClearGLTexture();
+  //@}
 
-  /// draw the Texture flat on screen.
-  virtual void Draw(float x, float y, int scrn) {}; // scrn may contain flags
+public:
+  Texture(const char *name);
+  virtual ~Texture();
 
-  /// tile an area of the screen with the Texture
+  /// \name Software renderer
+  //@{
+  /// True means that texture is available in column_t format using GetMaskedColumn
+  virtual bool Masked() { return false; };
+
+  /// Get masked indexed texture column data. if Masked() is false, returns NULL
+  virtual column_t *GetMaskedColumn(fixed_t col) { return NULL; };
+
+  /// Get unmasked indexed texture column data.
+  virtual byte *GetColumn(fixed_t col);
+
+  /// Get indexed column-major texture data.
+  virtual byte *GetData() = 0;
+
+  /// Draw the Texture in the LFB.
+  virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags) {};
+
+  /// Tile an area of the screen with the Texture.
   virtual void DrawFill(int x, int y, int w, int h) {};
+  //@}
 };
-
 
 
 /// \brief Textures which reside in a single lump.
@@ -185,7 +178,8 @@ public:
   LumpTexture(const char *name, int lump, int w, int h);
 
   virtual byte *GetData(); ///< pixels to indexed column-major texture data. Subclasses should redefine this.
-  virtual void Draw(float x, float y, int scrn);
+  virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags);
   virtual void DrawFill(int x, int y, int w, int h);
 };
 
@@ -219,6 +213,23 @@ public:
 
 
 
+/// \brief Class for TGA Textures
+class TGATexture : public LumpTexture
+{
+protected:
+  byte *data;      ///< raw TGA file data
+  int imageoffset; ///< pixels == &data[imageoffset]
+  int bpp;         ///< bits per pixel
+
+  virtual void GLGetData();
+
+public:
+  TGATexture(const char *name, int lump);
+  virtual ~TGATexture();
+  virtual byte *GetData();
+};
+
+
 
 /// \brief Class for patch_t's.
 ///
@@ -226,10 +237,10 @@ public:
 /// patch_t (masked) and raw.
 class PatchTexture : public Texture
 {
+protected:
   int   lump;
   byte *patch_data; ///< texture in patch_t format, pixels has it in raw column-major format
 
-protected:
   patch_t *GeneratePatch();
 
 public:
@@ -240,7 +251,8 @@ public:
   virtual column_t *GetMaskedColumn(fixed_t col);
   virtual byte *GetData();
 
-  virtual void Draw(float x, float y, int scrn);
+  virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags);
 };
 
 
@@ -285,11 +297,112 @@ public:
 };
 
 
+//===============================================================================
+
+/// \brief Cache for Textures.
+class texture_cache_t : public cache_t<Texture>
+{
+  friend class material_cache_t;
+protected:
+  /// Generates a Texture from a single data lump, deduces format.
+  virtual Texture *Load(const char *name);
+
+public:
+  /// Creates a Texture with a given name from a given lump.
+  Texture *LoadLump(const char *name, int lump);
+};
+
+extern texture_cache_t textures;
+
 
 //===============================================================================
 
-/// Texture lookup orders
-enum texture_class_t
+/// "Material" definition, uses one or more Textures and maybe shaders.
+class Material : public cacheitem_t
+{
+  friend class material_cache_t;
+public:
+  float worldwidth, worldheight; ///< dimensions in world units (from tex0)
+  float leftoffs, topoffs;       ///< external image offsets in world units (from tex0) (used by sprites and HUD graphics)
+
+  struct TextureRef
+  {
+  public:
+    Texture *t; ///< Texture we are referring to
+
+    float worldwidth, worldheight; ///< dimensions in world units
+    float xscale, yscale;          ///< texel-size / world-size    
+    GLint mag_filter, min_filter;  ///< OpenGL magnification and minification filters to use
+
+    // TODO blending type
+
+  public:
+    /// default constructor
+    TextureRef();
+
+    /// To be called after bitmap size and scale are known
+    inline void Initialize()
+    {
+      worldwidth  = t->width / xscale;
+      worldheight = t->height / yscale;
+    }
+
+    /// Binds the Texture and sets its params
+    void GLSetTextureParams();
+  };
+
+  std::vector<TextureRef> tex; ///< allow several textures per material
+  class ShaderProg *shader;
+
+  void Initialize()
+  {
+    int n = tex.size();
+    for (int k=0; k < n; k++)
+      tex[k].Initialize();
+
+    TextureRef &tr = tex[0];
+
+    worldwidth = tr.worldwidth;
+    worldheight = tr.worldheight;
+    leftoffs = tr.t->leftoffs / tr.xscale;
+    topoffs = tr.t->topoffs / tr.yscale;
+  };
+
+public:
+  Material(const char *name);
+  virtual ~Material();
+
+  /// \name Software renderer functions, these are wrappers for tex[0].
+  //@{
+  /// True means that texture is available in column_t format using GetMaskedColumn
+  inline bool Masked() { return tex[0].t->Masked(); };
+
+  /// Get masked indexed texture column data. if Masked() is false, returns NULL
+  inline column_t *GetMaskedColumn(fixed_t col) { return tex[0].t->GetMaskedColumn(col * tex[0].xscale); }
+
+  /// Get unmasked indexed texture column data.
+  inline byte *GetColumn(fixed_t col) { return tex[0].t->GetColumn(col * tex[0].xscale); }
+
+  /// Get indexed column-major texture data.
+  inline byte *GetData() { return tex[0].t->GetData(); }
+  //@}
+
+public:
+  /// draw the Material flat on screen.
+  void Draw(float x, float y, int scrn); // scrn may contain flags
+
+  /// tile an area of the screen with the Texture
+  void DrawFill(int x, int y, int w, int h);
+
+  /// Make OpenGL to use the Material. After this you can call glBegin(). Returns the number of texture units required.
+  int GLUse();
+};
+
+
+//===============================================================================
+
+/// Material lookup orders
+enum material_class_t
 {
   TEX_wall = 0,
   TEX_floor,
@@ -298,15 +411,8 @@ enum texture_class_t
 };
 
 
-typedef std::map<unsigned, Texture *>::iterator texiterator;
-
-/// \brief Second-level cache for Textures
-///
-/// There are two ways to add Texture definitions to the cache:
-/// Insert(Texture*) inserts a finished texture to cache (anims, doomtextures)
-/// Cache("name") (->Load("name")) tries to create a texture from a lump if it is not already found in cache
-
-class texturecache_t
+/// \brief Cache for Materials
+class material_cache_t
 {
 protected:
   cachesource_t new_tex;    ///< advanced textures, TX_START
@@ -315,95 +421,75 @@ protected:
   cachesource_t sprite_tex; ///< advanced spritetextures, S_START
   cachesource_t lod_tex;    ///< load-on-demand textures, mostly for misc. graphics
 
-  memtag_t      tagtype;      ///< memory tag used for the cached data
-  Texture      *default_item; ///< the default data item
+  Material   *default_item; ///< the default data item
 
-  /// Mapping from Texture id's to pointers.
-  std::map<unsigned, Texture *> texture_ids;
+  /// All known Materials stored here for simplicity, each also resides in one cachesource_t
+  std::set<Material*> all_materials;
+  typedef std::set<Material*>::iterator material_iterator_t;
+
+  /// inserts a Material into the given source
+  bool Insert(Material *m, cachesource_t &s, bool keep_old = false);
+
+  /// Creates a Material from the Texture, also inserts it to the given source.
+  Material *BuildMaterial(Texture *t, cachesource_t &source, bool h_start = false);
 
   /// sw renderer: colormaps for palette conversions (one for each resource file)
   std::vector<byte *> palette_conversion;
-
-  /// inserts a Texture into the given source
-  bool Insert(Texture *t, cachesource_t &s, bool keep_old = false);
-
-  /// Creates a Texture from the lump, inserts it to the given source.
-  bool BuildLumpTexture(int lump, bool h_start, cachesource_t &source);
+  /// OpenGL renderer: lump containing PLAYPAL meant for this resource file
+  std::vector<int> palette_lump;
 
 public:
-  texturecache_t(memtag_t tag);
-
-  /// sets the default Texture
-  void SetDefaultItem(const char *name);
-
-  /// empties the cache, deletes all Textures
-  void Clear();
-
-  /// For iterating through the textures.
-  texiterator begin() { return texture_ids.begin(); }
-
-  /// For stopping the iteration.
-  texiterator end() { return texture_ids.end(); }
-
-  /// generates a Texture from a single data lump
-  static Texture *Load(const char *p);
-
-  /// Insert a Texture into the new_tex source, used by NTEXTURE parser.
-  inline void InsertTexture(Texture *t) { Insert(t, new_tex, false); };
-
-  /// Insert a Texture into the sprite_tex source, used by NTEXTURE parser.
-  inline void InsertSprite(Texture *t) { Insert(t, sprite_tex, false); };
-
-  /// Insert a Texture into the flat source, used by animated textures.
-  /// Pointers to original Textures are preserved in the master animation.
-  inline void InsertFlat(Texture *t) { Insert(t, flat_tex, true); };
-
-  /// Insert a Texture into the doomtex source, used by animated textures.
-  /// Pointers to original Textures are preserved in the master animation.
-  inline void InsertDoomTex(Texture *t) { Insert(t, doom_tex, true); };
-
-  /// Returns pointer to an existing Texture, or tries creating it if nonexistant.
-  Texture *GetPtr(const char *name, texture_class_t mode = TEX_lod, bool name_8chars = true);
-
-  /// like GetPtr, but takes a lump number instead of a name. For TEX_lod ONLY!
-  Texture *GetPtrNum(int n);
-
-  /// Returns the id of an existing Texture, or tries creating it if nonexistant.
-  inline int GetID(const char *name, texture_class_t mode = TEX_wall)
-  {
-    Texture *t = GetPtr(name, mode);
-    return t ? t->id : 0;
-  };
-
-  /// For animated textures only
-  inline int GetNoSubstitute(const char *p, texture_class_t mode)
-  {
-    Texture *t = GetPtr(p, mode);
-    if (t == default_item)
-      return 0;
-
-    return t ? t->id : 0;
-  };
-
-  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID(name, TEX_wall);
-  int GetTextureOrColormap(const char *name, class fadetable_t*& cmap);
-  int GetTextureOrTransmap(const char *name, int& map_num);
-
-  /// returns the Texture with the corresponding id
-  Texture *operator[](unsigned id);
-
-  /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Textures.
-  int ReadTextures();
-
   /// creates the palette conversion colormaps
   void InitPaletteConversion();
 
   /// returns the palette conversion colormap for the given file
   inline byte *GetPaletteConv(int i) { return palette_conversion[i]; }
+
+  /// returns the palette lump for the given file
+  inline int GetPaletteLump(int i) { return palette_lump[i]; }
+
+public:
+  material_cache_t();
+
+  /// sets the default Material
+  void SetDefaultItem(const char *name);
+
+  /// empties the cache, deletes all Materials
+  void Clear();
+
+  /// Deletes all OpenGL textures within Materials
+  void ClearGLTextures();
+
+  /// Creates a new Material in cache or returns an existing one for updating. For NTEXTURE.
+  Material *Update(const char *name, material_class_t mode);
+
+  /// Insert a Material into the flat source, used by animated textures.
+  /// Pointers to original Materials are preserved in the master animation.
+  //inline void InsertFlat(Material *t) { Insert(t, flat_tex, true); };
+
+  /// Insert a Material into the doomtex source, used by animated textures.
+  /// Pointers to original Materials are preserved in the master animation.
+  //inline void InsertDoomTex(Material *t) { Insert(t, doom_tex, true); };
+
+  /// Returns an existing Material, (or, with TEX_lod, tries creating it if nonexistant).
+  Material *Get(const char *name, material_class_t mode = TEX_lod);
+
+  /// Like Get, but takes a lump number instead of a name. For TEX_lod ONLY!
+  Material *GetLumpnum(int n);
+
+  /// Like Get, but truncates name to 8 chars (use with Doom map data structures!).
+  Material *Get8char(const char *name, material_class_t mode = TEX_wall);
+
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID(name, TEX_wall);
+  Material *GetMaterialOrColormap(const char *name, class fadetable_t*& cmap);
+  Material *GetMaterialOrTransmap(const char *name, int& map_num);
+
+  /// Reads the TEXTUREn/PNAMES lumps and F_START lists, generates the corresponding Materials.
+  int ReadTextures();
 };
 
 
-extern texturecache_t tc;
+extern material_cache_t materials;
 
 
 /// \brief Set of 34 lightlevel colormaps from COLORMAP lump, also called a fadetable.

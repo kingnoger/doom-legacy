@@ -55,10 +55,11 @@ static bool TestPadding(char *name, int len)
 }
 
 
-
 //=============================
 //  Wad class implementation
 //=============================
+
+// All WAD* files use little-endian byte ordering (LSB)
 
 /// WAD file header
 struct wadheader_t 
@@ -131,10 +132,9 @@ bool Wad::Create(const char *fname, const char *lumpname)
 }
 
 
-// -----------------------------------------------------
+
 // Loads a WAD file, sets up the directory and cache.
 // Returns false in case of problem
-
 bool Wad::Open(const char *fname)
 {
   // common to all files
@@ -190,19 +190,10 @@ const char *Wad::GetItemName(int i)
 }
 
 
-int Wad::ReadItemHeader(int lump, void *dest, unsigned int size)
+int Wad::Internal_ReadItem(int lump, void *dest, unsigned size, unsigned offset)
 {
   waddir_t *l = directory + lump;
-
-  // empty resource (usually markers like S_START, F_END ..)
-  if (l->size == 0)
-    return 0;
-  
-  // 0 size means read all the lump
-  if (size == 0 || size > l->size)
-    size = l->size;
-
-  fseek(stream, l->offset, SEEK_SET);
+  fseek(stream, l->offset + offset, SEEK_SET);
   return fread(dest, 1, size, stream); 
 }
 
@@ -215,7 +206,7 @@ void Wad::ListItems()
 }
 
 
-// -----------------------------------------------------
+
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
 int Wad::FindNumForName(const char *name, int startlump)
@@ -271,10 +262,9 @@ int Wad::FindPartialName(Uint32 iname, int startlump, const char **fullname)
   return -1;
 }
 
-// -----------------------------------------------------
+
 // LoadDehackedLumps
 // search for DEHACKED lumps in a loaded wad and process them
-
 void Wad::LoadDehackedLumps()
 {
   // just the lump number, nothing else
@@ -329,10 +319,9 @@ Wad3::~Wad3()
 }
 
 
-// -----------------------------------------------------
+
 // Loads a WAD2 or WAD3 file, sets up the directory and cache.
 // Returns false in case of problem
-
 bool Wad3::Open(const char *fname)
 {
   // common to all files
@@ -390,27 +379,18 @@ void Wad3::ListItems()
 }
 
 
-int Wad3::ReadItemHeader(int lump, void *dest, unsigned int size)
+int Wad3::Internal_ReadItem(int lump, void *dest, unsigned size, unsigned offset)
 {
   wad3dir_t *l = directory + lump;
-
   if (l->compression)
     return -1;
   
-  if (l->size == 0)
-    return 0;
-  
-  // 0 size means read all the lump
-  if (size == 0 || size > l->size)
-    size = l->size;
-    
-  fseek(stream, l->offset, SEEK_SET);
-
+  fseek(stream, l->offset + offset, SEEK_SET);
   return fread(dest, 1, size, stream);
 }
 
 
-// -----------------------------------------------------
+
 // FindNumForName
 // Searches the wadfile for lump named 'name', returns the lump number
 // if not found, returns -1
@@ -478,10 +458,9 @@ Pak::~Pak()
 }
 
 
-// -----------------------------------------------------
+
 // Loads a PACK file, sets up the directory and cache.
 // Returns false in case of problem
-
 bool Pak::Open(const char *fname)
 {
   // common to all files
@@ -538,19 +517,10 @@ void Pak::ListItems()
 }
 
 
-int Pak::ReadItemHeader(int item, void *dest, unsigned int size)
+int Pak::Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset)
 {
   pakdir_t *l = directory + item;
-
-  if (l->size == 0)
-    return 0;
-  
-  // 0 size means read all the item
-  if (size == 0 || size > l->size)
-    size = l->size;
-    
-  fseek(stream, l->offset, SEEK_SET);
-
+  fseek(stream, l->offset + offset, SEEK_SET);
   return fread(dest, 1, size, stream);
 }
 
@@ -835,27 +805,37 @@ void ZipFile::ListItems()
 }
 
 
-int ZipFile::ReadItemHeader(int item, void *dest, unsigned int size)
+int ZipFile::Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset)
 {
   zipdir_t *l = directory + item;
 
-  if (l->size == 0)
-    return 0;
-  
-  // 0 size means read all the item
-  unsigned int get_size = (size == 0 || size > l->size) ? l->size : size;
-    
-  fseek(stream, l->offset, SEEK_SET);
-
   if (!l->deflated)
-    return fread(dest, 1, get_size, stream); // uncompressed lump
+    {
+      fseek(stream, l->offset + offset, SEEK_SET); // skip to correct offset within the uncompressed lump
+      return fread(dest, 1, size, stream); // uncompressed lump
+    }
 
   // DEFLATEd lump, uncompress it
 
-  int chunksize = min(max(get_size, 256u), 8192u); // guesstimate
-  byte in[chunksize];
+  // NOTE: inflating compressed lumps can be expensive, so we transparently cache them at first use.
+  // This way we only have to inflate the lump once. Uncompressed lumps are treated as usual.
+  // NOTE: this function is only called when an item has not been found in the lumpcache.
+
+  fseek(stream, l->offset, SEEK_SET); // seek to lump start within the file
+
+  unsigned unpack_size = l->size;
+  if (!cache[item])
+    Z_Malloc(unpack_size, PU_STATIC, &cache[item]); // even if cache[item] is allocated, it is not yet filled with data
 
   z_stream zs; // stores the decompressor state
+
+  // output buffer
+  zs.avail_out = unpack_size;
+  zs.next_out  = static_cast<byte*>(cache[item]);
+
+  int chunksize = min(max(unpack_size, 256u), 8192u); // guesstimate
+  byte in[chunksize];
+
   zs.zalloc = Z_NULL;
   zs.zfree = Z_NULL;
   zs.opaque = Z_NULL;
@@ -866,10 +846,6 @@ int ZipFile::ReadItemHeader(int item, void *dest, unsigned int size)
   int ret = inflateInit2(&zs, -MAX_WBITS); // tell zlib not to expect any headers
   if (ret != Z_OK)
     I_Error("Fatal zlib error.\n");
-
-  // output buffer
-  zs.avail_out = get_size;
-  zs.next_out  = static_cast<byte*>(dest);
 
   // decompress until deflate stream ends or we have enough data
   do
@@ -911,7 +887,9 @@ int ZipFile::ReadItemHeader(int item, void *dest, unsigned int size)
       I_Error("Error while decompressing a ZIP lump!\n");
       break;
     }
-
   // successful
-  return get_size;
+
+  // now the lump is uncompressed and cached
+  memcpy(dest, static_cast<byte*>(cache[item]) + offset, size);
+  return size;
 }

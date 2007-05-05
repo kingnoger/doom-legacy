@@ -763,8 +763,8 @@ void SV_Init()
   // add chat macro consvars
   HU_HackChatmacros();
 
-
-  R_ServerInit(); // must init texture cache now! Even server needs to know the texture heights etc.
+  if (game.dedicated)
+    R_ServerInit(); // even server needs to know the texture heights etc., nondedicated servers do this at CL_Init()
 
   InitNetwork();
 }

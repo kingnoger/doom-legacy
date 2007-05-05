@@ -312,13 +312,13 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
       if (twoSided(secnum, i))
 	{
 	  side_t *side = getSide(secnum,i,0);
-	  if (side->bottomtexture > 0)
-	    if (tc[side->bottomtexture]->height < minsize)
-	      minsize = tc[side->bottomtexture]->height;
+	  if (side->bottomtexture)
+	    if (side->bottomtexture->worldheight < minsize)
+	      minsize = side->bottomtexture->worldheight;
 	  side = getSide(secnum,i,1);
-	  if (side->bottomtexture > 0)
-	    if (tc[side->bottomtexture]->height < minsize)
-	      minsize = tc[side->bottomtexture]->height;
+	  if (side->bottomtexture)
+	    if (side->bottomtexture->worldheight < minsize)
+	      minsize = side->bottomtexture->worldheight;
 	}
     }
   return minsize;
@@ -343,12 +343,12 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 	{
 	  side_t *side = getSide(secnum,i,0);
 	  if (side->toptexture > 0)
-	    if (tc[side->toptexture]->height < minsize)
-	      minsize = tc[side->toptexture]->height;
+	    if (side->toptexture->worldheight < minsize)
+	      minsize = side->toptexture->worldheight;
 	  side = getSide(secnum,i,1);
 	  if (side->toptexture > 0)
-	    if (tc[side->toptexture]->height < minsize)
-	      minsize = tc[side->toptexture]->height;
+	    if (side->toptexture->worldheight < minsize)
+	      minsize = side->toptexture->worldheight;
 	}
     }
   return minsize;
@@ -969,7 +969,7 @@ void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
   if (flags & FF_TRANSLUCENT)
     {
       if (master->sideptr[0]->toptexture > 0)
-	ffloor->alpha = master->sideptr[0]->toptexture;
+	ffloor->alpha = 0; // FIXME NOW master->sideptr[0]->toptexture;
       else
 	ffloor->alpha = 0x70;
     }

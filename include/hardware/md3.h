@@ -130,7 +130,7 @@ struct MD3_mesh
   MD3_mesh_triangle *triangles;
   MD3_mesh_texcoord *texcoords;
   MD3_mesh_vertex   *vertices;
-  class Texture *texture; ///< Texture object to be used with this mesh
+  class Material *material; ///< Material object to be used with this mesh
 };
 
 
@@ -206,14 +206,10 @@ public:
 };
 
 
-class modelcache_t : public cache_t
+class modelcache_t : public cache_t<MD3_player>
 {
 protected:
-  cacheitem_t *Load(const char *p);
-
-public:
-  modelcache_t(memtag_t tag);
-  inline MD3_player *Get(const char *p) { return (MD3_player *)Cache(p); };
+  MD3_player *Load(const char *name);
 };
 
 

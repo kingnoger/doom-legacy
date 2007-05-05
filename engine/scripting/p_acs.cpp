@@ -1293,7 +1293,7 @@ static int CmdPolyWaitDirect()
 static int CmdChangeFloor()
 {
   const char *texname = ACMap->ACStrings[Pop()];
-  int flat = tc.GetID(texname, TEX_floor);
+  Material *flat = materials.Get(texname, TEX_floor);
   int tag = Pop();
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
@@ -1309,7 +1309,7 @@ static int CmdChangeFloorDirect()
 {
   int tag = *PCodePtr++;
   const char *texname = ACMap->ACStrings[*PCodePtr++];
-  int flat = tc.GetID(texname, TEX_floor);
+  Material *flat = materials.Get(texname, TEX_floor);
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
     {
@@ -1322,7 +1322,7 @@ static int CmdChangeFloorDirect()
 
 static int CmdChangeCeiling()
 {
-  int flat = tc.GetID(ACMap->ACStrings[Pop()], TEX_floor);
+  Material *flat = materials.Get(ACMap->ACStrings[Pop()], TEX_floor);
   int tag = Pop();
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
@@ -1334,7 +1334,7 @@ static int CmdChangeCeiling()
 static int CmdChangeCeilingDirect()
 {
   int tag = *PCodePtr++;
-  int flat = tc.GetID(ACMap->ACStrings[*PCodePtr++], TEX_floor);
+  Material *flat = materials.Get(ACMap->ACStrings[*PCodePtr++], TEX_floor);
   int sectorIndex = -1;
   while((sectorIndex = ACMap->FindSectorFromTag(tag, sectorIndex)) >= 0)
     ACMap->sectors[sectorIndex].ceilingpic = flat;
@@ -1618,7 +1618,7 @@ static int CmdSetLineTexture()
 {
   line_t *line;
 
-  int texture = tc.GetID(ACMap->ACStrings[Pop()], TEX_wall);
+  Material *texture = materials.Get(ACMap->ACStrings[Pop()], TEX_wall);
   int position = Pop();
   int side = Pop();
   int lineTag = Pop();

@@ -309,17 +309,7 @@ AutoMap::AutoMap()
 
 void AutoMap::Startup()
 {
-  int i;
-  if ((i = fc.FindNumForName("AUTOPAGE")) >= 0)
-    {
-      int size = fc.LumpLength(i);
-      if (size % 320)
-	I_Error("Size of AUTOPAGE (%d bytes) must be a multiple of 320!\n", size);
-
-      mapback = new LumpTexture("AUTOPAGE", i, 320, size/320); // we bypass the texture cache here for convenience...
-    }
-  else
-    mapback = NULL;
+  mapback = (fc.FindNumForName("AUTOPAGE") >= 0) ? materials.Get("AUTOPAGE") : NULL;
 }
 
 
@@ -354,7 +344,7 @@ void AutoMap::Open(const PlayerPawn *p)
     {
       char namebuf[9];
       sprintf(namebuf, "AMMNUM%d", i);
-      marknums[i] = tc.GetPtr(namebuf);
+      marknums[i] = materials.Get(namebuf);
     }
 }
 

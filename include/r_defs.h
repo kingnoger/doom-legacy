@@ -30,6 +30,8 @@
 #include "m_fixed.h"
 #include "m_bbox.h"
 
+class Material;
+
 /*!
   \defgroup g_mapgeometry Runtime Map geometry
 
@@ -93,13 +95,13 @@ enum ffloortype_e
 struct ffloor_t
 {
   fixed_t          *topheight;
-  short            *toppic;
+  Material        **toppic;
   short            *toplightlevel;
   fixed_t          *topxoffs;
   fixed_t          *topyoffs;
 
   fixed_t          *bottomheight;
-  short            *bottompic;
+  Material        **bottompic;
   short            *bottomlightlevel;
   fixed_t          *bottomxoffs;
   fixed_t          *bottomyoffs;
@@ -140,7 +142,10 @@ enum floortype_t
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
-  short    floorpic, ceilingpic;
+  Material *floorpic, *ceilingpic;
+  inline bool SkyFloor() const { return !floorpic; }
+  inline bool SkyCeiling() const { return !ceilingpic; }
+
   short    lightlevel;
   short    special, tag;
   int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
@@ -281,10 +286,10 @@ struct side_t
   /// add this to the calculated texture top
   fixed_t rowoffset;
 
-  /// Texture indices. We do not maintain names here.
-  short toptexture;
-  short bottomtexture;
-  short midtexture;
+  /// Textures.
+  Material *toptexture;
+  Material *bottomtexture;
+  Material *midtexture;
 
   /// Sector the SideDef is facing.
   sector_t *sector;

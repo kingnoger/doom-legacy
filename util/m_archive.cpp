@@ -27,6 +27,7 @@
 #include "m_archive.h"
 #include "m_swap.h"
 #include "m_menu.h" // for message boxes
+#include "r_data.h"
 #include "z_zone.h"
 
 
@@ -338,6 +339,24 @@ LArchive & LArchive::operator<<(char *&s)
     {
       s = Z_Strdup(reinterpret_cast<char *>(m_pos), PU_STATIC, NULL); // there better be a terminating '\0' !
       m_pos += strlen(s) + 1;
+    }
+
+  return *this;
+}
+
+// archives a Material name
+LArchive & LArchive::operator<<(Material *&m)
+{
+  if (storing)
+    {
+      const char *s = m->GetName();
+      Write(reinterpret_cast<const byte *>(s), strlen(s) + 1); // write the NUL too
+    }
+  else
+    {
+      // use the archive buffer directly
+      m = materials.Get(reinterpret_cast<char *>(m_pos), TEX_wall); // there better be a terminating '\0' !
+      m_pos += strlen(reinterpret_cast<char *>(m_pos)) + 1;
     }
 
   return *this;

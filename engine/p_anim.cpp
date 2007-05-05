@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -129,12 +129,8 @@ public:
   {
     width  = frames[0].tx->width;
     height = frames[0].tx->height;
-    xscale = frames[0].tx->xscale;
-    yscale = frames[0].tx->yscale;
     w_bits = frames[0].tx->w_bits;
     h_bits = frames[0].tx->h_bits;
-    worldwidth = frames[0].tx->worldwidth;
-    worldheight = frames[0].tx->worldheight;
     leftoffs = frames[0].tx->leftoffs;
     topoffs = frames[0].tx->topoffs;
   };
@@ -148,7 +144,9 @@ public:
   /// The glid of the metatexture is never changed from NOTEXTURE
   virtual GLuint GLPrepare() { return Update()->GLPrepare(); }
 
-  virtual void Draw(float x, float y, int scrn) { Update()->Draw(x, y, scrn); }
+  virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags)
+  { Update()->Draw(dest_tl, dest_tr, dest_bl, col, row, colfrac, rowfrac, flags); }
 };
 
 
@@ -210,6 +208,9 @@ Texture *AnimatedTexture::Update()
 /// Reads and interprets the Boom ANIMATED lump
 int P_Read_ANIMATED(int lump)
 {
+  int i, count = 0;
+  /*
+    // FIXME: ANIMATED
   ANIMATED_t *anims;
   if (lump >= 0)
     {
@@ -220,8 +221,6 @@ int P_Read_ANIMATED(int lump)
     anims = HereticAnims;
   else
     anims = DoomAnims;
-
-  int i, count = 0;
 
   for (ANIMATED_t *a = anims; a->istexture != -1; a++)
     {
@@ -283,7 +282,7 @@ int P_Read_ANIMATED(int lump)
       Z_Free(anims);
       CONS_Printf(" %d animations found.\n", count);
     }
-
+  */
   return count;
 }
 
@@ -292,6 +291,8 @@ int P_Read_ANIMATED(int lump)
 /// Parses the Hexen ANIMDEFS lump, creates the required animated textures
 int P_Read_ANIMDEFS(int lump)
 {
+  int i, n, count = 0;
+  /* // FIXME ANIMDEFS
   Parser p;
 
   if (!p.Open(lump))
@@ -299,7 +300,6 @@ int P_Read_ANIMDEFS(int lump)
 
   CONS_Printf("Reading ANIMDEFS...\n");
 
-  int i, n, count = 0;
   vector<AnimatedTexture::framedef_t> frames;
 
   p.RemoveComments(';');
@@ -424,5 +424,6 @@ int P_Read_ANIMDEFS(int lump)
     I_Error("Too many AnimDefs.");
 
   CONS_Printf(" %d animations found.\n", count);
+  */
   return count;
 }

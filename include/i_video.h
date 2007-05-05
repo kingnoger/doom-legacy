@@ -27,11 +27,6 @@
 
 #include "doomtype.h"
 
-
-// The new OpenGL renderer.
-extern class OGLRenderer *oglrenderer; // If this is not NULL, we are using OpenGL.
-
-
 enum rendermode_t
 {
   render_soft   = 1,

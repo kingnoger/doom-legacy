@@ -105,7 +105,7 @@ public:
 
   // r_plane.cpp
   void R_ClearPlanes();
-  visplane_t *R_FindPlane(fixed_t height, int picnum, int lightlevel, fixed_t xoff, fixed_t yoff, fadetable_t* planecolormap, ffloor_t* ffloor);
+  visplane_t *R_FindPlane(fixed_t height, Material *pic, int lightlevel, fixed_t xoff, fixed_t yoff, fadetable_t* planecolormap, ffloor_t* ffloor, bool sky);
   void R_DrawPlanes();
   void R_DrawSinglePlane(visplane_t* pl, bool handlesource);
 

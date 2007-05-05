@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -61,10 +61,10 @@ static bool         markfloor; // False if the back side is the same plane.
 static bool         markceiling;
 
 static bool         maskedtexture;
-static int             toptexture;
-static int             bottomtexture;
-static int             midtexture;
-static int             numthicksides;
+static Material*    toptexture;
+static Material*    bottomtexture;
+static Material*    midtexture;
+static int          numthicksides;
 //static short*          thicksidecol;
 
 
@@ -231,8 +231,9 @@ void Rend::R_DrawWallSplats()
       // BOOM WATER!
       // frontsector = ds_p->curline->frontsector;
 
-      Texture *tex = splat->tex;
-      fixed_t world_texturemid = splat->top + (0.5 * tex->worldheight) - viewz;
+      Material *mat = splat->mat;
+      Material::TextureRef &tr = mat->tex[0];
+      fixed_t world_texturemid = splat->top + (0.5 * tr.worldheight) - viewz;
 
       if (splat->yoffset)
 	world_texturemid += *splat->yoffset;
@@ -264,13 +265,13 @@ void Rend::R_DrawWallSplats()
 	dc_colormap = base_colormap + fixedcolormap;
 
       dc_texheight = 0;
-      dc_texturemid = world_texturemid * tex->yscale;
+      dc_texturemid = world_texturemid * tr.yscale;
 
       // draw the columns
       for (dc_x = x1 ; dc_x <= x2 ; dc_x++,spryscale += rw_scalestep)
         {
 	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
-	  dc_iscale *= tex->yscale;
+	  dc_iscale *= tr.yscale;
 
 	  if (!fixedcolormap)
             {
@@ -299,12 +300,12 @@ void Rend::R_DrawWallSplats()
 	  //                         FIXED_TO_FLOAT(texturecolumn), tex->width,
 	  //                         dc_x,FIXED_TO_FLOAT(rw_offset2),FIXED_TO_FLOAT(splat->offset),angle,FIXED_TO_FLOAT(finetangent[angle]),FIXED_TO_FLOAT(rw_distance),FIXED_TO_FLOAT(FixedMul(finetangent[angle],rw_distance)));
 
-	  if (texturecolumn < 0 || texturecolumn >= tex->worldwidth)
+	  if (texturecolumn < 0 || texturecolumn >= tr.worldwidth)
 	    continue;
 
 	  // draw the texture
-	  column_t *col = tex->GetMaskedColumn(texturecolumn);
-	  R_DrawSplatColumn (col);
+	  column_t *col = mat->GetMaskedColumn(texturecolumn);
+	  R_DrawSplatColumn(col);
         }
     } // next splat
 
@@ -391,17 +392,18 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   rw_scalestep = ds->scalestep;
   spryscale = ds->scale1 + (x1 - ds->x1)*rw_scalestep;
 
-  Texture *tex = tc[curline->sidedef->midtexture];
+  Material *mat = curline->sidedef->midtexture;
+  Material::TextureRef &tr = mat->tex[0];
 
   //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
   //     are not stored per-column with post info anymore in Doom Legacy
-  bool masked = tex->Masked();
+  bool masked = tr.t->Masked();
   if (masked)
     colfunc_2s = R_DrawMaskedColumn;   //render the usual 2sided single-patch packed texture
   else
     {
       colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
-      column2s_length = tex->height;
+      column2s_length = tr.t->height;
     }
 
   dc_numlights = 0;
@@ -458,14 +460,14 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
   mfloorclip = ds->sprbottomclip;
   mceilingclip = ds->sprtopclip;
 
-  dc_texheight = tex->height;
+  dc_texheight = tr.t->height;
   fixed_t world_texturemid;
 
   if (curline->linedef->flags & ML_DONTPEGBOTTOM)
     {
       world_texturemid = frontsector->floorheight > backsector->floorheight
 	? frontsector->floorheight : backsector->floorheight;
-      world_texturemid += tex->worldheight;
+      world_texturemid += tr.worldheight;
     }
   else
     {
@@ -474,7 +476,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
     }
   world_texturemid += -viewz + curline->sidedef->rowoffset;
 
-  dc_texturemid = world_texturemid * tex->yscale;
+  dc_texturemid = world_texturemid * tr.yscale;
 
   if (fixedcolormap)
     dc_colormap = base_colormap + fixedcolormap;
@@ -486,14 +488,14 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       if (maskedtexturecol[dc_x] != MAXSHORT)
         {
 	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
-	  dc_iscale *= tex->yscale;
+	  dc_iscale *= tr.yscale;
 
 	  // draw the texture
 	  column_t *col;
 	  if (masked)
-	    col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
+	    col = mat->GetMaskedColumn(maskedtexturecol[dc_x]);
 	  else
-	    col = (column_t *)tex->GetColumn(maskedtexturecol[dc_x]); // HACK
+	    col = (column_t *)mat->GetColumn(maskedtexturecol[dc_x]); // HACK
 #warning GetColumn should get a fixed_t param
 
 	  unsigned index;
@@ -501,7 +503,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
 	    {
 	      sprbotscreen = fixed_t::FMAX;
 	      sprtopscreen = windowtop = centeryfrac - (world_texturemid * spryscale);
-	      fixed_t realbot = windowbottom = tex->worldheight*spryscale + sprtopscreen;
+	      fixed_t realbot = windowbottom = tr.worldheight*spryscale + sprtopscreen;
 
 	      for(i = 0; i < dc_numlights; i++)
 		{
@@ -617,7 +619,8 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
 
   void (*colfunc_2s) (column_t*);
 
-  Texture *tex = tc[ffloor->master->sideptr[0]->midtexture];
+  Material *mat = ffloor->master->sideptr[0]->midtexture;
+  Material::TextureRef &tr = mat->tex[0];
 
     // Calculate light table.
     // Use different light tables
@@ -724,21 +727,21 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
   if(curline->linedef->flags & ML_DONTPEGBOTTOM)
     offsetvalue -= *ffloor->topheight - *ffloor->bottomheight;
 
-  dc_texturemid = (world_texturemid + offsetvalue) * tex->yscale;
-  dc_texheight = tex->height;
+  dc_texturemid = (world_texturemid + offsetvalue) * tr.yscale;
+  dc_texheight = tr.t->height;
 
   if (fixedcolormap)
     dc_colormap = base_colormap + fixedcolormap;
 
     //faB: handle case where multipatch texture is drawn on a 2sided wall, multi-patch textures
     //     are not stored per-column with post info anymore in Doom Legacy
-  bool masked = tex->Masked();
+  bool masked = tr.t->Masked();
   if (masked)
     colfunc_2s = R_DrawMaskedColumn;                    //render the usual 2sided single-patch packed texture
   else
     {
       colfunc_2s = R_Render2sidedMultiPatchColumn;        //render multipatch with no holes (no post_t info)
-      column2s_length = tex->height;
+      column2s_length = tr.t->height;
     }
 
   // draw the columns
@@ -747,13 +750,13 @@ void Rend::R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloo
       if(maskedtexturecol[dc_x] != MAXSHORT)
 	{
 	  dc_iscale.setvalue(0xffffffffu / unsigned(spryscale.value()));
-	  dc_iscale *= tex->yscale;
+	  dc_iscale *= tr.yscale;
 
 	  column_t *col;
 	  if (masked)
-	    col = tex->GetMaskedColumn(maskedtexturecol[dc_x]);
+	    col = mat->GetMaskedColumn(maskedtexturecol[dc_x]);
 	  else
-	    col = (column_t *)tex->GetColumn(maskedtexturecol[dc_x]); // HACK
+	    col = (column_t *)mat->GetColumn(maskedtexturecol[dc_x]); // HACK
 #warning GetColumn should get a fixed_t param
 
 	  // SoM: New code does not rely on r_drawColumnShadowed_8 which
@@ -1157,15 +1160,15 @@ void Rend::R_RenderSegLoop()
       // draw the wall tiers
       if (midtexture)
         {
-	  Texture *tex = tc[midtexture];
+	  Material::TextureRef &tr = midtexture->tex[0];
 
 	  // single sided line
 	  dc_yl = yl;
 	  dc_yh = yh;
-	  dc_texturemid = rw_midtexturemid * tex->yscale;
-	  dc_iscale = base_iscale * tex->yscale;
-	  dc_source = tex->GetColumn(texturecolumn);
-	  dc_texheight = tex->height;
+	  dc_texturemid = rw_midtexturemid * tr.yscale;
+	  dc_iscale = base_iscale * tr.yscale;
+	  dc_source = midtexture->GetColumn(texturecolumn);
+	  dc_texheight = tr.t->height;
 
 	  colfunc();
             
@@ -1190,13 +1193,14 @@ void Rend::R_RenderSegLoop()
                 
 	      if (mid >= yl)
                 {
-		  Texture *tex = tc[toptexture];
+		  Material::TextureRef &tr = toptexture->tex[0];
+
 		  dc_yl = yl;
 		  dc_yh = mid;
-		  dc_texturemid = rw_toptexturemid * tex->yscale;
-		  dc_iscale = base_iscale * tex->yscale;
-		  dc_source = tex->GetColumn(texturecolumn);
-		  dc_texheight = tex->height;
+		  dc_texturemid = rw_toptexturemid * tr.yscale;
+		  dc_iscale = base_iscale * tr.yscale;
+		  dc_source = toptexture->GetColumn(texturecolumn);
+		  dc_texheight = tr.t->height;
 
 		  colfunc();
 
@@ -1230,13 +1234,14 @@ void Rend::R_RenderSegLoop()
 
 	      if (mid <= yh)
                 {
-		  Texture *tex = tc[bottomtexture];
+		  Material::TextureRef &tr = bottomtexture->tex[0];
+
 		  dc_yl = mid;
 		  dc_yh = yh;
-		  dc_texturemid = rw_bottomtexturemid * tex->yscale;
-		  dc_iscale = base_iscale * tex->yscale;
-		  dc_source = tex->GetColumn(texturecolumn);
-		  dc_texheight = tex->height;
+		  dc_texturemid = rw_bottomtexturemid * tr.yscale;
+		  dc_iscale = base_iscale * tr.yscale;
+		  dc_source = bottomtexture->GetColumn(texturecolumn);
+		  dc_texheight = tr.t->height;
 
 		  colfunc();
 
@@ -1570,8 +1575,7 @@ void Rend::R_StoreWallRange(int start, int stop)
       worldlow = backsector->floorheight - viewz;
         
       // hack to allow height changes in outdoor areas
-      if (frontsector->ceilingpic == skyflatnum
-	  && backsector->ceilingpic == skyflatnum)
+      if (frontsector->SkyCeiling() && backsector->SkyCeiling())
         {
 	  worldtop = worldhigh;
         }
@@ -1606,8 +1610,7 @@ void Rend::R_StoreWallRange(int start, int stop)
 	  || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
 	  || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
 	  //SoM: 3/22/2000: Prevents bleeding.
-	  || (frontsector->heightsec != -1 &&
-	      frontsector->ceilingpic != skyflatnum)
+	  || (frontsector->heightsec != -1 && !frontsector->SkyCeiling())
 	  || backsector->floorlightsec != frontsector->floorlightsec
 	  //SoM: 4/3/2000: Check for colormaps
 	  || frontsector->extra_colormap != backsector->extra_colormap
@@ -1896,8 +1899,7 @@ void Rend::R_StoreWallRange(int start, int stop)
             markfloor = false;
         }
 
-        if (frontsector->ceilingheight <= viewz
-            && frontsector->ceilingpic != skyflatnum)
+        if (frontsector->ceilingheight <= viewz && !frontsector->SkyCeiling())
         {
             // below view plane
             markceiling = false;

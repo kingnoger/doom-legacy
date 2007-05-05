@@ -51,22 +51,24 @@ byte *current_colormap; // for applying colormaps to Drawn Textures
 //                    2D Drawing of Textures
 //=================================================================
 
-void PatchTexture::Draw(float x, float y, int scrn)
-{
-  int flags = scrn & V_FLAGMASK;
-  scrn &= V_SCREENMASK;
 
+void Material::Draw(float x, float y, int scrn)
+{
   if (rendermode == render_opengl)
     {
       if (oglrenderer && oglrenderer->ReadyToDraw())
 	// Console tries to use some patches before graphics are
 	// initialized. If this is the case, then create the missing
 	// texture.
-	oglrenderer->Draw2DGraphic_Doom(x, y, this, flags);
+	oglrenderer->Draw2DGraphic_Doom(x, y, this, scrn & V_FLAGMASK);
       return;
     }
 
-  byte *dest_tl = vid.screens[scrn]; // destination top left
+  bool masked = tex[0].t->Masked(); // means column_t based, in which case the current algorithm cannot handle y clipping
+
+  int flags = scrn & V_FLAGMASK;
+  scrn &= V_SCREENMASK;
+  byte *dest_tl = vid.screens[scrn]; // destination top left in LFB
 
   // location scaling
   if (flags & V_SLOC)
@@ -77,18 +79,18 @@ void PatchTexture::Draw(float x, float y, int scrn)
     }
 
   // size scaling
-  fixed_t colfrac = xscale;
-  fixed_t rowfrac = yscale;
+  fixed_t colfrac = tex[0].xscale;
+  fixed_t rowfrac = tex[0].yscale;
 
   // clipping to LFB
-  int x2, y2; // past-the-end coords for lower right corner
+  int x2, y2; // clipped past-the-end coords of the lower right corner in LFB
 
   if (flags & V_SSIZE)
     {
       x -= leftoffs * vid.dupx;
       y -= topoffs * vid.dupy;
       x2 = min(int(x + worldwidth * vid.dupx), vid.width);
-      y2 = int(y + worldheight * vid.dupy); // TODO we do not clip y, just check it...
+      y2 = masked ? int(y + worldheight * vid.dupy) : min(int(y + worldheight * vid.dupy), vid.height);
       colfrac /= vid.dupx;
       rowfrac /= vid.dupy;
     }
@@ -97,12 +99,13 @@ void PatchTexture::Draw(float x, float y, int scrn)
       x -= leftoffs;
       y -= topoffs;
       x2 = min(int(x + worldwidth), vid.width);
-      y2 = int(y + worldheight);
+      y2 = masked ? int(y + worldheight) : min(int(y + worldheight), vid.height);
     }
 
-  // clipped left side
+
+  // clipped upper left corner
   int x1 = max(int(x), 0);
-  int y1 = int(y);
+  int y1 = masked ? int(y) : max(int(y), 0);
 
 #ifdef RANGECHECK
   if (y < 0 || y2 > vid.height)
@@ -113,8 +116,10 @@ void PatchTexture::Draw(float x, float y, int scrn)
     }
 #endif
 
-  dest_tl += y1*vid.width + x1; // top left corner
+  // limits in LFB
+  dest_tl += y1*vid.width + x1; // top left
   byte *dest_tr = dest_tl + x2 - x1; // top right, past-the-end
+  byte *dest_bl = dest_tl + (y2-y1)*vid.width; // bottom left, past-the-end
 
   // starting location in texture space
   fixed_t col;
@@ -128,6 +133,16 @@ void PatchTexture::Draw(float x, float y, int scrn)
       col = (x1 - x)*colfrac;
     }
 
+  fixed_t row = (y1 - y)*rowfrac;
+
+
+  tex[0].t->Draw(dest_tl, dest_tr, dest_bl, col, row, colfrac, rowfrac, flags);
+}
+
+
+void PatchTexture::Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+			fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags)
+{
   patch_t *p = GeneratePatch();
 
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
@@ -165,83 +180,17 @@ void PatchTexture::Draw(float x, float y, int scrn)
 
 
 
-void LumpTexture::Draw(float x, float y, int scrn)
+void LumpTexture::Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
+		       fixed_t col, fixed_t startrow, fixed_t colfrac, fixed_t rowfrac, int flags)
 {
-  int flags = scrn & V_FLAGMASK;
-  scrn &= V_SCREENMASK;
-
-  if (rendermode == render_opengl)
-    {
-      if (oglrenderer && oglrenderer->ReadyToDraw()) 
-	oglrenderer->Draw2DGraphic_Doom(x, y, this, flags);
-      return;
-    }
-
-  byte *dest_tl = vid.screens[scrn];
-
-  // location scaling
-  if (flags & V_SLOC)
-    {
-      x *= vid.dupx;
-      y *= vid.dupy;
-      dest_tl += vid.scaledofs;
-    }
-
-  // size scaling
-  fixed_t colfrac = xscale;
-  fixed_t rowfrac = yscale;
-
-  // clipping to LFB
-  int x2, y2; // clipped past-the-end coordinates of the lower right corner in LFB
-
-  if (flags & V_SSIZE)
-    {
-      x -= leftoffs * vid.dupx;
-      y -= topoffs * vid.dupy;
-      x2 = min(int(x + worldwidth * vid.dupx), vid.width);
-      y2 = min(int(y + worldheight * vid.dupy), vid.height);
-      colfrac /= vid.dupx;
-      rowfrac /= vid.dupy;
-    }
-  else
-    {
-      x -= leftoffs;
-      y -= topoffs;
-      x2 = min(int(x + worldwidth), vid.width);
-      y2 = min(int(y + worldheight), vid.height);
-    }
-
-  // clipped upper left corner
-  int x1 = max(int(x), 0);
-  int y1 = max(int(y), 0);
-
-  dest_tl += y1*vid.width + x1; // top left
-  byte *dest_tr = dest_tl + x2 - x1; // top right, past-the-end
-
-  // starting location in texture space
-  fixed_t startrow = (y1 - y)*rowfrac;
-  fixed_t col;
-  if (flags & V_FLIPX)
-    {
-      col = (x2 - x - 1)*colfrac; // a little back from right edge
-      colfrac = -colfrac; // reverse stride
-    }
-  else
-    {
-      col = (x1 - x)*colfrac;
-    }
-
-  int zzz = (y2-y1)*vid.width; // LFB offset from top to bottom, past-the-end
   byte *base = GetData(); // in col-major order!
 
-  for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
+  for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++, dest_bl++)
     {
-      // LFB limits for the column
-      byte *dest_end = dest_tl + zzz; // past-the-end
       byte *source = base + height * col.floor();
 
       fixed_t row = startrow;
-      for (byte *dest = dest_tl; dest < dest_end; row += rowfrac, dest += vid.width)
+      for (byte *dest = dest_tl; dest < dest_bl; row += rowfrac, dest += vid.width)
 	{
 	  byte pixel = source[row.floor()];
 
@@ -258,17 +207,22 @@ void LumpTexture::Draw(float x, float y, int scrn)
 }
 
 
+void Material::DrawFill(int x, int y, int w, int h)
+{
+  if (rendermode == render_opengl)
+    {
+      if (oglrenderer && oglrenderer->ReadyToDraw()) 
+	oglrenderer->Draw2DGraphicFill_Doom(x, y, w, h, this);
+      return;
+    }
+  
+  tex[0].t->DrawFill(x, y, w, h);
+}
 
-// Fills a box of pixels using a flat texture as a pattern,
+// Fills a box of pixels using a repeated texture as a pattern,
 // scaled to screen size.
 void LumpTexture::DrawFill(int x, int y, int w, int h)
 {
-  if(rendermode == render_opengl){
-    if(oglrenderer && oglrenderer->ReadyToDraw()) 
-      oglrenderer->Draw2DGraphicFill_Doom(x, y, w, h, this);
-    return;
-  }
-
   byte *flat = GetData(); // in col-major order
   byte *base_dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
@@ -517,14 +471,14 @@ font_t::font_t(int startlump, int endlump, char firstchar)
   end = max(lastchar, '_');
   int size = end - start + 1;
 
-  font = (Texture **)Z_Malloc(size*sizeof(Texture*), PU_STATIC, NULL);
+  font.resize(size);
 
   for (int i = start; i <= end; i++)
     if (i < firstchar || i > lastchar)
       // replace the missing letters with the first char
-      font[i - start] = tc.GetPtrNum(startlump);
+      font[i - start] = materials.GetLumpnum(startlump);
     else
-      font[i - start] = tc.GetPtrNum(i - firstchar + startlump);
+      font[i - start] = materials.GetLumpnum(i - firstchar + startlump);
 
   // use the character '0' as a "prototype" for the font
   if (start <= '0' && '0' <= end)
@@ -555,8 +509,8 @@ void font_t::DrawCharacter(float x, float y, char c, int flags)
   if (c < start || c > end)
     return;
 
-  Texture *t = font[c - start];
-  t->Draw(x, y, flags);
+  Material *m = font[c - start];
+  m->Draw(x, y, flags);
 }
 
 
@@ -635,10 +589,10 @@ void font_t::DrawString(float x, float y, const char *str, int flags)
           continue;
         }
 
-      Texture *t = font[c - start];
-      t->Draw(cx, cy, flags);
+      Material *m = font[c - start];
+      m->Draw(cx, cy, flags);
 
-      cx += t->worldwidth * dupx;
+      cx += m->worldwidth * dupx;
     }
 }
 

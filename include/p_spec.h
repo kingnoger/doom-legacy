@@ -145,14 +145,14 @@ public:
   };
 
 private:
-  line_t *line;
+  line_t     *line;
   mappoint_t *soundorg;
-  int     texture;
-  int     timer;
+  Material   *texture;
+  int         timer;
   byte where; // button_e
 
 public:
-  button_t(line_t *l, button_e w, int tex, int time);
+  button_t(line_t *l, button_e w, Material *tex, int time);
   
   virtual void Think();
 };
@@ -491,7 +491,7 @@ protected:
 
   // ceiling changers
   int       modelsec; ///< model sector number
-  short     texture;
+  Material *texture;
 
   list<ceiling_t *>::iterator li;
 
@@ -571,7 +571,7 @@ private:
 
   // floor changers
   int       modelsec; ///< model sector number
-  short     texture;
+  Material *texture;
 
 public:
   fixed_t   destheight;

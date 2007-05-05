@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2003-2006 by DooM Legacy Team.
+// Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -55,8 +55,10 @@ protected:
   nmap_t       imap;  ///< mapping from item names to item numbers
   lumpcache_t *cache; ///< from item numbers to item data (L1 cache)
 
-public:
+  /// Actual data retrieval.
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0) = 0;
 
+public:
   // constructor and destructor
   VFile();
   virtual ~VFile();
@@ -88,7 +90,7 @@ public:
   /// Caches the requested item, overriding current tag, returns a pointer to the raw data.
   void *CacheItem(int item, int tag);
   /// Tries to write size bytes of data item item into dest, returns the number of bytes actually written.
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size) = 0;
+  int ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
 };
 
 
@@ -102,6 +104,8 @@ protected:
   DIR        *dstream;  ///< associated stream
   struct vdiritem_t *contents; ///< mapping from numbers to item properties
 
+  virtual int Internal_ReadItem(int item, void *dest, unsigned size, unsigned offset = 0);
+
 public:
   VDir();
   virtual ~VDir();
@@ -112,9 +116,6 @@ public:
   virtual const char *GetItemName(int i);
   virtual int  GetItemSize(int i);
   virtual void ListItems();
-
-  // retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size);
 };
 
 
@@ -141,9 +142,6 @@ public:
   virtual const char *GetItemName(int i) = 0;
   virtual int  GetItemSize(int i) = 0;
   virtual void ListItems() = 0;
-
-  // retrieval
-  virtual int ReadItemHeader(int item, void *dest, unsigned int size) = 0;
 };
 
 
