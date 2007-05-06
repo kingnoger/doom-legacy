@@ -163,20 +163,37 @@ tex_prop ::= SCALE num(A) num(B) SEMICOLON.  { d->tr->yscale = 1.0/A; d->tr->xsc
 tex_prop ::= SCALE num(A) SEMICOLON.         { d->tr->xscale = d->tr->yscale = 1.0/A; }
 tex_prop ::= TEXELOFFSETS int(A) SEMICOLON.  { d->texeloffsets = A; }
 tex_prop ::= OFFSET num(A) num(B) SEMICOLON.
-    {
-      if (d->tr->t)
+  {
+    if (d->tr->t)
       if (d->texeloffsets)
-	{
+        {
 	  d->tr->t->leftoffs = int(A / d->tr->xscale);
 	  d->tr->t->topoffs = int(B / d->tr->yscale);
 	}
       else
-	{
+        {
 	  d->tr->t->leftoffs = int(A);
 	  d->tr->t->topoffs = int(B);
 	}
-    }
+  }
 
+tex_prop ::= FILTERING str(A) str(B) SEMICOLON.
+  {
+    d->tr->mag_filter = (toupper(A[0]) == 'L') ? GL_LINEAR : GL_NEAREST;
+    int temp;
+    bool min_linear = (toupper(B[0]) == 'L');
+    switch (toupper(B[1]))
+      {
+      case 'L':
+	temp = min_linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR; break;
+      case 'N':
+	temp = min_linear ? GL_LINEAR_MIPMAP_NEAREST : GL_NEAREST_MIPMAP_NEAREST; break;
+      default:
+	temp = min_linear ? GL_LINEAR : GL_NEAREST; break;
+      }
+
+    d->tr->min_filter = temp;
+  }
 
 // string
 str(A) ::= STR(B). { A = B.stype; }

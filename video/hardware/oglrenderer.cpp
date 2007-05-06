@@ -47,11 +47,6 @@ extern trace_t trace;
 
 void MD3_InitNormLookup();
 
-/*
-  // TODO ideas
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);  //Texture does NOT blend with object background
-*/
-
 
 OGLRenderer::OGLRenderer()
 {

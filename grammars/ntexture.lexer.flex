@@ -71,6 +71,7 @@ worldsize    { return WORLDSIZE; }
 scale        { return SCALE; }
 texeloffsets { return TEXELOFFSETS; } 
 offset       { return OFFSET; }
+filtering    { return FILTERING; }
 shader_ref   { return SHADER_REF; }
 
 shader          { return SHADER; }

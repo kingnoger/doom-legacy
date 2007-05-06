@@ -931,7 +931,13 @@ bool material_cache_t::Insert(Material *t, cachesource_t &s, bool keep_old)
 
 Material *material_cache_t::Update(const char *name, material_class_t mode)
 {
-  cacheitem_t *t = (mode == TEX_sprite) ? sprite_tex.Find(name) : new_tex.Find(name);
+  cacheitem_t *t;
+
+  if (mode == TEX_sprite)
+    t = sprite_tex.Find(name);
+  else if (!(t = new_tex.Find(name)))
+    if (!(t = doom_tex.Find(name)))
+      t = flat_tex.Find(name);
 
   if (!t)
     {
