@@ -40,7 +40,7 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 
-#include "r_sprite.h"
+#include "r_presentation.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "tables.h"

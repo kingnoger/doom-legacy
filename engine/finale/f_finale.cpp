@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Finale animations
+/// \brief Finale animations.
 
 #include <string>
 #include <ctype.h>
@@ -28,23 +28,21 @@
 #include "d_event.h"
 #include "g_game.h"
 #include "g_level.h"
-#include "hud.h"
-
-#include "i_video.h"
-
-#include "r_data.h"
-#include "r_state.h" // sprites array
-#include "r_sprite.h"
 #include "info.h"
+
+#include "screen.h"
+#include "r_data.h"
+#include "r_sprite.h"
+#include "v_video.h"
+
+#include "hud.h"
 
 #include "sounds.h"
 #include "s_sound.h"
 
-#include "i_video.h"
-#include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
-#include "i_video.h"
+
 
 
 extern bool force_wipe;

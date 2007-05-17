@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -40,7 +39,8 @@ enum silhouette_e
 };
 
 
-/// \brief 
+/// \brief Represents a seg_t to be drawn, allocated on the fly.
+/// \ingroup g_sw
 struct drawseg_t
 {
   seg_t*              curline;
@@ -75,14 +75,13 @@ struct drawseg_t
 };
 
 
+extern drawseg_t *ds_p;
+extern drawseg_t *drawsegs;
+extern unsigned   maxdrawsegs;
+extern drawseg_t *firstseg;
+extern drawseg_t *firstnewseg;
 
-//extern lighttable_t**   walllights;
+
 extern int *walllights;
 
-//void R_RenderMaskedSegRange( drawseg_t*    ds, int  x1, int x2);
-
-
-//void R_RenderThickSideRange(drawseg_t* ds, int x1, int x2, ffloor_t*  ffloor);
-
-//void R_StoreWallRange( int   start,int   stop );
 #endif

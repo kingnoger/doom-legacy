@@ -81,7 +81,7 @@ private:
   void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material *tex, bool isFloor, GLfloat xoff=0.0, GLfloat yoff=0.0);
   void RenderGLSeg(int num);
   void RenderActors(sector_t *sec);
-  void DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
+  void DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
   void DrawSimpleSky();
 
   bool BBoxIntersectsFrustum(const struct bbox_t& bbox); ///< True if bounding box intersects current view frustum.

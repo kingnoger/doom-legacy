@@ -51,9 +51,10 @@
 
 #include "command.h"
 #include "g_game.h"
+
 #include "r_render.h"
-#include "r_local.h"
-#include "r_state.h"
+#include "r_data.h"
+
 #include "i_system.h"
 
 

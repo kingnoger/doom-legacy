@@ -33,7 +33,6 @@
 #include "r_render.h"
 #include "r_main.h"
 #include "r_bsp.h"
-#include "r_state.h"
 #include "r_plane.h"
 #include "r_sprite.h"
 #include "r_draw.h"

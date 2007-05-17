@@ -37,6 +37,7 @@
 #include "tables.h"
 #include "r_data.h"
 #include "r_main.h"
+#include "r_presentation.h"
 #include "r_sprite.h"
 #include "am_map.h"
 #include "w_wad.h" // Need file cache to get playpal.
@@ -115,7 +116,7 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *
 void OGLRenderer::RenderGLSubsector(int num) {}
 void OGLRenderer::RenderActors(sector_t *sec) {}
 void OGLRenderer::RenderGLSeg(int num) {}
-void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) {}
+void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) {}
 void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip) {}
 bool OGLRenderer::CheckVis(int fromss, int toss) { return false; }
 void OGLRenderer::DrawSimpleSky() {}
@@ -170,7 +171,7 @@ void OGLRenderer::InitGLState()
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
   glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
 
-  GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 }; // infinitely far away
+  GLfloat light_position[] = { 1.0, -1.0, 0.0, 0.0 }; // infinitely far away
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 
@@ -639,7 +640,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 void OGLRenderer::Render3DView(Actor *pov)
 {
   Setup3DMode();
-  glMatrixMode(GL_PROJECTION);
+  glMatrixMode(GL_MODELVIEW);
 
   x = pov->pos.x.Float();
   y = pov->pos.y.Float();
@@ -910,12 +911,9 @@ void OGLRenderer::RenderGLSubsector(int num)
 
   // A quick hack: draw 3D floors here. To do it Right, they (and
   // things in this subsector) need to be depth-sorted.
-  for(ff = s->ffloors; ff; ff = ff->next) {
-    line_t *mline;
-    side_t *mside;
+  for (ff = s->ffloors; ff; ff = ff->next) {
 
     GLfloat textop, texbottom, texleft, texright;
-    GLfloat fsheight; // Height of this 3D floor.
     fmat = *ff->toppic;
     RenderGlSsecPolygon(ss, ff->topheight->Float(), fmat, true);
     fmat = *ff->bottompic;
@@ -924,10 +922,10 @@ void OGLRenderer::RenderGLSubsector(int num)
     // Draw "edges" of 3D floor.
 
     // Sanity check.
-    mline = ff->master;
+    line_t *mline = ff->master;
     if (mline == NULL)
       continue;
-    mside = mline->sideptr[0];
+    side_t *mside = mline->sideptr[0];
     if (mside == NULL)
       continue;
     fmat = mside->midtexture;
@@ -935,8 +933,7 @@ void OGLRenderer::RenderGLSubsector(int num)
       continue;
 
     // Calculate texture offsets. (They are the same for every edge.)
-    fsheight = mside->sector->ceilingheight.Float() -
-               mside->sector->floorheight.Float();
+    GLfloat fsheight = mside->sector->ceilingheight.Float() -mside->sector->floorheight.Float();
     if(mline->flags & ML_DONTPEGBOTTOM) {
       texbottom = mside->rowoffset.Float();
       textop = texbottom - fsheight;
@@ -946,26 +943,21 @@ void OGLRenderer::RenderGLSubsector(int num)
     }
     texleft = mside->textureoffset.Float();
 
-    fmat->GLUse();
     for (curseg=firstseg; curseg<firstseg+segcount; curseg++) {
-      vertex_t *fv;
-      vertex_t *tv;
+
       fixed_t nx, ny;
       seg_t *s = &(mp->segs[curseg]);
       texright = texleft + s->length;
-      fv = s->v1;
-      tv = s->v2;
+      vertex_t *v1 = s->v1;
+      vertex_t *v2 = s->v2;
 
       // Surface normal points to the opposite direction than if we
-      // were drawing a wall.
-      nx = -(tv->y - fv->y);
-      ny = -(fv->x - tv->x);
-      glNormal3f(nx.Float(), ny.Float(), 0.0);
-      DrawSingleQuad(tv, fv, 
+      // were drawing a wall, so swap endpoints (and texcoords!)
+      DrawSingleQuad(fmat, v2, v1, 
 		     mside->sector->floorheight.Float(), 
 		     mside->sector->ceilingheight.Float(),
-		     texleft/fmat->worldwidth,
 		     texright/fmat->worldwidth,
+		     texleft/fmat->worldwidth,
 		     textop/fmat->worldheight,
 		     texbottom/fmat->worldheight);
 
@@ -1038,24 +1030,19 @@ void OGLRenderer::RenderGLSeg(int num)
 
   seg_t *s = &(mp->segs[num]);
   line_t *ld = s->linedef;
+
   // Minisegs don't have wall textures so no point in drawing them.
   if (ld == NULL)
     return;
 
+  if (ld->v1->x.Float() == 704 && ld->v1->y.Float() == -3552)
+    utexhei = 0;
+
   // Mark this linedef as visited so it gets drawn on the automap.
   ld->flags |= ML_MAPPED;
 
-  vertex_t *fv = s->v1;
-  vertex_t *tv = s->v2;
-
-  // Calculate surface normamp-> Should we account for degenerate
-  // linedefs?
-  shader_attribs_t a; // TEST
-  a.tangent[0] = (tv->x - fv->x).Float();
-  a.tangent[1] = (tv->y - fv->y).Float();
-  a.tangent[2] = 0;
-  
-  glNormal3f(a.tangent[1], -a.tangent[0], 0.0);
+  vertex_t *v1 = s->v1;
+  vertex_t *v2 = s->v2;
 
   if(s->side == 0) {
     lsd = ld->sideptr[0];
@@ -1110,8 +1097,8 @@ void OGLRenderer::RenderGLSeg(int num)
       // If the front and back ceilings are sky, do not draw this
       // upper texture.
       if (!ls->SkyCeiling() || !rs->SkyCeiling()) {
-	uppertex->GLUse();
-	DrawSingleQuad(fv, tv, rs_ceil, ls_ceil, 
+
+	DrawSingleQuad(uppertex, v1, v2, rs_ceil, ls_ceil, 
 		       texleft/uppertex->worldwidth,
 		       texright/uppertex->worldwidth,
 		       textop/uppertex->worldheight,
@@ -1128,8 +1115,7 @@ void OGLRenderer::RenderGLSeg(int num)
 	textop = tex_yoff;
 	texbottom = textop + ltexhei;
       }
-      lowertex->GLUse();
-      DrawSingleQuad(fv, tv, ls_floor, rs_floor,
+      DrawSingleQuad(lowertex, v1, v2, ls_floor, rs_floor,
 		     texleft/lowertex->worldwidth,
 		     texright/lowertex->worldwidth,
 		     textop/lowertex->worldheight,
@@ -1155,8 +1141,7 @@ void OGLRenderer::RenderGLSeg(int num)
 	  top = rs_ceil;
 	bottom = top - middletex->worldheight;
       }
-      middletex->GLUse();
-      DrawSingleQuad(fv, tv, bottom, top,
+      DrawSingleQuad(middletex, v1, v2, bottom, top,
 		     texleft/middletex->worldwidth,
 		     texright/middletex->worldwidth,
 		     0.0, 1.0);
@@ -1172,12 +1157,7 @@ void OGLRenderer::RenderGLSeg(int num)
       textop = tex_yoff;
       texbottom = textop + ls_height;
     }
-    middletex->GLUse();
-
-    if (middletex->shader)
-      middletex->shader->SetAttributes(&a); // TEST
-
-    DrawSingleQuad(fv, tv, ls_floor, ls_ceil,
+    DrawSingleQuad(middletex, v1, v2, ls_floor, ls_ceil,
 		   texleft/middletex->worldwidth,
 		   texright/middletex->worldwidth,
 		   textop/middletex->worldheight,
@@ -1187,18 +1167,35 @@ void OGLRenderer::RenderGLSeg(int num)
 
 
 /// Draw a single textured wall segment.
-void OGLRenderer::DrawSingleQuad(vertex_t *fv, vertex_t *tv, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom)
+void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom)
 {
+  m->GLUse();
+
+  // Calculate surface normamp-> Should we account for degenerate
+  // linedefs?
+
+  shader_attribs_t sa; // TEST
+  sa.tangent[0] = (v2->x - v1->x).Float();
+  sa.tangent[1] = (v2->y - v1->y).Float();
+  sa.tangent[2] = 0;
+    
+  glNormal3f(sa.tangent[1], -sa.tangent[0], 0.0);
+
+  if (m->shader)
+    {
+      m->shader->SetAttributes(&sa);
+    }
+
   glBegin(GL_QUADS);
   
   glTexCoord2f(texleft, texbottom);
-  glVertex3f(fv->x.Float(), fv->y.Float(), lower);
+  glVertex3f(v1->x.Float(), v1->y.Float(), lower);
   glTexCoord2f(texright, texbottom);
-  glVertex3f(tv->x.Float(), tv->y.Float(), lower);
+  glVertex3f(v2->x.Float(), v2->y.Float(), lower);
   glTexCoord2f(texright, textop);
-  glVertex3f(tv->x.Float(), tv->y.Float(), upper);
+  glVertex3f(v2->x.Float(), v2->y.Float(), upper);
   glTexCoord2f(texleft, textop);
-  glVertex3f(fv->x.Float(), fv->y.Float(), upper);
+  glVertex3f(v1->x.Float(), v1->y.Float(), upper);
 
   glEnd();
 }

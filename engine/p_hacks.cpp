@@ -26,8 +26,6 @@
 #include "g_map.h"
 
 #include "r_defs.h"
-#include "r_sprite.h"
-
 
 
 VoodooDoll::VoodooDoll(const PlayerPawn &p)

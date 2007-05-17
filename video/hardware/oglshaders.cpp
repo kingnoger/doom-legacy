@@ -93,7 +93,7 @@ void Shader::Compile(const char *code, int len)
   glGetShaderiv(shader_id, GL_COMPILE_STATUS, &status);
   ready = (status == GL_TRUE);
   if (!ready)
-    CONS_Printf("Shader %s would not compile.\n", name);
+    CONS_Printf("Shader '%s' would not compile.\n", name);
 }
 
 void Shader::PrintInfoLog()
@@ -106,7 +106,7 @@ void Shader::PrintInfoLog()
       char *log = static_cast<char*>(Z_Malloc(len, PU_DAVE, NULL));
       int chars = 0;
       glGetShaderInfoLog(shader_id, len, &chars, log);
-      CONS_Printf("Shader %s InfoLog:\n%s\n", name, log);
+      CONS_Printf("Shader '%s' InfoLog: %s\n", name, log);
       Z_Free(log);
     }
 }
@@ -153,24 +153,34 @@ void ShaderProg::Link()
   GLint status = 0;
   glGetProgramiv(prog_id, GL_LINK_STATUS, &status);
   if (status == GL_FALSE)
-    CONS_Printf("Shader program %s could not be linked.\n", name);
+    CONS_Printf("Shader program '%s' could not be linked.\n", name);
 
-  // find locations for uniform vars (per-primitive vars, ie. only changed outside glBegin()..glEnd())
+  struct shader_var_t
+  {
+    GLint *location;
+    const char *name;
+  };
+
+  shader_var_t uniforms[] = {
+    {&loc.tex0, "tex0"},
+    {&loc.tex1, "tex1"},
+    {&loc.time, "time"},
+  };
+
+  shader_var_t attribs[] = {
+    {&loc.tangent, "tangent"},
+  };
+
   // TODO the var names need to be defined (they define the Legacy-shader interface!)
-  if ((loc.tex0 = glGetUniformLocation(prog_id, "tex0")) == -1)
-    CONS_Printf("var not found!\n");
 
-  if ((loc.tex1 = glGetUniformLocation(prog_id, "tex1")) == -1)
-    CONS_Printf("var not found!\n");
+  // find locations for shader variables
+  for (int k=0; k<3; k++)
+    if ((*uniforms[k].location = glGetUniformLocation(prog_id, uniforms[k].name)) == -1)
+      CONS_Printf("Uniform shader var '%s' not found!\n", uniforms[k].name);
 
-  if ((loc.eye_pos = glGetUniformLocation(prog_id, "eye_pos")) == -1)
-    CONS_Printf("var not found!\n");
-
-  if ((loc.t = glGetUniformLocation(prog_id, "t")) == -1)
-    CONS_Printf("var not found!\n");
-
-  if ((loc.eye_pos = glGetAttribLocation(prog_id, "tangent")) == -1)
-    CONS_Printf("var not found!\n");
+  for (int k=0; k<1; k++)
+    if ((*attribs[k].location = glGetAttribLocation(prog_id, attribs[k].name)) == -1)
+      CONS_Printf("Attribute shader var '%s' not found!\n", attribs[k].name);
 }
 
 void ShaderProg::Use()
@@ -181,16 +191,16 @@ void ShaderProg::Use()
 void ShaderProg::SetUniforms()
 {
   // only call after linking!
+  // set uniform vars (per-primitive vars, ie. only changed outside glBegin()..glEnd())
   glUniform1i(loc.tex0, 0);
   glUniform1i(loc.tex1, 1);
-  glUniform3f(loc.eye_pos, oglrenderer->x, oglrenderer->y, oglrenderer->z);
-  glUniform1f(loc.t, oglrenderer->mp->maptic/60.0);
+  glUniform1f(loc.time, oglrenderer->mp->maptic/60.0);
 }
 
 void ShaderProg::SetAttributes(shader_attribs_t *a)
 {
   // then vertex attribute vars (TODO vertex attribute arrays) (can be changed anywhere)
-  glVertexAttrib3fv(loc.tangent, a->tangent); // FIXME TEST
+  glVertexAttrib3fv(loc.tangent, a->tangent);
 }
 
 void ShaderProg::PrintInfoLog()
@@ -203,7 +213,7 @@ void ShaderProg::PrintInfoLog()
       char *log = static_cast<char*>(Z_Malloc(len, PU_DAVE, NULL));
       int chars = 0;
       glGetProgramInfoLog(prog_id, len, &chars, log);
-      CONS_Printf("Program %s InfoLog:\n%s\n", name, log);
+      CONS_Printf("Shader program '%s' InfoLog: %s\n", name, log);
       Z_Free(log);
     }
 }

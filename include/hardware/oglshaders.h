@@ -66,12 +66,11 @@ class ShaderProg : public cacheitem_t
 {
 protected:
   GLuint prog_id; ///< OpenGL handle for the program.
-  /// Uniform variable locations in the linked program.
+  /// Variable locations in the linked program.
   struct
   {
     GLint tex0, tex1; ///< Texture units
-    GLint t;
-    GLint eye_pos;
+    GLint time;
     GLint tangent;
   } loc;
 

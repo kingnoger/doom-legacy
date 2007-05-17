@@ -38,7 +38,6 @@
 
 #include "r_render.h"
 #include "r_data.h"
-#include "r_state.h"
 #include "r_draw.h"
 #include "r_bsp.h"
 #include "r_segs.h"

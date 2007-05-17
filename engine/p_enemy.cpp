@@ -37,7 +37,7 @@
 #include "g_player.h"
 #include "g_decorate.h"
 
-#include "r_sprite.h"
+#include "r_presentation.h"
 #include "sounds.h"
 #include "m_random.h"
 #include "p_maputl.h"

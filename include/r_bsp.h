@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -32,14 +31,6 @@ extern side_t*          sidedef;
 extern line_t*          linedef;
 extern sector_t*        frontsector;
 extern sector_t*        backsector;
-
-extern bool          skymap;
-
-// faB: drawsegs are now allocated on the fly ... see r_segs.c
-extern struct drawseg_t *drawsegs;
-extern unsigned         maxdrawsegs;
-extern drawseg_t*       ds_p;
-extern drawseg_t*       firstnewseg;
 
 
 typedef void (*drawfunc_t)(int start, int stop);

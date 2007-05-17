@@ -27,7 +27,6 @@
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
-#include "console.h"
 
 #include "am_map.h"
 
@@ -37,9 +36,8 @@
 #include "g_pawn.h"
 
 #include "screen.h"
-#include "r_main.h"
 #include "r_data.h"
-#include "r_sprite.h"
+#include "r_presentation.h"
 
 #include "m_random.h"
 

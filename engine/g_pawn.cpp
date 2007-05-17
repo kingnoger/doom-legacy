@@ -40,7 +40,10 @@
 #include "hud.h"
 #include "sounds.h"
 #include "tables.h"
+
 #include "r_sprite.h"
+#include "hardware/md3.h"
+
 #include "m_random.h"
 
 #define ANG5    (ANG90/18)

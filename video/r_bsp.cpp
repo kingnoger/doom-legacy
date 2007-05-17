@@ -32,8 +32,8 @@
 #include "g_player.h"
 
 #include "r_render.h" // experiment
-#include "r_local.h"
-#include "r_state.h"
+#include "r_bsp.h"
+#include "r_plane.h"
 #include "r_poly.h"
 #include "r_splats.h"
 

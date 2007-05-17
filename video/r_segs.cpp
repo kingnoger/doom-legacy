@@ -27,16 +27,18 @@
 
 #include "command.h"
 #include "cvars.h"
+#include "console.h" //Con_clipviewtop
 
 #include "r_render.h"
-#include "r_local.h"
-#include "r_state.h"
+#include "r_data.h"
+#include "r_bsp.h"
+#include "r_draw.h"
+#include "r_plane.h"
 #include "r_sky.h"
 #include "r_splats.h"
+#include "r_things.h"
 
 #include "p_spec.h" // linedef special types
-
-#include "console.h" //Con_clipviewtop
 
 #include "w_wad.h"
 #include "z_zone.h"

@@ -43,7 +43,7 @@
 #include "p_spec.h"
 #include "p_heretic.h"
 #include "sounds.h"
-#include "r_sprite.h"
+#include "r_presentation.h"
 #include "tables.h"
 
 

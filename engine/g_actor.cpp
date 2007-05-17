@@ -41,6 +41,8 @@
 #include "p_maputl.h"
 
 #include "r_sprite.h"
+#include "hardware/md3.h"
+
 #include "r_splats.h"
 #include "sounds.h"
 #include "s_sound.h"

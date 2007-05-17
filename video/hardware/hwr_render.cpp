@@ -42,11 +42,12 @@
 #include "m_bbox.h"
 
 #include "r_bsp.h"
-#include "r_sprite.h"
 #include "r_data.h"
 #include "r_main.h"
 #include "r_draw.h"
 #include "v_video.h"
+
+#include "hardware/md3.h"
 
 #ifdef NO_OPENGL
 

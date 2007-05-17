@@ -34,7 +34,7 @@
 #include "info.h"
 
 #include "p_enemy.h"
-#include "r_sprite.h"
+#include "r_presentation.h"
 #include "r_defs.h"
 #include "sounds.h"
 #include "m_random.h"

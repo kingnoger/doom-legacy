@@ -27,6 +27,8 @@
 #define r_main_h 1
 
 #include "r_defs.h"
+#include "screen.h"
+#include "tables.h"
 
 extern  int     viewangleoffset;
 
@@ -41,6 +43,7 @@ extern int              viewheight;
 extern int              viewwindowx;
 extern int              viewwindowy;
 
+extern int              scaledviewwidth;
 
 
 extern int              centerx;
@@ -59,6 +62,19 @@ extern int              linecount;
 extern int              loopcount;
 
 extern int      framecount;
+
+
+
+extern angle_t          clipangle;
+
+extern int              viewangletox[FINEANGLES/2];
+extern angle_t          xtoviewangle[MAXVIDWIDTH+1];
+
+extern fixed_t          rw_distance;
+extern angle_t          rw_normalangle;
+
+// angle to line origin
+extern int              rw_angle1;
 
 
 

@@ -39,6 +39,7 @@
 #include "p_enemy.h"
 #include "p_maputl.h"
 #include "r_sprite.h"
+#include "hardware/md3.h"
 #include "r_defs.h"
 
 #include "sounds.h"

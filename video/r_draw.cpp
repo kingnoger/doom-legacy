@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -31,15 +31,16 @@
 #include "command.h"
 #include "g_game.h"
 
-#include "r_local.h"
-#include "r_state.h"
 #include "hud.h"
-#include "i_video.h"
+
+#include "r_data.h"
+#include "r_draw.h"
 #include "v_video.h"
 
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "i_video.h"
 
 #ifndef NO_OPENGL
 #include "hardware/hwr_render.h"

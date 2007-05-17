@@ -78,7 +78,6 @@
 
 #include "r_data.h"
 #include "r_main.h"
-#include "r_state.h"
 #include "r_segs.h"
 
 #include "sounds.h"

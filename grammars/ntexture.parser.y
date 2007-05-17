@@ -44,6 +44,7 @@
 %type num {float}
 
 %include {
+#include "i_video.h"
 #include "z_zone.h"
 #include "parser_driver.h"
 #include "ntexture.parser.h"
@@ -58,11 +59,16 @@ definitions ::= . // empty
 definitions ::= definitions def. // left recursion
 
 // shader definition
-def ::= shader_name L_BRACE shader_props R_BRACE. { d->p->Link(); }
+def ::= shader_name L_BRACE shader_props R_BRACE.
+  {
+    if (rendermode == render_opengl)
+      d->p->Link();
+  }
 
 shader_name ::= SHADER str(A).
   {
-    d->p = shaderprogs.Get(A);
+    if (rendermode == render_opengl)
+      d->p = shaderprogs.Get(A);
   }
 
 shader_props ::= .
@@ -78,14 +84,17 @@ shader_sources ::= shader_sources shader_src. // left recursion
 
 shader_src ::= str(A).
   {
-    Shader *s = shaders.Find(A); // cannot use Get because Shader constructor needs type as parameter
-    if (!s)
+    if (rendermode == render_opengl)
     {
-      s = new Shader(A, d->vertex_src); // construct and compile
-      shaders.Insert(s);
-    }
+      Shader *s = shaders.Find(A); // cannot use Get because Shader constructor needs type as parameter
+      if (!s)
+      {
+	s = new Shader(A, d->vertex_src); // construct and compile
+	shaders.Insert(s);
+      }
 
-    d->p->AttachShader(s); // attach a source module to the shader
+      d->p->AttachShader(s); // attach a source module to the shader
+    }
   }
 
 
@@ -122,11 +131,14 @@ mat_props ::= mat_props mat_prop. // left recursion
 
 mat_prop ::= SHADER_REF str(A) SEMICOLON.
   {
-    ShaderProg *p = shaderprogs.Find(A);
-    if (p)
-      d->m->shader = p;
-    else
-      CONS_Printf(" Unknown shader '%s'.\n", A);
+    if (rendermode == render_opengl)
+    {
+      ShaderProg *p = shaderprogs.Find(A);
+      if (p)
+        d->m->shader = p;
+      else
+        CONS_Printf(" Unknown shader '%s'.\n", A);
+    }
   }
 
 mat_prop ::= tex_unit L_BRACE tex_props R_BRACE.

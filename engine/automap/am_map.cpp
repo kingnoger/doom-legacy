@@ -39,7 +39,7 @@
 
 #include "r_data.h"
 #include "r_defs.h"
-#include "r_sprite.h"
+#include "r_presentation.h"
 #include "r_draw.h"
 #include "v_video.h"
 

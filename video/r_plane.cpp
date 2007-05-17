@@ -32,11 +32,12 @@
 #include "r_render.h"
 #include "r_defs.h"
 #include "r_data.h"
-#include "r_local.h"
-#include "r_state.h"
+#include "r_draw.h"
+#include "r_plane.h"
 #include "r_splats.h"   //faB(21jan):testing
 #include "r_sky.h"
 #include "v_video.h"
+
 #include "w_wad.h"
 #include "z_zone.h"
 
@@ -704,6 +705,7 @@ void Rend::R_DrawPlanes()
         // sky flat
         if (pl->sky)
 	  {
+	    extern fixed_t pspriteyscale;
             //added:12-02-98: use correct aspect ratio scale
             dc_iscale = (1 / pspriteyscale) * skytex->tex[0].yscale;
 

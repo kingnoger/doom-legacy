@@ -39,6 +39,8 @@
 #include "n_connection.h"
 
 #include "r_sprite.h"
+#include "hardware/md3.h"
+
 #include "wi_stuff.h"
 #include "tables.h"
 #include "z_zone.h"
