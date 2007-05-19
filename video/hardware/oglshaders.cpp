@@ -22,7 +22,15 @@
 
 #include "hardware/oglshaders.h"
 
-#ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
+shader_cache_t shaders;
+shaderprog_cache_t shaderprogs;
+
+
+#ifdef NO_SHADERS
+# warning Shaders not included in the build.
+#elif !defined(GL_VERSION_2_0) // GLSL is introduced in OpenGL 2.0
+# warning Shaders require OpenGL 2.0!
+#else
 
 #include <GL/glu.h>
 #include "doomdef.h"
@@ -30,10 +38,6 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "hardware/oglrenderer.hpp"
-
-shader_cache_t shaders;
-shaderprog_cache_t shaderprogs;
-
 
 static void PrintError()
 {
@@ -44,7 +48,6 @@ static void PrintError()
       err = glGetError();
     }
 }
-
 
 
 
@@ -218,7 +221,5 @@ void ShaderProg::PrintInfoLog()
     }
 }
 
-#else
-#warning Shaders require OpenGL 2.0!
 #endif // GL_VERSION_2_0
 

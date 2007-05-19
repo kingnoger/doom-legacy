@@ -26,6 +26,7 @@
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 
+#include "z_cache.h"
 
 struct shader_attribs_t
 {
@@ -33,10 +34,7 @@ struct shader_attribs_t
 };
 
 
-#ifdef GL_VERSION_2_0  // GLSL is introduced in OpenGL 2.0
-
-#include "z_cache.h"
-
+#if defined(GL_VERSION_2_0) && !defined(NO_SHADERS) // GLSL is introduced in OpenGL 2.0
 
 /// GLSL shader object.
 class Shader : public cacheitem_t
@@ -92,10 +90,22 @@ public:
 #else // GL_VERSION_2_0
 
 // Inert dummy implementation
-class ShaderProg
+class Shader : public cacheitem_t
 {
-  static void DisableShaders() {};
-  void Use() {};
+public:
+  Shader(const char *name, bool vertex_shader = true) : cacheitem_t(name) {}
+};
+
+
+// Inert dummy implementation
+class ShaderProg : public cacheitem_t
+{
+public:
+  ShaderProg(const char *name) : cacheitem_t(name) {}
+  static void DisableShaders() {}
+  void Use() {}
+  void SetUniforms() {}
+  void SetAttributes(shader_attribs_t *a) {}
 };
 
 #endif // GL_VERSION_2_0
