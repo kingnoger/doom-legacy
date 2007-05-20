@@ -405,6 +405,13 @@ void OGLRenderer::Setup3DMode()
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
 
+  // Read projection information from consvars. Currently only fov.
+  fov = cv_grfov.value;
+  if(fov > 180) // Sanity checks.
+    fov = 180;
+  if(fov < 1)
+    fov = 1;
+
   gluPerspective(fov, double(viewportw)/viewporth, 1, 10000);
 
   glMatrixMode(GL_MODELVIEW);
