@@ -449,7 +449,8 @@ void OGLRenderer::Setup3DMode()
   if(fov < 1)
     fov = 1;
 
-  gluPerspective(fov/(viewportar*0.75), viewportar, 0.9, 9000.0);
+  // Load clipping planes from consvars.
+  gluPerspective(fov/(viewportar*0.75), viewportar, cv_grnearclippingplane.Get().Float(), cv_grfarclippingplane.Get().Float());
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
