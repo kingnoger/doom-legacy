@@ -22,3 +22,4 @@
 
 byte LightLevelToLum(int l, int extralight=0);
 void InitLumLut();
+bool GLExtAvailable(char *extension);

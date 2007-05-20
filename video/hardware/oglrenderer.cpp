@@ -354,6 +354,16 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   while (glGetError() != GL_NO_ERROR)
     ;
 
+  if(GLExtAvailable("GL_ARB_multitexture"))
+    CONS_Printf("GL multitexturing supported.\n");
+  else
+    CONS_Printf("GL multitexturing not supported. Expect trouble.\n");
+
+  if(GLExtAvailable("GL_ARB_texture_non_power_of_two"))
+    CONS_Printf("Non power of two textures supported.\n");
+  else
+    CONS_Printf("Only power of two textures supported.\n");
+
   return true;
 }
 

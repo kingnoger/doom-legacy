@@ -21,6 +21,8 @@
 #include "doomdef.h"
 #include "hardware/oglhelpers.hpp"
 
+static const GLubyte *gl_extensions = NULL;
+
 static byte lightleveltonumlut[256];
 
 // Converts Doom sector light values to suitable background pixel
@@ -61,4 +63,34 @@ void InitLumLut() {
 
         lightleveltonumlut[i] = 255 < k ? 255 : int(k); //min(255, k);
     }
+}
+
+/// Tells whether the spesified extension is supported by the current
+/// OpenGL implementation.
+
+bool GLExtAvailable(char *extension)
+{
+    const GLubyte *start;
+    GLubyte *where, *terminator;
+
+    where = (GLubyte *) strchr(extension, ' ');
+    if (where || *extension == '\0')
+        return false;
+
+    if(!gl_extensions)
+      gl_extensions = glGetString(GL_EXTENSIONS);
+
+    start = gl_extensions;
+    for (;;)
+    {
+        where = (GLubyte *) strstr((const char *) start, extension);
+        if (!where)
+            break;
+        terminator = where + strlen(extension);
+        if (where == start || *(where - 1) == ' ')
+            if (*terminator == ' ' || *terminator == '\0')
+                return true;
+        start = terminator;
+    }
+    return false;
 }
