@@ -64,10 +64,11 @@ OGLRenderer::OGLRenderer()
   theta = phi = 0.0;
   viewportw = viewporth = 0;
 
-  fov = 70.0;
+  fov = 90.0;
 
   hudar = 4.0/3.0; // Basic DOOM hud takes the full screen.
   screenar = 1.0;  // Pick a default value, any default value.
+  viewportar = 1.0;
 
   // Initially we are at 2D mode.
   consolemode = true;
@@ -338,9 +339,7 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 
   // ADD: currently we only use one viewport, so we set it here. When
   // multiple subwindows are added this should be set somewhere else.
-  viewportw = screen->w;
-  viewporth = screen->h;
-  glViewport(0, 0, viewportw, viewporth);
+  SetupViewport(1, 0);
 
   // Reset matrix transformations.
   if(consolemode)
@@ -367,6 +366,28 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   return true;
 }
 
+// Set up viewport projection matrix.
+//
+// SetupViewport(1, 0) makes everything fullscreen again.
+
+void OGLRenderer::SetupViewport(const unsigned int numplayers, const unsigned int curplayer) {
+  GLfloat *mult;
+
+  if(numplayers == 0)
+    I_Error("Tried to set viewport with 0 players.\n");
+
+  if(numplayers > 4)
+    I_Error("System supports only 4 local players, %d requested.\n", numplayers);
+
+  if(curplayer >= numplayers)
+    I_Error("Tried to set viewport for non-existin player %d (max value %d).\n", curplayer, numplayers);
+
+  mult = viewport_multipliers[numplayers-1][curplayer];
+  viewportw = GLint(screen->w * mult[2]);
+  viewporth = GLint(screen->h * mult[3]);
+  glViewport(GLint(screen->w*mult[0]), GLint(screen->h*mult[1]), viewportw, viewporth);
+  viewportar = GLfloat(viewportw)/viewporth;
+}
 
 /// Set up the GL matrices so that we can draw 2D stuff like menus.
 void OGLRenderer::Setup2DMode()
@@ -381,16 +402,16 @@ void OGLRenderer::Setup2DMode()
   glLoadIdentity();
   gluOrtho2D(0.0, 1.0, 0.0, 1.0);
   
-  if(screenar > hudar) {
-    extraoffx = (screenar - hudar)/(screenar*2.0);
+  if(viewportar > hudar) {
+    extraoffx = (viewportar - hudar)/(viewportar*2.0);
     extraoffy = 0.0;
-    extrascalex = hudar/screenar;
+    extrascalex = hudar/viewportar;
     extrascaley = 1.0;
-  } else if(screenar < hudar) {
+  } else if(viewportar < hudar) {
      extraoffx = 0.0;
-     extraoffy = (hudar - screenar)/(hudar*2.0);
+     extraoffy = (hudar - viewportar)/(hudar*2.0);
      extrascalex = 1.0;
-     extrascaley = screenar/hudar;
+     extrascaley = viewportar/hudar;
   } else {
      extrascalex = extrascaley = 1.0;
      extraoffx = extraoffy = 0.0;
@@ -422,7 +443,7 @@ void OGLRenderer::Setup3DMode()
   if(fov < 1)
     fov = 1;
 
-  gluPerspective(fov, double(viewportw)/viewporth, 1, 10000);
+  gluPerspective(fov/(viewportar*0.75), viewportar, 0.9, 9000.0);
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -1339,7 +1360,7 @@ void OGLRenderer::DrawSimpleSky()
   left = 0.0;
   right = 1.0;
 
-  GLfloat fovx = fov*screenar;
+  GLfloat fovx = fov*viewportar;
   fovx *= 2.0; // I just love magic numbers. Don't you?
 
   texleft = (2.0*phi + fovx)/720.0;

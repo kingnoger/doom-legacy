@@ -25,6 +25,43 @@ static const GLubyte *gl_extensions = NULL;
 
 static byte lightleveltonumlut[256];
 
+// This array has the multipliers necessary to render multiple player
+// views onto the screen. The first index tells how many total players
+// there are on this screen (values 1-4). The second one tells the
+// current player number and must be less or equal to the first one.
+// These give an array of four values: bottom left x and y followed by
+// top right x and y.
+//
+// Setting up the screen to render the view of player one of total of
+// two players, you would do this.
+//
+// x0 = viewport_multipliers[1][0][0] * screen_width;
+// y0 = viewport_multipliers[1][0][1] * screen_height;
+// vw = viewport_multipliers[1][0][2] * screen_width;
+// vh = viewport_multipliers[1][0][3] * screen_height;
+// glViewPort(x0, y0, x1, y0);
+
+GLfloat viewport_multipliers[4][4][4] = {
+  // 1 Player
+  {{0.0, 0.0, 1.0, 1.0}},
+
+  // 2 players
+  {{0.0, 0.5, 1.0, 0.5},
+   {0.0, 0.0, 1.0, 0.5}},
+
+  // 3 players
+  {{0.0, 0.5, 1.0, 0.5},
+   {0.0, 0.0, 0.5, 0.5},
+   {0.5, 0.0, 0.5, 0.5}},
+
+  // 4 players
+  {{0.0, 0.5, 0.5, 0.5},
+   {0.5, 0.5, 0.5, 0.5},
+   {0.0, 0.0, 0.5, 0.5},
+   {0.5, 0.0, 0.5, 0.5}}
+};
+
+
 // Converts Doom sector light values to suitable background pixel
 // color. extralight is for temporary brightening of the screen due to
 // muzzle flashes etc.

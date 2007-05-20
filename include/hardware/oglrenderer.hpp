@@ -58,8 +58,8 @@ private:
   float glversion;  ///< Current (runtime) OpenGL version (major.minor).
 
   SDL_Surface *screen; ///< Main screen turn on.
-  int viewportw; ///< Width of current viewport in pixels.
-  int viewporth; ///< Height of current viewport in pixels.
+  GLint viewportw; ///< Width of current viewport in pixels.
+  GLint viewporth; ///< Height of current viewport in pixels.
 
   bool consolemode; ///< Are we drawing 3D level graphics or 2D console graphics.
 
@@ -71,8 +71,9 @@ private:
 
   double fov;     ///< Field of view in degrees.
 
-  double hudar;     ///< HUD aspect ratio.
-  double screenar;  ///< Aspect ratio of the physical screen (monitor).
+  double hudar;      ///< HUD aspect ratio.
+  double screenar;   ///< Aspect ratio of the physical screen (monitor).
+  double viewportar; ///< Aspect ratio of current viewport.
 
   RGB_t *palette;  ///< Converting palette data to OGL colors.
 
@@ -111,6 +112,7 @@ public:
 
   void Setup3DMode();
 
+  void SetupViewport(const unsigned int numplayers, const unsigned int curplayer);
   void RenderPlayerView(PlayerInfo *player);
   void Render3DView(Actor *pov);
   void DrawPSprites(class PlayerPawn *p);

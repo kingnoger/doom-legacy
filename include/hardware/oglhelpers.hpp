@@ -18,8 +18,15 @@
 // This file pair contains all sorts of helper functions and arrays
 // used by the OpenGL renderer.
 
+#ifndef OGLHELPERS_CPP
+#define OGLHELPERS_CPP
+
 #include"doomtype.h"
+
+extern GLfloat viewport_multipliers[4][4][4];
 
 byte LightLevelToLum(int l, int extralight=0);
 void InitLumLut();
 bool GLExtAvailable(char *extension);
+
+#endif // OGLHELPERS_CPP
