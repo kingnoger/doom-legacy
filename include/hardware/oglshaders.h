@@ -94,6 +94,7 @@ class Shader : public cacheitem_t
 {
 public:
   Shader(const char *name, bool vertex_shader = true) : cacheitem_t(name) {}
+  void Link() {};
 };
 
 
@@ -106,7 +107,10 @@ public:
   void Use() {}
   void SetUniforms() {}
   void SetAttributes(shader_attribs_t *a) {}
+  void Link() {};
+  void AttachShader(Shader *s) {};
 };
+
 
 #endif // GL_VERSION_2_0
 
