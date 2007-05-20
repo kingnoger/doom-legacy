@@ -77,13 +77,6 @@ OGLRenderer::OGLRenderer()
   MD3_InitNormLookup();
 
   CONS_Printf("New OpenGL renderer created.\n");
-#ifndef NO_OPENGL
-  CONS_Printf("OpenGL vendor:   %s\n", glGetString(GL_VENDOR));
-  CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
-  const char *str = reinterpret_cast<const char*>(glGetString(GL_VERSION));
-  glversion = str ? strtof(str, NULL) : 0;
-  CONS_Printf("OpenGL version:  %s\n", str);
-#endif
 }
 
 OGLRenderer::~OGLRenderer()
@@ -269,13 +262,16 @@ bool OGLRenderer::WriteScreenshot(const char *fname)
 
 bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 {
-  // Some platfroms silently destroy OpenGL textures when changing
-  // resolution. Unload them all, just in case.
-  materials.ClearGLTextures();
-
   Uint32 surfaceflags;
   int mindepth = 16;
   int temp;
+  bool first_init;
+
+  first_init = screen ? false : true;
+
+  // Some platfroms silently destroy OpenGL textures when changing
+  // resolution. Unload them all, just in case.
+  materials.ClearGLTextures();
 
   workinggl = false;
 
@@ -299,6 +295,16 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     return false;
   }
 
+  // This is the earlies possible point to print these since GL
+  // context is not guaranteed to exist until the call to
+  // SDL_SetVideoMode.
+  if(first_init) {
+    CONS_Printf("OpenGL vendor:   %s\n", glGetString(GL_VENDOR));
+    CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
+    const char *str = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+    glversion = str ? strtof(str, NULL) : 0;
+    CONS_Printf("OpenGL version:  %s\n", str);
+  }
 
   CONS_Printf("Color depth in bits: ");
   SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &temp);
@@ -319,7 +325,7 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     CONS_Printf("OpenGL mode is NOT double buffered.\n");
 
   // Print state and debug info.
-  CONS_Printf("Set OpenGL video mode %dx%dx%d", screen->w, screen->h, cbpp);
+  CONS_Printf("Set OpenGL video mode %dx%dx%d", w, h, cbpp);
   CONS_Printf(fullscreen ? " (fullscreen)\n" : " (windowed)\n");
 
   // Calculate the screen's aspect ratio. Assumes square pixels.
