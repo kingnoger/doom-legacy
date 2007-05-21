@@ -74,12 +74,12 @@ static void Command_GrStats_f();
 CV_PossibleValue_t grcrappymlook_cons_t[]= {{0,"Off"}, {1,"On"},{2,"Full"}, {0,NULL} };
 CV_PossibleValue_t grgamma_cons_t[]= {{1,"MIN"}, {255,"MAX"}, {0,NULL} };
 CV_PossibleValue_t grfov_cons_t[]= {{0,"MIN"}, {179,"MAX"}, {0,NULL} };
-// FIXME: this is not correct, it's there so it compiles
-CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "Nearest"},
-                                           {1, "Bilinear"},
-                                           {2, "Trilinear"},
-                                           {3, "Linear_Nearest"},
-                                           {4, "Nearest_Linear"},
+
+// Only list mipmapping filter modes, since we always use them.
+CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "Nearest_Nearest"},
+                                           {1, "Nearest_Linear"},
+                                           {2, "Linear_Nearest"},
+                                           {3, "Linear_Linear"},
                                            {0, NULL} };
 
 consvar_t cv_grrounddown       = {"gr_rounddown",       "Off", 0,       CV_OnOff };
@@ -92,7 +92,7 @@ consvar_t cv_grfogdensity      = {"gr_fogdensity",      "100", CV_SAVE|CV_CALL|C
 consvar_t cv_grgammared        = {"gr_gammared",        "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
 consvar_t cv_grgammagreen      = {"gr_gammagreen",      "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
 consvar_t cv_grgammablue       = {"gr_gammablue",       "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
-consvar_t cv_grfiltermode      = {"gr_filtermode", "Bilinear", CV_SAVE|CV_CALL, grfiltermode_cons_t, CV_filtermode_ONChange };
+consvar_t cv_grfiltermode      = {"gr_filtermode", "Nearest_Nearest", CV_SAVE|CV_CALL, grfiltermode_cons_t, CV_filtermode_ONChange };
 consvar_t cv_grzbuffer         = {"gr_zbuffer",          "On", 0,       CV_OnOff };
 consvar_t cv_grcorrecttricks   = {"gr_correcttricks",    "On", 0,       CV_OnOff };
 consvar_t cv_grsolvetjoin      = {"gr_solvetjoin",       "On", 0,       CV_OnOff };

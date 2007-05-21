@@ -794,18 +794,32 @@ Material::TextureRef::TextureRef()
   t = NULL;
   xscale = yscale = 1;
 #ifndef NO_OPENGL
-  mag_filter = GL_NEAREST;
-  min_filter = GL_NEAREST_MIPMAP_LINEAR;
+  mag_filter = 0; // If this is zero, take value from consvar.
+  min_filter = 0;
 #endif
 }
 
 
 void Material::TextureRef::GLSetTextureParams()
 {
+  GLint magf, minf;
   glBindTexture(GL_TEXTURE_2D, t->GLPrepare()); // bind the texture
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filter);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
+  if(mag_filter != 0) {
+    magf = mag_filter;
+    minf = min_filter;
+  } else {
+    switch(cv_grfiltermode.value) {
+    case 3 : magf = GL_LINEAR; minf = GL_LINEAR_MIPMAP_LINEAR; break;
+    case 2 : magf = GL_LINEAR; minf = GL_LINEAR_MIPMAP_NEAREST; break;
+    case 1 : magf = GL_LINEAR; minf = GL_NEAREST_MIPMAP_LINEAR; break;
+    case 0 : 
+    default : magf = GL_NEAREST; minf = GL_NEAREST_MIPMAP_NEAREST; break;
+    }
+  }
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magf);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf);
 }
 
 

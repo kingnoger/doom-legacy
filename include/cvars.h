@@ -168,5 +168,5 @@ extern consvar_t cv_grfiltermode;
 extern consvar_t cv_grcorrecttricks;
 extern consvar_t cv_grnearclippingplane;
 extern consvar_t cv_grfarclippingplane;
-
+extern consvar_t cv_grfiltermode;
 #endif
