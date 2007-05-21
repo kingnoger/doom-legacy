@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -281,9 +280,8 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 
       if (sec->ceilingdata) //SoM: 3/6/2000
 	{
-	  // FIXME dangerous and wrong, since it could be a ceiling_t for example, started using a script!
-	  vdoor_t *door = (vdoor_t *)sec->ceilingdata; //SoM: 3/6/2000
-	  if ((door->type & vdoor_t::TMASK) == vdoor_t::OwC)
+	  vdoor_t *door = sec->ceilingdata->IsOf(vdoor_t::_type) ? reinterpret_cast<vdoor_t*>(sec->ceilingdata) : NULL;
+	  if (door && (door->type & vdoor_t::TMASK) == vdoor_t::OwC)
 	    {
 	      if (door->direction == -1)
 		door->direction = 1;    // go back up
@@ -296,9 +294,18 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 		}
 	      return 1;
 	    }
-	}      
-      // new door thinker
-      new vdoor_t(this, type, sec, speed, delay);
+	  else
+	    {
+	      // We already have a ceiling thinker that is not a door, can't be helped.
+	      CONS_Printf("Cannot spawn a vdoor_t thinker in sector %d, it already has a ceiling action.\n", sec - sectors);
+	      return 0;
+	    }
+	}
+      else
+	{
+	  // new door thinker
+	  new vdoor_t(this, type, sec, speed, delay);
+	}
 
       return 1;
     }
