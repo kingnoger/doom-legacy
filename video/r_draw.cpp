@@ -42,20 +42,15 @@
 
 #include "i_video.h"
 
-#ifndef NO_OPENGL
-#include "hardware/hwr_render.h"
-#endif
+#include "hardware/oglrenderer.hpp"
+
 
 //==========================================================================
 //                     COMMON DATA FOR 8bpp AND 16bpp
 //==========================================================================
 
-byte*           viewimage;
-int             viewwidth;
-int             scaledviewwidth;
-int             viewheight;
-int             viewwindowx;
-int             viewwindowy;
+int  viewwidth, viewheight;    ///< single 3D viewport width and height in pixels
+int  viewwindowx, viewwindowy; ///< x,y coords of first viewport in pixels
 
 // pointer to the start of each line of the screen,
 // these tables convert viewport coords into LFB offsets
@@ -286,27 +281,16 @@ void R_InitViewBuffer(int width, int height)
   if (bytesperpixel<1 || bytesperpixel>4)
     I_Error ("R_InitViewBuffer : wrong bytesperpixel value %d\n", bytesperpixel);
 
-  // Handle resize,
-  //  e.g. smaller view windows
-  //  with border and/or status bar.
-  viewwindowx = (vid.width-width) >> 1;
-
   // Column offset for those columns of the view window, but
   // relative to the entire screen
   for (i=0 ; i<width ; i++)
     columnofs[i] = (viewwindowx + i) * bytesperpixel;
 
-  // Same with base row offset.
-  if (width == vid.width)
-    viewwindowy = 0;
-  else
-    viewwindowy = (vid.height-hud.stbarheight-height) >> 1;
-
   // Precalculate all row offsets.
   for (i=0 ; i<height ; i++)
     {
       ylookup1[i] = vid.screens[0] + (i+viewwindowy)*vid.width*bytesperpixel;
-      ylookup2[i] = vid.screens[0] + (i+(vid.height>>1))*vid.width*bytesperpixel; // for splitscreen
+      ylookup2[i] = ylookup1[i] + (vid.height / 2)*vid.width*bytesperpixel; // for splitscreen
     }
 }
 
@@ -368,7 +352,7 @@ void R_FillBackScreen()
 
   //added:08-01-98:draw pattern around the status bar too (when hires),
   //                so return only when in full-screen without status bar.
-  if ((scaledviewwidth == vid.width)&&(viewheight==vid.height))
+  if ((viewwidth == vid.width)&&(viewheight==vid.height))
     return;
 
   Material *t = window_background;
@@ -378,7 +362,7 @@ void R_FillBackScreen()
       t->Draw(x, y, 1);
 
   //added:08-01-98:dont draw the borders when viewwidth is full vid.width.
-  if (scaledviewwidth == vid.width)
+  if (viewwidth == vid.width)
     return;
 
   if (game.mode >= gm_heretic)
@@ -392,23 +376,23 @@ void R_FillBackScreen()
       boff = 8;
     }
 
-  for (x=0 ; x<scaledviewwidth ; x+=step)
+  for (x=0 ; x<viewwidth ; x+=step)
     window_border[BRDR_T]->Draw(viewwindowx+x, viewwindowy-boff, 1);
 
-  for (x=0 ; x<scaledviewwidth ; x+=step)
+  for (x=0 ; x<viewwidth ; x+=step)
     window_border[BRDR_B]->Draw(viewwindowx+x, viewwindowy+viewheight, 1);
 
   for (y=0 ; y<viewheight ; y+=step)
     window_border[BRDR_L]->Draw(viewwindowx-boff, viewwindowy+y, 1);
 
   for (y=0 ; y<viewheight ; y+=step)
-    window_border[BRDR_R]->Draw(viewwindowx+scaledviewwidth, viewwindowy+y, 1);
+    window_border[BRDR_R]->Draw(viewwindowx+viewwidth, viewwindowy+y, 1);
 
   // Draw beveled corners.
   window_border[BRDR_TL]->Draw(viewwindowx-boff, viewwindowy-boff, 1);
-  window_border[BRDR_TR]->Draw(viewwindowx+scaledviewwidth, viewwindowy-boff, 1);
+  window_border[BRDR_TR]->Draw(viewwindowx+viewwidth, viewwindowy-boff, 1);
   window_border[BRDR_BL]->Draw(viewwindowx-boff, viewwindowy+viewheight, 1);
-  window_border[BRDR_BR]->Draw(viewwindowx+scaledviewwidth, viewwindowy+viewheight, 1);
+  window_border[BRDR_BR]->Draw(viewwindowx+viewwidth, viewwindowy+viewheight, 1);
 }
 
 
@@ -431,21 +415,19 @@ void R_VideoErase(unsigned ofs, int count)
 //
 void R_DrawViewBorder()
 {
-#ifndef NO_OPENGL
-  if (rendermode != render_soft)
+  if (rendermode == render_opengl)
     {
-      HWR.DrawViewBorder();
+      OGLRenderer::DrawViewBorder();
       return;
     }
-#endif
 
-  if (scaledviewwidth == vid.width)
+  if (viewwidth == vid.width)
     return;
 
   R_VideoErase(0, (vid.height - hud.stbarheight)*vid.width);
   /*
   int top  = (vid.height -hud.stbarheight -viewheight) >> 1;
-  int side = (vid.width - scaledviewwidth) >> 1;
+  int side = (vid.width - viewwidth) >> 1;
 
   // copy top and one line of left side
   R_VideoErase(0, top*vid.width + side);

@@ -49,12 +49,7 @@
 
 #include "hardware/md3.h"
 
-#ifdef NO_OPENGL
-
-// stubs for OpenGL functions
-void modelpres_t::Project(Actor *p) {}
-
-#else
+#ifndef NO_OPENGL
 
 void OglSdlFinishUpdate(bool vidwait);
 
@@ -72,29 +67,14 @@ static void CV_Gammaxxx_ONChange();
 static void Command_GrStats_f();
 
 CV_PossibleValue_t grcrappymlook_cons_t[]= {{0,"Off"}, {1,"On"},{2,"Full"}, {0,NULL} };
-CV_PossibleValue_t grgamma_cons_t[]= {{1,"MIN"}, {255,"MAX"}, {0,NULL} };
 CV_PossibleValue_t grfov_cons_t[]= {{0,"MIN"}, {179,"MAX"}, {0,NULL} };
-CV_PossibleValue_t granisotropy_cons_t[]= {{1,"MIN"}, {16,"MAX"}, {0,NULL}};
 
-// Only list mipmapping filter modes, since we always use them.
-CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "Nearest_Nearest"},
-                                           {1, "Nearest_Linear"},
-                                           {2, "Linear_Nearest"},
-                                           {3, "Linear_Linear"},
-                                           {0, NULL} };
 
 consvar_t cv_grrounddown       = {"gr_rounddown",       "Off", 0,       CV_OnOff };
 consvar_t cv_grcrappymlook     = {"gr_mlook",          "Full", CV_SAVE, grcrappymlook_cons_t };
-consvar_t cv_grfov             = {"gr_fov",              "90", CV_SAVE|CV_CALL, grfov_cons_t, CV_grFov_OnChange };
-consvar_t cv_granisotropy      = {"gr_anisotropy",        "1", CV_SAVE, granisotropy_cons_t, NULL };
+
 consvar_t cv_grsky             = {"gr_sky",              "On", 0,       CV_OnOff };
-consvar_t cv_grfog             = {"gr_fog",              "On", CV_SAVE, CV_OnOff };
-consvar_t cv_grfogcolor        = {"gr_fogcolor",     "000000", CV_SAVE, NULL };
-consvar_t cv_grfogdensity      = {"gr_fogdensity",      "100", CV_SAVE|CV_CALL|CV_NOINIT, CV_Unsigned, CV_FogDensity_ONChange };
-consvar_t cv_grgammared        = {"gr_gammared",        "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
-consvar_t cv_grgammagreen      = {"gr_gammagreen",      "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
-consvar_t cv_grgammablue       = {"gr_gammablue",       "127", CV_SAVE|CV_CALL, grgamma_cons_t, CV_Gammaxxx_ONChange };
-consvar_t cv_grfiltermode      = {"gr_filtermode", "Nearest_Nearest", CV_SAVE|CV_CALL, grfiltermode_cons_t, CV_filtermode_ONChange };
+
 consvar_t cv_grzbuffer         = {"gr_zbuffer",          "On", 0,       CV_OnOff };
 consvar_t cv_grcorrecttricks   = {"gr_correcttricks",    "On", 0,       CV_OnOff };
 consvar_t cv_grsolvetjoin      = {"gr_solvetjoin",       "On", 0,       CV_OnOff };
@@ -112,13 +92,8 @@ consvar_t cv_gralpha = {"gr_alpha", "160", 0, CV_Unsigned };
 consvar_t cv_grbeta  = {"gr_beta",  "0",   0, CV_Unsigned };
 consvar_t cv_grgamma = {"gr_gamma", "0",   0, CV_Unsigned };
 
-consvar_t cv_grnearclippingplane = {"gr_nearclippingplane", "0.9", CV_SAVE | CV_FLOAT, 0};
-consvar_t cv_grfarclippingplane  = {"gr_farclippingplane", "9000.0", CV_SAVE | CV_FLOAT, 0};
 
-consvar_t cv_grdynamiclighting = {"gr_dynamiclighting",  "On", CV_SAVE, CV_OnOff };
 consvar_t cv_grstaticlighting  = {"gr_staticlighting",   "On", CV_SAVE, CV_OnOff };
-consvar_t cv_grcoronas         = {"gr_coronas",          "On", CV_SAVE, CV_OnOff };
-consvar_t cv_grcoronasize      = {"gr_coronasize",        "1", CV_SAVE| CV_FLOAT, 0 };
 consvar_t cv_grmblighting      = {"gr_mblighting",       "On", CV_SAVE|CV_CALL,   CV_OnOff, CV_grMonsterDL_OnChange };
 
 //Hurdler: Transform (coords + angles)
@@ -646,10 +621,6 @@ static void CV_filtermode_ONChange()
   //HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_grfiltermode.value);
 }
 //FIXME: Hurdler: I've discovered that too much CONS_Printf (probably before a flush) generate segfault :(
-void modelpres_t::Project(Actor *p)
-{
-  //CONS_Printf("modelpres_t::Project: Not yet implemented\n");
-}
 /*
 void PatchTexture::HWR_Draw(float x, float y, int flags)
 {

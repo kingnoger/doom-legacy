@@ -308,7 +308,7 @@ void spritepres_t::Project(Actor *p)
   //vis->mobjflags = p->flags;
 
   vis->xscale = xscale;
-  vis->yscale = yscale;           //<<detailshift;
+  vis->yscale = yscale;
 
   vis->px = p->pos.x;
   vis->py = p->pos.y;
@@ -381,7 +381,7 @@ void spritepres_t::Project(Actor *p)
       else
         {
           // diminished light
-          int index = (xscale << (LIGHTSCALESHIFT+detailshift)).floor();
+          int index = (xscale << LIGHTSCALESHIFT).floor();
 
           if (index >= MAXLIGHTSCALE)
             index = MAXLIGHTSCALE-1;
@@ -617,7 +617,7 @@ vissprite_t *vissprite_t::SplitSprite(Actor *thing, int cut_y, lightlist_t *ll)
 	    ;
 	  else
 	    {
-	      int index = (xscale << (LIGHTSCALESHIFT+detailshift)).floor();
+	      int index = (xscale << LIGHTSCALESHIFT).floor();
 
 	      if (index >= MAXLIGHTSCALE)
 		index = MAXLIGHTSCALE-1;
@@ -771,7 +771,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 
   vis->x1 = x1 < 0 ? 0 : x1;
   vis->x2 = x2 >= viewwidth ? viewwidth-1 : x2;
-  vis->yscale = pspriteyscale;  //<<detailshift;
+  vis->yscale = pspriteyscale;
 
   if (sprframe->flip[0])
     {

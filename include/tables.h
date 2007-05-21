@@ -40,6 +40,7 @@
 #define tables_h 1
 
 #include "doomtype.h"
+#include "vect.h"
 #include "m_fixed.h"
 
 typedef Uint32 angle_t;
@@ -124,5 +125,17 @@ inline angle_t ArcTan(fixed_t x)
 
 angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
 fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1);
+fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
+
+inline angle_t R_PointToAngle2(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return R_PointToAngle2(a.x, a.y, b.x, b.y);
+}
+
+inline fixed_t P_XYdist(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
+{
+  return P_AproxDistance(a.x - b.x, a.y - b.y);
+}
+
 
 #endif

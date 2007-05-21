@@ -32,7 +32,6 @@
 #include "command.h"
 #include "cvars.h"
 
-#ifndef NO_OPENGL
 
 static SDL_Surface *vidSurface = NULL; //use the one from i_video_sdl.c instead?
 
@@ -68,7 +67,6 @@ bool OglSdlSurface()
     return false;
 
   CONS_Printf("HWRend::Startup(): %dx%d %d bits\n", vid.width, vid.height, cbpp);
-  HWR.Startup();
 
   return true;
 }
@@ -108,5 +106,3 @@ void OglSdlSetPalette(RGBA_t *palette, RGBA_t *gamma)
     Flush();
 }
 */
-
-#endif // NO_OPENGL

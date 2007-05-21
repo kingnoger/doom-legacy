@@ -841,6 +841,7 @@ bool P_UseArtifact(PlayerPawn *p, artitype_t arti)
 }
 
 
+#define ITEMUSE_FRAMES 4
 
 bool Map::EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *a)
 {
@@ -874,7 +875,7 @@ bool Map::EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *a)
 		}
 
 	      S_StartSound(p, SFX_PUZZLE_SUCCESS);
-	      p->player->itemuse = true;
+	      p->player->itemuse = ITEMUSE_FRAMES;
 
 	      return true;
 	    }
@@ -903,7 +904,7 @@ void PlayerPawn::UseArtifact(artitype_t arti)
 	      }
 
 	    S_StartSound(this, sfx_artiuse);
-	    player->itemuse = true;
+	    player->itemuse = ITEMUSE_FRAMES;
 	  }
 	else
 	  { // Unable to use artifact

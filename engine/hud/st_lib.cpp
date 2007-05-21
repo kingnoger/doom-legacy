@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,18 +19,24 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Implementation of Hud Widgets
+/// \brief Implementation of Hud Widgets.
 
 #include "doomdef.h"
 #include "st_lib.h"
 
+#include "g_game.h"
+#include "g_player.h"
+#include "g_pawn.h"
+
 #include "hud.h"
 #include "r_data.h"
-
+#include "r_sprite.h"
+#include "r_presentation.h"
 #include "v_video.h"
 #include "i_video.h"    //rendermode
-#include "g_pawn.h"
-#include "g_game.h"
+
+#include "tables.h"
+#include "m_random.h"
 
 #define BG 1
 extern int fgbuffer; // contains both the buffer and the drawing flags (updated elsewhere)
@@ -218,6 +224,225 @@ void HudBinIcon::Draw()
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
 }
+
+
+//===================================================================================
+
+#define ST_TURNOFFSET           (ST_NUMSTRAIGHTFACES)
+#define ST_OUCHOFFSET           (ST_TURNOFFSET + ST_NUMTURNFACES)
+#define ST_EVILGRINOFFSET       (ST_OUCHOFFSET + 1)
+#define ST_RAMPAGEOFFSET        (ST_EVILGRINOFFSET + 1)
+#define ST_GODFACE              (ST_NUMPAINFACES*ST_FACESTRIDE)
+#define ST_DEADFACE             (ST_GODFACE+1)
+
+#define ST_EVILGRINCOUNT        (2*TICRATE)
+#define ST_STRAIGHTFACECOUNT    (TICRATE/2)
+#define ST_TURNCOUNT            (1*TICRATE)
+#define ST_OUCHCOUNT            (1*TICRATE)
+#define ST_RAMPAGEDELAY         (2*TICRATE)
+
+#define ST_MUCHPAIN             20
+
+// N/256*100% probability that the normal face state will change
+//#define ST_FACEPROBABILITY              96
+
+
+HudFace::HudFace(int nx, int ny)
+  : HudWidget(nx, ny)
+{
+  priority = 0;
+  count = 0;
+
+  oldhealth = -1;
+  maxhealth = 100;
+  rampagecount = -1;
+  for (int k=0; k<NUMWEAPONS; k++)
+    oldweaponsowned[k] = false;
+
+  color = 0;
+
+  faceindex = 0;
+  oldfaceindex = -1;
+
+  faces = NULL;
+  faceback = NULL;
+}
+
+
+int HudFace::calcPainOffset(int health)
+{
+  health = max(0, min(health, maxhealth));
+  return ST_FACESTRIDE * (((maxhealth - health) * ST_NUMPAINFACES) / (maxhealth + 1));
+}
+
+
+// This is a not-very-pretty routine which handles the face states and their timing.
+// The precedence of expressions is: dead > evil grin > turned head > straight ahead
+void HudFace::updateFaceWidget(const PlayerInfo *p)
+{
+  PlayerPawn *pawn = p->pawn;
+  int h = pawn->health;
+
+  // death
+  if (priority < 10 && !h)
+    {
+      priority = 9;
+      faceindex = ST_DEADFACE;
+      count = 1;
+    }
+
+  // picking up a weapon
+  if (priority < 9 && p->bonuscount)
+    {
+      bool doevilgrin = false;
+
+      for (int i=0; i<NUMWEAPONS; i++)
+	if (oldweaponsowned[i] != pawn->weaponowned[i])
+	  {
+	    doevilgrin = true;
+	    break;
+	  }
+
+      if (doevilgrin)
+	{
+	  // evil grin if just picked up weapon
+	  priority = 8;
+	  count = ST_EVILGRINCOUNT;
+	  faceindex = calcPainOffset(h) + ST_EVILGRINOFFSET;
+	}
+    }
+
+  // being attacked
+  if (priority < 8 && p->damagecount && pawn->attacker && pawn->attacker != pawn)
+    {
+      priority = 7;
+
+      if (h - oldhealth > ST_MUCHPAIN)
+	{
+	  count = ST_TURNCOUNT;
+	  faceindex = calcPainOffset(h) + ST_OUCHOFFSET;
+	}
+      else
+	{
+	  angle_t diffang;
+	  angle_t badguyangle = R_PointToAngle2(pawn->pos, pawn->attacker->pos);
+	  bool right;
+	  if (badguyangle > pawn->yaw)
+	    {
+	      // whether right or left
+	      diffang = badguyangle - pawn->yaw;
+	      right = diffang > ANG180;
+	    }
+	  else
+	    {
+	      // whether left or right
+	      diffang = pawn->yaw - badguyangle;
+	      right = diffang <= ANG180;
+	    } // confusing, aint it?
+
+	  count = ST_TURNCOUNT;
+	  faceindex = calcPainOffset(h);
+
+	  if (diffang < ANG45)
+	    {
+	      // head-on
+	      faceindex += ST_RAMPAGEOFFSET;
+	    }
+	  else if (right)
+	    {
+	      // turn face right
+	      faceindex += ST_TURNOFFSET;
+	    }
+	  else
+	    {
+	      // turn face left
+	      faceindex += ST_TURNOFFSET+1;
+	    }
+        }
+    }
+
+  // getting hurt because of your own damn stupidity
+  if (priority < 7 && p->damagecount)
+    {
+      if (h - oldhealth > ST_MUCHPAIN)
+	{
+	  priority = 7;
+	  count = ST_TURNCOUNT;
+	  faceindex = calcPainOffset(h) + ST_OUCHOFFSET;
+	}
+      else
+	{
+	  priority = 6;
+	  count = ST_TURNCOUNT;
+	  faceindex = calcPainOffset(h) + ST_RAMPAGEOFFSET;
+	}
+    }
+
+  // rapid firing
+  if (priority < 6)
+    {
+      if (pawn->attackdown)
+        {
+          if (rampagecount == -1)
+            rampagecount = ST_RAMPAGEDELAY;
+          else if (!--rampagecount)
+            {
+              priority = 5;
+              count = 1;
+              faceindex = calcPainOffset(h) + ST_RAMPAGEOFFSET;
+              rampagecount = 1;
+            }
+        }
+      else
+        rampagecount = -1;
+    }
+
+  // invulnerability
+  if (priority < 5 && ((pawn->cheats & CF_GODMODE) || pawn->powers[pw_invulnerability]))
+    {
+      priority = 4;
+      count = 1;
+      faceindex = ST_GODFACE;
+    }
+
+  // look left or look right if the facecount has timed out
+  if (!count)
+    {
+      priority = 0;
+      count = ST_STRAIGHTFACECOUNT;
+      faceindex = calcPainOffset(h) + (M_Random() % 3);
+    }
+
+  count--;
+  oldhealth = h;
+
+  faces    = pawn->skin->faces;
+  faceback = pawn->skin->faceback;
+
+  color = pawn->pres->color;
+}
+
+
+void HudFace::Update(bool force)
+{
+  if ((oldfaceindex != faceindex || force) && (faceindex != -1))
+    Draw();
+}
+
+
+void HudFace::Draw()
+{
+  // draw the faceback for the statusbarplayer
+  current_colormap = translationtables[color];
+  faceback->Draw(x, y, fgbuffer | V_MAP);
+
+  if (faceindex >= 0 && faces[faceindex])
+    faces[faceindex]->Draw(x, y, fgbuffer);
+
+  oldfaceindex = faceindex;
+}
+
+
 
 
 

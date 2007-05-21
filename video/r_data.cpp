@@ -326,7 +326,6 @@ void Texture::GLGetData()
 /// Uses the virtualized GLGetData().
 GLuint Texture::GLPrepare()
 {
-#ifndef NO_OPENGL
   if (gl_id == NOTEXTURE)
     {
       GLGetData();
@@ -342,14 +341,12 @@ GLuint Texture::GLPrepare()
       // default params
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
       glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
       gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, gl_format, GL_UNSIGNED_BYTE, pixels);
 
       //  CONS_Printf("Created GL texture %d for %s.\n", gl_id, name);
       // TODO free and null pixels?
     }
-#endif
+
   return gl_id;
 }
 
@@ -359,9 +356,7 @@ bool Texture::ClearGLTexture()
 {
   if (gl_id != NOTEXTURE)
     {
-#ifndef NO_OPENGL
       glDeleteTextures(1, &gl_id);
-#endif
       gl_id = NOTEXTURE;
       return true;
     }
@@ -784,7 +779,9 @@ Material::Material(const char *name)
 
 Material::~Material()
 {
-  // TODO release Textures
+  int n = tex.size(); // number of texture units
+  for (int i=0; i<n; i++)
+    tex[i].t->Release();
 }
 
 
@@ -793,37 +790,24 @@ Material::TextureRef::TextureRef()
   // default scaling and OpenGL params
   t = NULL;
   xscale = yscale = 1;
-#ifndef NO_OPENGL
+
   mag_filter = 0; // If these are zero, take values from consvars.
   min_filter = 0;
-  anisotropy = 0;
-#endif
+  max_anisotropy = 0.0;
 }
 
 
 void Material::TextureRef::GLSetTextureParams()
 {
-  GLint magf, minf, aniso;
   glBindTexture(GL_TEXTURE_2D, t->GLPrepare()); // bind the texture
 
-  if(mag_filter != 0) {
-    magf = mag_filter;
-    minf = min_filter;
-  } else {
-    switch(cv_grfiltermode.value) {
-    case 3 : magf = GL_LINEAR; minf = GL_LINEAR_MIPMAP_LINEAR; break;
-    case 2 : magf = GL_LINEAR; minf = GL_LINEAR_MIPMAP_NEAREST; break;
-    case 1 : magf = GL_LINEAR; minf = GL_NEAREST_MIPMAP_LINEAR; break;
-    case 0 : 
-    default : magf = GL_NEAREST; minf = GL_NEAREST_MIPMAP_NEAREST; break;
-    }
-  }
-
-  aniso = anisotropy ? anisotropy : cv_granisotropy.value;
+  GLint magf = mag_filter ? mag_filter : (cv_grfiltermode.value ? GL_LINEAR : GL_NEAREST);
+  // HACK, relies on the order of the GL numeric constants which should be always the same
+  GLint minf = min_filter ? min_filter : GL_NEAREST_MIPMAP_NEAREST + cv_grfiltermode.value;
 
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magf);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, max_anisotropy ? max_anisotropy : cv_granisotropy.value);
 }
 
 
@@ -1817,10 +1801,8 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
   f->rgba = rgba;
 
 
-#ifndef NO_OPENGL
   // OpenGL renderer does not need the colormap part
   if (rendermode == render_soft)
-#endif
   {
     double deltas[256][3], cmap[256][3];
 

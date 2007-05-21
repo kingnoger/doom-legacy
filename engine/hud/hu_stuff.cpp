@@ -52,10 +52,7 @@
 #include "am_map.h"
 #include "d_main.h"
 
-#ifndef NO_OPENGL
-# include "hardware/hwr_render.h"
 #include "hardware/oglrenderer.hpp"
-#endif
 
 
 //======================================================================
@@ -92,9 +89,6 @@ public:
 
 static char hu_tick;
 
-
-#define HU_CROSSHAIRS 3
-Material* crosshair[HU_CROSSHAIRS]; // precached crosshair graphics
 static Material* PatchRankings;
 
 
@@ -105,7 +99,6 @@ HUD::HUD()
   stbarheight = 0;
   st_palette = 0;
   st_active = false;
-  st_player = NULL;
 };
 
 
@@ -156,10 +149,6 @@ void HUD::Init()
     }
 
   //----------- cache all legacy.wad stuff here
-
-  startlump = fc.GetNumForName("CROSHAI1");
-  for (int i=0; i<HU_CROSSHAIRS; i++)
-    crosshair[i] = materials.GetLumpnum(startlump + i);
 
   PatchRankings = materials.Get("RANKINGS");
 
@@ -276,25 +265,6 @@ void HUD::Ticker()
     {
       PlayerInfo *pl = ViewPlayers[i];
 
-      if (pl->palette >= 0)
-	{
-	  vid.SetPalette(pl->palette);
-	  pl->palette = -1;
-	  damagecount = bonuscount = 0;
-	}
-      else
-	{
-	  damagecount += pl->damagecount;
-	  bonuscount += pl->bonuscount;
-	  pl->damagecount = pl->bonuscount = 0;
-	}
-      
-      if (pl->itemuse)
-	{
-	  itemuse = 4; // number of animation frames
-	  pl->itemuse = false;
-	}
-
       // display player messages
       while (!pl->messages.empty())
 	{
@@ -319,16 +289,6 @@ void HUD::Ticker()
 	drawscore = (!pl->pawn || (pl->pawn->flags & MF_CORPSE));
     }
 
-  // update widget data
-  UpdateWidgets();
-
-  if (damagecount > 100)
-    damagecount = 100;  // teleport stomp does 10k points...
-  else if (damagecount > 0)
-    damagecount--;
-
-  if (bonuscount > 0)
-    bonuscount--;
 
   // deathmatch rankings overlay if press key or while in death view
   if (cv_deathmatch.value)
@@ -434,13 +394,29 @@ void HU_drawDeathmatchRankings()
 }
 
 
+void HUD::Draw(PlayerInfo *p, int vp)
+{
+  if (!st_active || !p)
+    return;
+
+  // update widget data
+  UpdateWidgets(p, vp);
+
+  // Do red-/gold-shifts from damage/items
+  if (vp == 0)
+    PaletteFlash(p);
+
+  ST_Drawer(vp);
+}
+
 //
 //  Heads up display drawer, called each frame
 //
-void HUD::Draw(bool redrawsbar)
+void HUD::DrawCommon()
 {
 #define HU_INPUTX 0
 #define HU_INPUTY 0
+
   // draw chat string plus cursor
   if (chat_on)
     {
@@ -454,27 +430,9 @@ void HUD::Draw(bool redrawsbar)
   if (drawscore)
     HU_drawDeathmatchRankings();
 
-  // draw the crosshair, not with chasecam
-  if (rendermode == render_soft &&
-      !automap.active)
-    {
-      // (cv_splitscreen.value) FIXME viewports!
-      int y = viewwindowy + (viewheight>>1);
-      for (int i=0; i<2; i++)
-	{
-	  if (LocalPlayers[i].crosshair) // && !LocalPlayers[i].chasecam)
-	    {
-	      int c = LocalPlayers[i].crosshair & 3;
-	      crosshair[c-1]->Draw(vid.width >> 1, y, V_TL | V_SSIZE);
-	    }
-	  y += viewheight;
-	}
-    }
-
   DrawTips();
   DrawPics();
-
-  ST_Drawer(redrawsbar);
+  st_refresh = false;
 }
 
 
@@ -698,15 +656,13 @@ void HUD::HU_Erase()
   if (automap.active || viewwindowx==0)   // hud msgs don't need to be cleared
     return;
 
-#ifndef NO_OPENGL
-  if (rendermode!=render_soft)
+  if (rendermode == render_opengl)
     {
       // refresh just what is needed from the view borders
-      HWR.DrawViewBorder();
+      OGLRenderer::DrawViewBorder();
       con_hudupdate = secondframe;
     }
   else
-#endif
     { // software mode copies view border pattern & beveled edges from the backbuffer
       int topline = 0;
       for (y=topline,yoffset=y*vid.width; y<bottomline ; y++,yoffset+=vid.width)

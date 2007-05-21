@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,14 +45,10 @@
 #include "r_plane.h"
 #include "r_things.h"
 #include "i_video.h"
+#include "v_video.h"
 
 #include "w_wad.h"
 
-#ifndef NO_OPENGL
-# include "hardware/hwr_render.h"
-HWRend HWR;
-#endif
-#include "hardware/oglrenderer.hpp"
 
 /*!
   \defgroup g_sw Software renderer
@@ -65,9 +61,6 @@ HWRend HWR;
 Rend R;
 
 angle_t G_ClipAimingPitch(angle_t pitch);
-
-// Fineangles in the SCREENWIDTH wide window.
-#define FIELDOFVIEW             2048
 
 extern bool devparm;			//in d_main.cpp
 
@@ -96,9 +89,6 @@ int                     loopcount;
 
 fixed_t                 viewcos;
 fixed_t                 viewsin;
-
-// 0 = high, 1 = low
-int                     detailshift;
 
 //
 // precalculated math tables
@@ -132,12 +122,13 @@ int                     extralight;
 //===========================================
 
 CV_PossibleValue_t viewsize_cons_t[]={{3,"MIN"},{12,"MAX"},{0,NULL}};
-CV_PossibleValue_t detaillevel_cons_t[]={{0,"High"},{1,"Low"},{0,NULL}};
-
 consvar_t cv_viewsize       = {"viewsize","10",CV_SAVE|CV_CALL,viewsize_cons_t,R_SetViewSize};      //3-12
-consvar_t cv_detaillevel    = {"detaillevel","0",CV_SAVE|CV_CALL,detaillevel_cons_t,R_SetViewSize}; // UNUSED
+// CV_PossibleValue_t detaillevel_cons_t[]={{0,"High"},{1,"Low"},{0,NULL}};
+// consvar_t cv_detaillevel    = {"detaillevel","0",CV_SAVE|CV_CALL,detaillevel_cons_t,R_SetViewSize}; // UNUSED
 consvar_t cv_scalestatusbar = {"scalestatusbar","0",CV_SAVE|CV_CALL,CV_YesNo,R_SetViewSize};
-// consvar_t cv_fov = {"fov","2048", CV_CALL | CV_NOINIT, NULL, R_ExecuteSetViewSize};
+
+CV_PossibleValue_t fov_cons_t[]= {{1,"MIN"}, {179,"MAX"}, {0,NULL} };
+consvar_t cv_fov = {"fov", "90", CV_SAVE | CV_CALL | CV_NOINIT, fov_cons_t, R_ExecuteSetViewSize};
 
 void Translucency_OnChange();
 void BloodTime_OnChange();
@@ -315,7 +306,7 @@ fixed_t Rend::R_ScaleFromGlobalAngle(angle_t visangle)
   fixed_t sineb = finesine[angleb>>ANGLETOFINESHIFT];
   //added:02-02-98:now uses projectiony instead of projection for
   //               correct aspect ratio!
-  fixed_t num = (projectiony * sineb)<<detailshift;
+  fixed_t num = projectiony * sineb;
   fixed_t den = rw_distance * sinea;
 
   if (den > num>>16)
@@ -350,7 +341,9 @@ void R_InitTextureMapping()
   //
   // Calc focallength
   //  so FIELDOFVIEW angles covers SCREENWIDTH.
-  fixed_t focallength = centerxfrac / finetangent[FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2];
+
+  int fov = cv_fov.value;
+  fixed_t focallength = centerxfrac / Tan(angle_t(0.5 * fov * ANGLE_1));
 
   for (i=0 ; i<FINEANGLES/2 ; i++)
     {
@@ -446,58 +439,42 @@ void R_SetViewSize()
 }
 
 
-//
-// R_ExecuteSetViewSize
-//
-// now uses screen variables cv_viewsize, cv_detaillevel
-//
+// called from main display loop
 void R_ExecuteSetViewSize()
 {
-  int i, j;
+  setsizeneeded = false;
 
   // no reduced view in splitscreen mode
-  if (cv_splitscreen.value && cv_viewsize.value < 11)
-    cv_viewsize.Set(11);
+  if (cv_splitscreen.value && cv_viewsize.value < 10)
+    cv_viewsize.Set(10);
 
-#ifndef NO_OPENGL
   if ((rendermode != render_soft) && (cv_viewsize.value < 6))
     cv_viewsize.Set(6);
-#endif
-
-  setsizeneeded = false;
 
   hud.ST_Recalc();
 
+  automap.Resize();
+
+  if (rendermode != render_soft)
+    return;
+
+  // added 16-6-98:splitscreen
+  // NOTE: we only support two viewports in software
+  int hhh = cv_splitscreen.value ? vid.height/2 : vid.height;
+
   //added 01-01-98: full screen view, without statusbar
-  if (cv_viewsize.value > 10)
+  if (cv_viewsize.value > 10) // no statusbar
     {
-      scaledviewwidth = vid.width;
-      viewheight = vid.height;
+      viewwidth = vid.width;
+      viewheight = hhh;
     }
   else
     {
       //added 01-01-98: always a multiple of eight
-      scaledviewwidth = (cv_viewsize.value * vid.width/10) & ~7;
-      //added:05-02-98: make viewheight multiple of 2 because sometimes
-      //                a line is not refreshed by R_DrawViewBorder()
-      viewheight = (cv_viewsize.value*(vid.height-hud.stbarheight)/10) & ~1;
+      viewwidth = (cv_viewsize.value * vid.width/10) & ~7;
+      //added:05-02-98: make viewheight multiple of 2 because sometimes a line is not refreshed by R_DrawViewBorder()
+      viewheight = (cv_viewsize.value*(hhh - hud.stbarheight)/10) & ~1;
     }
-
-  // added 16-6-98:splitscreen
-  if (cv_splitscreen.value)
-    viewheight >>= 1;
-
-  int setdetail = cv_detaillevel.value;
-  // clamp detail level (actually ignore it, keep it for later who knows)
-  if (setdetail)
-    {
-      setdetail = 0;
-      CONS_Printf("lower detail mode n.a.\n");
-      cv_detaillevel.Set(setdetail);
-    }
-
-  detailshift = setdetail;
-  viewwidth = scaledviewwidth>>detailshift;
 
   centery = viewheight/2;
   centerx = viewwidth/2;
@@ -513,9 +490,19 @@ void R_ExecuteSetViewSize()
   // no more low detail mode, it used to setup the right drawer routines
   // for either detail mode here
   //
-  // if (!detailshift) ... else ...
 
-  R_InitViewBuffer(scaledviewwidth, viewheight);
+  // First viewport coordinates
+  viewwindowx = (vid.width-viewwidth) >> 1;
+
+  if (cv_splitscreen.value)
+    viewwindowy = 0;
+  else if (cv_viewsize.value > 10) // no statusbar
+    viewwindowy = 0;
+  else
+    viewwindowy = (vid.height -hud.stbarheight -viewheight) >> 1;
+
+
+  R_InitViewBuffer(viewwidth, viewheight);
 
   R_InitTextureMapping();
 
@@ -527,24 +514,23 @@ void R_ExecuteSetViewSize()
   //added:02-02-98:now aspect ratio correct for psprites
   pspriteyscale = fixed_t((vid.height*viewwidth)/vid.width)/BASEVIDHEIGHT;
 
+  int i;
+
   // thing clipping
   for (i=0 ; i<viewwidth ; i++)
     screenheightarray[i] = viewheight;
 
   // planes
-  if (rendermode == render_soft)
-    {
-      //added:02-02-98:now correct aspect ratio!
-      int aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
+  //added:02-02-98:now correct aspect ratio!
+  int aspectx = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width);
 
-      // this is only used for planes rendering in software mode
-      j = viewheight*4;
-      for (i=0 ; i<j ; i++)
-	{
-	  //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
-	  fixed_t dy = abs(fixed_t(i - viewheight*2) + 0.5f);
-	  yslopetab[i] = aspectx / dy;
-	}
+  // this is only used for planes rendering in software mode
+  int j = viewheight*4;
+  for (i=0 ; i<j ; i++)
+    {
+      //added:10-02-98:(i-centery) became (i-centery*2) and centery*2=viewheight
+      fixed_t dy = abs(fixed_t(i - viewheight*2) + 0.5f);
+      yslopetab[i] = aspectx / dy;
     }
 
   for (i=0 ; i<viewwidth ; i++)
@@ -560,7 +546,7 @@ void R_ExecuteSetViewSize()
       int startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
       for (j=0 ; j<MAXLIGHTSCALE ; j++)
         {
-	  int level = startmap - j*vid.width/(viewwidth<<detailshift)/DISTMAP;
+	  int level = startmap - j*vid.width/viewwidth/DISTMAP;
 
 	  if (level < 0)
 	    level = 0;
@@ -571,15 +557,6 @@ void R_ExecuteSetViewSize()
 	  scalelight[i][j] = level*256;
         }
     }
-
-  //faB: continue to do the software setviewsize as long as we use
-  //     the reference software view
-#ifndef NO_OPENGL
-  if (rendermode!=render_soft)
-    HWR.SetViewSize(cv_viewsize.value);
-#endif
-
-  automap.Resize();
 }
 
 
@@ -689,6 +666,9 @@ static void TestAnims()
 
 
 
+#define HU_CROSSHAIRS 3
+Material* crosshair[HU_CROSSHAIRS]; // crosshair graphics
+
 
 /// Initializes the essential parts of the renderer
 /// (even a dedicated server needs these)
@@ -751,6 +731,11 @@ void R_Init()
   R_InitDrawNodes();
 
   framecount = 0;
+
+  // load crosshairs
+  int startlump = fc.GetNumForName("CROSHAI1");
+  for (int i=0; i<HU_CROSSHAIRS; i++)
+    crosshair[i] = materials.GetLumpnum(startlump + i);
 }
 
 
@@ -874,6 +859,24 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 }
 
 
+void R_SetViewport(int viewport)
+{
+  if (viewport == 0) // support just two viewports for now
+    {
+      viewwindowy = 0;
+      ylookup = ylookup1;
+      vid.scaledofs = (cv_splitscreen.value) ? -vid.width * vid.height / 2 : 0;
+      // for 2d drawing in upper splitscreen viewport we pretend the actual screen is shifted up by 0.5*vid.height
+    }
+  else
+    {
+      //faB: Boris hack :P !!
+      viewwindowy = vid.height/2;
+      ylookup = ylookup2;
+      vid.scaledofs = 0;
+    }
+}
+
 
 // ================
 // R_RenderView
@@ -885,30 +888,10 @@ void Rend::R_SetupFrame(PlayerInfo *player)
 // I mean, there is a win16lock() or something that lasts all the rendering,
 // so maybe we should release screen lock before each netupdate below..?
 
-void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
+void Rend::R_RenderPlayerView(PlayerInfo *player)
 {
-  // OpenGL
-  if (rendermode == render_opengl)
-    {
-      oglrenderer->RenderPlayerView(player);
-      return;
-    }
-
   SetMap(player->mp);
   R_SetupFrame(player);
-
-
-  if (viewport == 0) // support just two viewports for now
-    {
-      ylookup = ylookup1;
-    }
-  else
-    {
-      //faB: Boris hack :P !!
-      viewwindowy = vid.height/2;
-      ylookup = ylookup2;
-    }
-
 
   // Clear buffers.
   R_ClearClipSegs();
@@ -968,9 +951,13 @@ void Rend::R_RenderPlayerView(int viewport, PlayerInfo *player)
   //NetUpdate ();
   player->pawn->flags &= ~MF_NOSECTOR; // don't show self (uninit) clientprediction code
 
-  if (viewport != 0) // HACK support just two viewports for now
+  // draw the crosshair, not with chasecam
+  int temp = vid.scaledofs; // ugly HACK
+  vid.scaledofs = 0;
+  if (true) // && !LocalPlayers[i].chasecam)
     {
-      viewwindowy = 0;
-      ylookup = ylookup1;
+      int c = 1; //LocalPlayers[i].crosshair & 3;
+      crosshair[c-1]->Draw(vid.width >> 1, viewwindowy + (viewheight>>1), V_TL | V_SSIZE);
     }
+  vid.scaledofs = temp;
 }

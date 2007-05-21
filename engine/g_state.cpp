@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -291,6 +291,8 @@ void GameInfo::Ticker()
 
 	  // TODO purge the removed players from the frag maps of other players?
 	}
+      else
+	p->Ticker();
     }
 
   if (!server)

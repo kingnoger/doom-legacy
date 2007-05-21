@@ -96,7 +96,7 @@ public:
   /// Read size bytes from the lump (starting from the given offset) into dest. Returns the number of bytes actually read.
   int ReadLumpHeader(int lump, void *dest, unsigned size, unsigned offset = 0);
   /// Read the entire lump into memory, allocating the space. Returns a pointer to the buffer.
-  void *CacheLumpNum(int lump, int tag);
+  void *CacheLumpNum(int lump, int tag, bool add_NUL = false);
   /// Read the entire lump into dest without allocating any memory.
   inline int ReadLump(int lump, void *dest) { return ReadLumpHeader(lump, dest, 0); };
   /// Shorthand for caching lumps by name.

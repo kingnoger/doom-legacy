@@ -194,8 +194,7 @@ public:
   int palette;
   int damagecount;
   int bonuscount;
-  //int poisoncount;
-  bool itemuse;
+  int itemuse;
   //@}
 
   PlayerOptions options; ///< Player preferences.
@@ -216,6 +215,8 @@ public:
 
   void SavePawn();
   void LoadPawn();
+
+  void Ticker(); ///< called once a tic for each player
 
   bool InventoryResponder(short (*gc)[2], struct event_t *ev);
 

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -63,17 +62,15 @@ protected:
   bool invopen;
   bool drawscore; ///< should we draw frags instead of statusbar overlay?
 
+  bool st_refresh;  ///< the statusbar needs to be redrawn
+
   vector<class HudWidget *> statusbar; ///< status bar
   vector<HudWidget *> mainbar; ///< part of the status bar that is hidden by open inventory
   vector<HudWidget *> keybar;  ///< part of the status bar that is shown under automap
   vector<HudWidget *> overlay; ///< HUD overlay
 
-  class PlayerInfo *st_player; ///< whose status is shown?
-
-  void PaletteFlash();
-
-  void UpdateWidgets();
-  void ST_updateFaceWidget(const class PlayerPawn *p);
+  void UpdateWidgets(class PlayerInfo *p, int vp);
+  void PaletteFlash(PlayerInfo *p);
 
   void ST_RefreshBackground();
 
@@ -85,18 +82,10 @@ protected:
 public:
   void CreateOverlayWidgets();
 
-  int  stbarheight;
+  int  stbarheight; ///< status bar height in pixels (with current drawing options)
   bool overlay_on;  ///< draw overlay instead of statusbar?
-  bool st_refresh;  ///< the statusbar needs to be redrawn
-
-  int itemuse;  ///< counter for Artifact Flashes
 
   int st_palette;  ///< current palette
-
-  /// causes for palette flashes
-  int poisoncount;
-  int damagecount;
-  int bonuscount;
 
   bool    chat_on; ///< player is currently typing a chat msg
 protected:
@@ -116,16 +105,18 @@ public:
   void Init();     // cache HUD data
   bool Responder(struct event_t* ev);
   void Ticker();
-  void Draw(bool redrawsbar);
+  void Draw(PlayerInfo *player, int vp);
+  void DrawCommon();
 
-  void ST_Drawer(bool refresh);
-  void ST_Start(PlayerInfo *p);
+  void ST_Drawer(int vp);
+  void ST_Start();
   void ST_Stop();
 
   void ST_Recalc(); // recalculates the status bar coordinates
   // (after changing the resolution or scaling, for example)
 
   void HU_Erase();
+  inline void RefreshStatusbar() { st_refresh = true; }
 
   int  GetFSPic(int lumpnum, int xpos, int ypos);
   bool DeleteFSPic(int handle);

@@ -1653,7 +1653,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (precache)
     PrecacheMap();
 
-#ifndef NO_OPENGL
   // OpenGL renderer. TODO more friendly behavior
   if (rendermode == render_opengl && glvertexes == NULL)
     {
@@ -1661,7 +1660,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
       CONS_Printf("Build GL nodes with glbsp and try again.\n");
       return false;
     }
-#endif
 
   //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
   return true;

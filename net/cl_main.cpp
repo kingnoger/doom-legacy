@@ -43,7 +43,6 @@
 #include "s_sound.h"
 #include "sounds.h"
 #include "r_main.h"
-#include "hardware/hwr_render.h"
 #include "m_misc.h"
 #include "w_wad.h"
 
@@ -67,23 +66,24 @@ void SplitScreen_OnChange()
   if (game.state < GameInfo::GS_LEVEL)
     return;
 
-  // FIXME splitscreen
-  /*
-  if (cv_splitscreen.value)
+  int n = 1 + cv_splitscreen.value; // this many viewports
+  int old = ViewPlayers.size();
+
+  ViewPlayers.resize(n);
+  for (int i=old; i < n; i++)
     {
-      displayplayer2 = consoleplayer2 = game.AddPlayer(new PlayerInfo(localplayer2));
-      // TODO as server first
+      if (i >= NUM_LOCALPLAYERS)
+	i = 0;
+      PlayerInfo *p = LocalPlayers[i].info;
+      ViewPlayers[i] = p ? p : LocalPlayers[0].info;
     }
-  else
-    {
-      consoleplayer2->playerstate = PST_REMOVE;
-    }
-  */
+
+  // TODO add/remove local players
   // TODO in a demo, just open another viewport...
-  //displayplayer2 = game.FindPlayer(1);
 }
 
-consvar_t cv_splitscreen = {"splitscreen", "0", CV_CALL, CV_OnOff, SplitScreen_OnChange};
+static CV_PossibleValue_t CV_Splitscreen[] = {{0,"MIN"}, {3,"MAX"}, {0,NULL}};
+consvar_t cv_splitscreen = {"splitscreen", "0", CV_CALL, CV_Splitscreen, SplitScreen_OnChange};
 
 
 
@@ -240,9 +240,8 @@ void CL_Init()
   cv_usegamma.Reg();
 
   cv_viewsize.Reg();
-  cv_detaillevel.Reg();
   cv_scalestatusbar.Reg();
-  //cv_fov.Reg();
+  cv_fov.Reg();
   cv_splitscreen.Reg();
 
   cv_screenslink.Reg();
@@ -252,10 +251,11 @@ void CL_Init()
   cv_bloodtime.Reg();
   cv_psprites.Reg();
 
-#ifndef NO_OPENGL
+
+  /// Register OpenGL-specific consvars and commands.
+  extern void OGL_AddCommands();
   if (rendermode != render_soft)
-    HWR.AddCommands();
-#endif
+    OGL_AddCommands();
 }
 
 
@@ -359,7 +359,7 @@ bool GameInfo::CL_StartGame()
   for (int i=0; i < n; i++)
     ViewPlayers.push_back(LocalPlayers[i].info);
 
-  hud.ST_Start(LocalPlayers[0].info);
+  hud.ST_Start();
 
   if (paused)
     {

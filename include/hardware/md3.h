@@ -302,7 +302,7 @@ public:
   virtual void SetAnim(animseq_e seq);
 
   virtual bool Update(int nowtic);
-  virtual void Project(Actor *p);
+  virtual void Project(Actor *p) {}
   virtual bool Draw(const Actor *p);
   virtual int  Marshal(LArchive &a);
 

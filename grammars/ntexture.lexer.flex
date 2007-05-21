@@ -72,8 +72,9 @@ scale        { return SCALE; }
 texeloffsets { return TEXELOFFSETS; } 
 offset       { return OFFSET; }
 filtering    { return FILTERING; }
-shader_ref   { return SHADER_REF; }
+max_anisotropy { return MAX_ANISOTROPY; }
 
+shader_ref   { return SHADER_REF; }
 shader          { return SHADER; }
 vertex_source   { return V_SOURCE; }
 fragment_source { return F_SOURCE; }

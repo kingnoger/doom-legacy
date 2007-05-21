@@ -50,9 +50,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#ifndef NO_OPENGL
-#include "hardware/hwr_states.h"
-#endif
+#include "hardware/oglrenderer.hpp"
+#include "hardware/oglhelpers.hpp"
 
 #define FG 0
 #define BG 1
@@ -77,51 +76,15 @@ int fgbuffer = FG;
 // Radiation suit, green shift.
 #define RADIATIONPAL            13
 // new Hexen palettes
-#define STARTPOISONPALS 13
-#define NUMPOISONPALS   8
-#define STARTICEPAL     21
-#define STARTHOLYPAL    22
-#define STARTSCOURGEPAL 25
+#define STARTPOISONPALS  13
+#define NUMPOISONPALS    8
+#define ICEPAL           21
+#define STARTHOLYPALS    22
+#define NUMHOLYPALS      3
+#define STARTSCOURGEPALS 25
+#define NUMSCOURGEPALS   3
 
-
-
-// N/256*100% probability
-//  that the normal face state will change
-#define ST_FACEPROBABILITY              96
-
-// For Responder
-#define ST_TOGGLECHAT           KEY_ENTER
-
-
-// Number of status faces.
-#define ST_NUMPAINFACES         5
-#define ST_NUMSTRAIGHTFACES     3
-#define ST_NUMTURNFACES         2
-#define ST_NUMSPECIALFACES      3
-
-#define ST_FACESTRIDE \
-          (ST_NUMSTRAIGHTFACES+ST_NUMTURNFACES+ST_NUMSPECIALFACES)
-
-#define ST_NUMEXTRAFACES        2
-
-#define ST_NUMFACES \
-          (ST_FACESTRIDE*ST_NUMPAINFACES+ST_NUMEXTRAFACES)
-
-#define ST_TURNOFFSET           (ST_NUMSTRAIGHTFACES)
-#define ST_OUCHOFFSET           (ST_TURNOFFSET + ST_NUMTURNFACES)
-#define ST_EVILGRINOFFSET       (ST_OUCHOFFSET + 1)
-#define ST_RAMPAGEOFFSET        (ST_EVILGRINOFFSET + 1)
-#define ST_GODFACE              (ST_NUMPAINFACES*ST_FACESTRIDE)
-#define ST_DEADFACE             (ST_GODFACE+1)
-
-#define ST_EVILGRINCOUNT        (2*TICRATE)
-#define ST_STRAIGHTFACECOUNT    (TICRATE/2)
-#define ST_TURNCOUNT            (1*TICRATE)
-#define ST_OUCHCOUNT            (1*TICRATE)
-#define ST_RAMPAGEDELAY         (2*TICRATE)
-
-#define ST_MUCHPAIN             20
-
+#define NUM_PALETTES  (1+NUMREDPALS+NUMBONUSPALS+NUMPOISONPALS+1+NUMHOLYPALS+NUMSCOURGEPALS)
 
 //=========================================
 // HUD widget control variables
@@ -130,6 +93,8 @@ int fgbuffer = FG;
 // palette flashes
 static int  st_berzerk;
 static bool st_radiation;
+
+static int  st_itemuse;
 
 // inside the HUD class:
 // statusbar_on, mainbar_on, invopen
@@ -141,8 +106,6 @@ static bool st_godmode;
 
 static int  st_pawncolor;
 static int  st_health;
-static int  st_maxhealth;
-static int  st_oldhealth; // to get appopriately pained face
 
 static int  st_armor;
 static int  st_readywp;
@@ -151,8 +114,6 @@ static int  st_readywp_ammo;
 
 static int  st_ammo[NUMAMMO];
 static int  st_maxammo[NUMAMMO];
-
-static int  st_faceindex = 0; // current marine face
 
 // owned keys
 static int st_keyboxes[NUMKEYS];
@@ -168,10 +129,9 @@ static int  st_defense = -1;
 static int  st_minotaur = -1;
 
 static inventory_t st_invslots[7+1]; // visible inventory slots (+ one hack slot)
-int st_curpos = 0; // active inv. slot (0-6)
+static int st_curpos = 0; // active inv. slot (0-6)
 
-// used for evil grin
-static bool st_oldweaponsowned[NUMWEAPONS];
+static bool st_weaponsowned[NUMWEAPONS];
 
 static bool st_mana1icon, st_mana2icon;
 static int st_mana1, st_mana2;
@@ -207,10 +167,8 @@ static Material *PatchSNum[11];
 
 // "STGNUM0", small, dark gray, no minus
 static Material *PatchArms[6][2]; // weapon ownership patches
-
 static Material *PatchArmsBack; // arms background
-static Material *PatchFaces[ST_NUMFACES]; // marine face patches
-static Material *PatchFaceBack; // face background
+
 
 static Material *PatchKeys[NUMKEYS]; // 3 key-cards, 3 skulls
 static Material *PatchSTATBAR;
@@ -263,19 +221,11 @@ static Material *PatchINum[11];  // IN0, big yellow number
 // FONTAY01-59 : like FONTA but yellow
 // FONTB01-59 : large brown font
 
-int playpalette;
-
-int SpinBookLump; // frames 0-15 each
-int SpinFlyLump;
-int SpinSpeedLump;
-int SpinDefenseLump;
-int SpinMinotaurLump;
-
-Material *PatchFlight[16];
-Material *PatchBook[16];
-Material *PatchSpeed[16];
-Material *PatchDefense[16];
-Material *PatchMinotaur[16];
+static Material *PatchFlight[16];
+static Material *PatchBook[16];
+static Material *PatchSpeed[16];
+static Material *PatchDefense[16];
+static Material *PatchMinotaur[16];
 
 // Hexen extras
 static Material *PatchH2BAR;
@@ -446,12 +396,10 @@ void ST_LoadHexenData()
     PatchSNum[i] = materials.GetLumpnum(startLump+i);
   PatchSNum[10] = PatchSNum[0]; // no minus available
 
-  playpalette = fc.GetNumForName("PLAYPAL");
-
-  SpinFlyLump = fc.GetNumForName("SPFLY0");
-  SpinSpeedLump = fc.GetNumForName("SPBOOT0");
-  SpinDefenseLump = fc.GetNumForName("SPSHLD0");
-  SpinMinotaurLump = fc.GetNumForName("SPMINO0");
+  int SpinFlyLump = fc.GetNumForName("SPFLY0");
+  int SpinSpeedLump = fc.GetNumForName("SPBOOT0");
+  int SpinDefenseLump = fc.GetNumForName("SPSHLD0");
+  int SpinMinotaurLump = fc.GetNumForName("SPMINO0");
 
   for (i=0; i<16; i++)
     {
@@ -550,9 +498,8 @@ void ST_LoadHereticData()
     PatchSNum[i] = materials.GetLumpnum(startLump+i);
   PatchSNum[10] = PatchSNum[0]; // no minus available
 
-  playpalette = fc.GetNumForName("PLAYPAL");
-  SpinBookLump = fc.GetNumForName("SPINBK0");
-  SpinFlyLump = fc.GetNumForName("SPFLY0");
+  int SpinBookLump = fc.GetNumForName("SPINBK0");
+  int SpinFlyLump = fc.GetNumForName("SPFLY0");
 
   for (i=0; i<16; i++)
     {
@@ -562,60 +509,6 @@ void ST_LoadHereticData()
 }
 
 
-
-// made separate so that skins code can reload custom face graphics
-void ST_loadFaceGraphics (char *facestr)
-{
-  int   i,j;
-  int   facenum;
-  char  namelump[9];
-  char* namebuf;
-
-  //hack: make sure base face name is no more than 3 chars
-  if (strlen(facestr)>3)
-    facestr[3]='\0';
-  strcpy (namelump, facestr);  // copy base name
-  namebuf = namelump;
-  while (*namebuf>' ') namebuf++;
-
-  // face states
-  facenum = 0;
-  for (i=0;i<ST_NUMPAINFACES;i++)
-    {
-      for (j=0;j<ST_NUMSTRAIGHTFACES;j++)
-        {
-          sprintf(namebuf, "ST%d%d", i, j);
-          PatchFaces[facenum++] = materials.Get(namelump);
-        }
-      sprintf(namebuf, "TR%d0", i);        // turn right
-      PatchFaces[facenum++] = materials.Get(namelump);
-      sprintf(namebuf, "TL%d0", i);        // turn left
-      PatchFaces[facenum++] = materials.Get(namelump);
-      sprintf(namebuf, "OUCH%d", i);       // ouch!
-      PatchFaces[facenum++] = materials.Get(namelump);
-      sprintf(namebuf, "EVL%d", i);        // evil grin ;)
-      PatchFaces[facenum++] = materials.Get(namelump);
-      sprintf(namebuf, "KILL%d", i);       // pissed off
-      PatchFaces[facenum++] = materials.Get(namelump);
-    }
-  strcpy (namebuf, "GOD0");
-  PatchFaces[facenum++] = materials.Get(namelump);
-  strcpy (namebuf, "DEAD0");
-  PatchFaces[facenum++] = materials.Get(namelump);
-
-  // face backgrounds for different player colors
-  //added:08-02-98: uses only STFB0, which is remapped to the right
-  //                colors using the player translation tables, so if
-  //                you add new player colors, it is automatically
-  //                used for the statusbar.
-  strcpy (namebuf, "B0");
-  i = fc.FindNumForName(namelump);
-  if (i != -1)
-    PatchFaceBack = materials.GetLumpnum(i);
-  else
-    PatchFaceBack = materials.Get("STFB0");
-
-}
 
 
 void ST_LoadDoomData()
@@ -664,9 +557,6 @@ void ST_LoadDoomData()
   // status bar background bits
   PatchSTATBAR = materials.Get("STBAR");
 
-  // the original Doom uses 'STF' as base name for all face graphics
-  ST_loadFaceGraphics("STF");
-
   // ammo pics
   for (i = 0; i < NUMAMMO; i++)
     PatchAmmoPic[i] = materials.Get(DHAmmoPics[i]);
@@ -674,18 +564,6 @@ void ST_LoadDoomData()
   sbohealth = materials.Get("SBOHEALT"); //"STIMA0"
   sbofrags  = materials.Get("SBOFRAGS"); //"M_SKULL1"
   sboarmor  = materials.Get("SBOARMOR"); //"ARM1A0"
-}
-
-
-
-// made separate so that skins code can reload custom face graphics
-void ST_unloadFaceGraphics()
-{
-  for (int i=0;i<ST_NUMFACES;i++)
-    PatchFaces[i]->Release();
-
-  // face background
-  PatchFaceBack->Release();
 }
 
 
@@ -716,8 +594,6 @@ void ST_unloadData()
       PatchKeys[i]->Release();
 
   PatchSTATBAR->Release();
-
-  ST_unloadFaceGraphics();
 }
 
 
@@ -752,10 +628,6 @@ void HUD::ST_RefreshBackground()
       // software mode copies patch to BG buffer,
       // hardware modes directly draw the statusbar to the screen
       PatchSTATBAR->Draw(st_x, st_y, flags);
-
-      // draw the faceback for the statusbarplayer
-      current_colormap = translationtables[st_pawncolor];
-      PatchFaceBack->Draw(st_x+143, st_y, flags | V_MAP);
     }
 
   // copy the statusbar buffer to the screen
@@ -764,198 +636,17 @@ void HUD::ST_RefreshBackground()
 }
 
 
-static int ST_calcPainOffset()
+
+// Widgets that keep a history cannot be shared between viewports.
+static HudSlider *sliders[MAX_GLVIEWPORTS];
+static HudFace     *faces[MAX_GLVIEWPORTS];
+
+
+
+void HUD::UpdateWidgets(PlayerInfo *st_player, int vp)
 {
-  static int  lastcalc;
-  static int  oldhealth = -1;
+  //ST_SetClassData(pawndata[p->ptype].pclass, p->number); TODO FIXME
 
-  int health = (st_health > st_maxhealth) ? st_maxhealth : st_health;
-  if (health < 0)
-    health = 0;
-
-  if (health != oldhealth)
-    {
-      lastcalc = ST_FACESTRIDE * (((st_maxhealth - health) * ST_NUMPAINFACES) / (st_maxhealth+1));
-      oldhealth = health;
-    }
-  return lastcalc;
-}
-
-
-// This is a not-very-pretty routine which handles
-//  the face states and their timing.
-// the precedence of expressions is:
-//  dead > evil grin > turned head > straight ahead
-//
-void HUD::ST_updateFaceWidget(const PlayerPawn *st_pawn)
-{
-  int         i;
-  angle_t     badguyangle;
-  angle_t     diffang;
-  static int  lastattackdown = -1;
-  static int  priority = 0;
-
-  // count until face changes
-  static int  st_facecount = 0;
-
-  if (priority < 10)
-    {
-      // dead
-      if (!st_pawn->health)
-        {
-          priority = 9;
-          st_faceindex = ST_DEADFACE;
-          st_facecount = 1;
-        }
-    }
-
-  if (priority < 9)
-    {
-      if (bonuscount)
-        {
-          // picking up bonus
-	  bool doevilgrin = false;
-
-          for (i=0;i<NUMWEAPONS;i++)
-	    if (st_oldweaponsowned[i] != st_pawn->weaponowned[i])
-	      {
-		doevilgrin = true;
-		break;
-	      }
-
-          if (doevilgrin)
-            {
-              // evil grin if just picked up weapon
-              priority = 8;
-              st_facecount = ST_EVILGRINCOUNT;
-              st_faceindex = ST_calcPainOffset() + ST_EVILGRINOFFSET;
-            }
-        }
-    }
-
-  if (priority < 8)
-    {
-      if (damagecount && st_pawn->attacker && st_pawn->attacker != st_pawn)
-        {
-          // being attacked
-          priority = 7;
-
-          if (st_pawn->health - st_oldhealth > ST_MUCHPAIN)
-            {
-              st_facecount = ST_TURNCOUNT;
-              st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
-            }
-          else
-            {
-              badguyangle = R_PointToAngle2(st_pawn->pos.x, st_pawn->pos.y,
-                                            st_pawn->attacker->pos.x,
-                                            st_pawn->attacker->pos.y);
-
-              if (badguyangle > st_pawn->yaw)
-                {
-                  // whether right or left
-                  diffang = badguyangle - st_pawn->yaw;
-                  i = diffang > ANG180;
-                }
-              else
-                {
-                  // whether left or right
-                  diffang = st_pawn->yaw - badguyangle;
-                  i = diffang <= ANG180;
-                } // confusing, aint it?
-
-
-              st_facecount = ST_TURNCOUNT;
-              st_faceindex = ST_calcPainOffset();
-
-              if (diffang < ANG45)
-                {
-                  // head-on
-                  st_faceindex += ST_RAMPAGEOFFSET;
-                }
-              else if (i)
-                {
-                  // turn face right
-                  st_faceindex += ST_TURNOFFSET;
-                }
-              else
-                {
-                  // turn face left
-                  st_faceindex += ST_TURNOFFSET+1;
-                }
-            }
-        }
-    }
-
-  if (priority < 7)
-    {
-      // getting hurt because of your own damn stupidity
-      if (damagecount)
-        {
-          if (st_pawn->health - st_oldhealth > ST_MUCHPAIN)
-            {
-              priority = 7;
-              st_facecount = ST_TURNCOUNT;
-              st_faceindex = ST_calcPainOffset() + ST_OUCHOFFSET;
-            }
-          else
-            {
-              priority = 6;
-              st_facecount = ST_TURNCOUNT;
-              st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
-            }
-        }
-    }
-
-  if (priority < 6)
-    {
-      // rapid firing
-      if (st_pawn->attackdown)
-        {
-          if (lastattackdown==-1)
-            lastattackdown = ST_RAMPAGEDELAY;
-          else if (!--lastattackdown)
-            {
-              priority = 5;
-              st_faceindex = ST_calcPainOffset() + ST_RAMPAGEOFFSET;
-              st_facecount = 1;
-              lastattackdown = 1;
-            }
-        }
-      else
-        lastattackdown = -1;
-    }
-
-  if (priority < 5)
-    {
-      // invulnerability
-      if ((st_pawn->cheats & CF_GODMODE)
-          || st_pawn->powers[pw_invulnerability])
-        {
-          priority = 4;
-
-          st_faceindex = ST_GODFACE;
-          st_facecount = 1;
-        }
-    }
-
-  // look left or look right if the facecount has timed out
-  if (!st_facecount)
-    {
-      st_faceindex = ST_calcPainOffset() + (M_Random() % 3);
-      st_facecount = ST_STRAIGHTFACECOUNT;
-      priority = 0;
-    }
-
-  st_facecount--;
-}
-
-
-void HUD::UpdateWidgets()
-{
-  // if no target, don't update
-  if (!st_active || !st_player)
-    return;
 
   PlayerPawn *st_pawn = st_player->pawn;
 
@@ -1005,8 +696,7 @@ void HUD::UpdateWidgets()
       mainbar_on = statusbar_on && !invopen && !automap.active;
 
       // inventory
-      if (itemuse > 0)
-        itemuse--;
+      st_itemuse = st_player->itemuse;
 
       int n = st_pawn->inventory.size();
 
@@ -1075,12 +765,10 @@ void HUD::UpdateWidgets()
           st_maxammo[i] = st_pawn->maxammo[i];
         }
 
-      // refresh everything if this is him coming back to life
-      ST_updateFaceWidget(st_pawn); // updates st_oldweaponsowned
       for (i=0; i<NUMWEAPONS; i++)
-	st_oldweaponsowned[i] = st_pawn->weaponowned[i];
+	st_weaponsowned[i] = st_pawn->weaponowned[i];
 
-      st_oldhealth = st_health;
+      faces[vp]->updateFaceWidget(st_player); // these are personal
     }
 
   st_armor = int(100 * st_pawn->toughness);
@@ -1107,23 +795,27 @@ void HUD::UpdateWidgets()
 
 // sets the new palette based upon current values of damagecount
 // and bonuscount
-void HUD::PaletteFlash()
+void HUD::PaletteFlash(PlayerInfo *p)
 {
-  int palette;
-  int dcount = damagecount;
+  int palette = 0;
+  int dcount = p->damagecount;
 
   if (st_berzerk > dcount)
     dcount = st_berzerk;
 
-  if (poisoncount)
+  if (p->palette >= 0)
     {
-      palette = (poisoncount + 7) >> 3;
+      palette = p->palette;
+    }
+  else /* if (p->pawn->poisoncount) TODO
+    {
+      palette = (p->pawn->poisoncount + 7) >> 3;
       if (palette >= NUMPOISONPALS)
         palette = NUMPOISONPALS-1;
 
       palette += STARTPOISONPALS;
     }
-  else if (dcount)
+  else */ if (dcount)
     {
       palette = (dcount + 7) >> 3;
 
@@ -1132,9 +824,9 @@ void HUD::PaletteFlash()
 
       palette += STARTREDPALS;
     }
-  else if (bonuscount)
+  else if (p->bonuscount)
     {
-      palette = (bonuscount+7)>>3;
+      palette = (p->bonuscount + 7) >> 3;
 
       if (palette >= NUMBONUSPALS)
         palette = NUMBONUSPALS-1;
@@ -1146,41 +838,59 @@ void HUD::PaletteFlash()
   /*
   else if (sbpawn->flags2 & MF2_ICEDAMAGE)
     { // TODO Frozen player
-      palette = STARTICEPAL;
+      palette = ICEPAL;
     }
   */
-  else
-    palette = 0;
+
+  palette = min(palette, NUM_PALETTES-1);
 
   if (palette != st_palette)
     {
       st_palette = palette;
 
-#ifndef NO_OPENGL
-      if (rendermode != render_soft)
+      if (rendermode == render_opengl)
         {
-          switch (palette)
-            {
-            case 0x00: State::SetGlobalColor(0.0f, 0.0f, 0.0f, 0.0f, State::NONE); break;  // pas de changement
-            case 0x01: State::SetGlobalColor(0.59f, 0.21f, 0.21f, 1.0f); break; // red
-            case 0x02: State::SetGlobalColor(0.59f, 0.21f, 0.21f, 1.0f); break; // red
-            case 0x03: State::SetGlobalColor(0.65f, 0.18f, 0.18f, 1.0f); break; // red
-            case 0x04: State::SetGlobalColor(0.71f, 0.15f, 0.15f, 1.0f); break; // red
-            case 0x05: State::SetGlobalColor(0.78f, 0.12f, 0.12f, 1.0f); break; // red
-            case 0x06: State::SetGlobalColor(0.84f, 0.09f, 0.09f, 1.0f); break; // red
-            case 0x07: State::SetGlobalColor(0.90f, 0.06f, 0.06f, 1.0f); break; // red
-            case 0x08: State::SetGlobalColor(0.97f, 0.03f, 0.03f, 1.0f); break; // red
-            case 0x09: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
-            case 0x0a: State::SetGlobalColor(0.56f, 0.62f, 0.44f, 1.0f); break; // light green
-            case 0x0b: State::SetGlobalColor(0.59f, 0.69f, 0.40f, 1.0f); break; // light green
-            case 0x0c: State::SetGlobalColor(0.62f, 0.75f, 0.37f, 1.0f); break; // light green
-            case 0x0d: State::SetGlobalColor(0.37f, 1.00f, 0.37f, 1.0f); break; // green
-            case 0x0e: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
-            case 0x0f: State::SetGlobalColor(0.37f, 0.37f, 1.00f, 1.0f); break; // blue
-            }
+	  float opengl_color[NUM_PALETTES][4] = {
+	    { 0.0f,  0.0f,  0.0f, 0.0f}, // normal
+
+	    {0.59f, 0.21f, 0.21f, 1.0f}, // damage/berserk (8 reds)
+	    {0.59f, 0.21f, 0.21f, 1.0f},
+	    {0.65f, 0.18f, 0.18f, 1.0f},
+	    {0.71f, 0.15f, 0.15f, 1.0f},
+	    {0.78f, 0.12f, 0.12f, 1.0f},
+	    {0.84f, 0.09f, 0.09f, 1.0f},
+	    {0.90f, 0.06f, 0.06f, 1.0f}, 
+	    {0.97f, 0.03f, 0.03f, 1.0f},
+
+	    {0.37f, 0.37f, 1.00f, 1.0f}, // bonus (4 gold/green?)
+	    {0.56f, 0.62f, 0.44f, 1.0f},
+	    {0.59f, 0.69f, 0.40f, 1.0f},
+	    {0.62f, 0.75f, 0.37f, 1.0f},
+
+	    // TODO rest of colors
+	    {0.37f, 1.00f, 0.37f, 1.0f}, // Doom: radiation suit (1 green), Hexen: poisoning (8 greens)
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+
+	    {0.37f, 0.37f, 1.00f, 1.0f}, // ice (1 bluish)
+
+	    {0.37f, 0.37f, 1.00f, 1.0f}, // wraithverge (3 )
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+
+	    {0.37f, 0.37f, 1.00f, 1.0f}, // bloodscourge (3 reddish)
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	    {0.37f, 0.37f, 1.00f, 1.0f},
+	  };
+
+	  oglrenderer->SetGlobalColor(opengl_color[palette]);
         }
       else
-#endif
         {
 	  vid.SetPalette(palette);
         }
@@ -1208,16 +918,14 @@ void HUD::ST_Recalc()
     {
       fgbuffer = FG | V_SCALE; // scale patch by default
 
-#ifndef NO_OPENGL
-      if (rendermode != render_soft)
+      if (rendermode == render_opengl)
         {
           st_x = 0;
-          st_y = BASEVIDHEIGHT - stbarheight;
+          st_y = BASEVIDHEIGHT - stbarheight + 1;
 
 	  stbarheight = int(stbarheight * vid.fdupy); // real height
         }
       else
-#endif
         {
           st_x = (vid.width - ST_WIDTH * vid.dupx) / (2 * vid.dupx);
           st_y = (vid.height - stbarheight * vid.dupy) / vid.dupy;
@@ -1235,12 +943,22 @@ void HUD::ST_Recalc()
   // TODO not good. When should the widgets be created?
   // and renew the widgets
   ST_CreateWidgets();
+
+  st_refresh = true;
 }
+
 
 
 void HUD::CreateHexenWidgets()
 {
   HudWidget *h;
+
+  // health sliders
+  for (int k=0; k<MAX_GLVIEWPORTS; k++)
+    {
+      sliders[k] = new HexenHudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
+      faces[k] = NULL;
+    }
 
   // spinning icons
   h = new HudMultIcon(st_x+20, 19, &st_flight, PatchFlight);
@@ -1257,10 +975,6 @@ void HUD::CreateHexenWidgets()
 
   // gargoyle wings
   h = new HudBinIcon(st_x, st_y-27, &st_true, NULL, PatchH2TOP);
-  statusbar.push_back(h);
-
-  // health slider
-  h = new HexenHudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
   statusbar.push_back(h);
 
   // mainbar (closed inventory shown)
@@ -1290,7 +1004,7 @@ void HUD::CreateHexenWidgets()
   mainbar.push_back(h);
 
   // inventory system
-  h = new HexenHudInventory(st_x+38, st_y-1, &invopen, &itemuse, st_invslots, &st_curpos,
+  h = new HexenHudInventory(st_x+38, st_y-1, &invopen, &st_itemuse, st_invslots, &st_curpos,
 			    PatchSNum, PatchARTI, Patch_InvBar);
   statusbar.push_back(h);
 
@@ -1319,6 +1033,13 @@ void HUD::CreateHereticWidgets()
 {
   // statusbar_on, mainbar_on, invopen
 
+  // health sliders
+  for (int k=0; k<MAX_GLVIEWPORTS; k++)
+    {
+      sliders[k] = new HexenHudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
+      faces[k] = NULL;
+    }
+
   int i;
   HudWidget *h;
 
@@ -1340,12 +1061,8 @@ void HUD::CreateHereticWidgets()
   h = new HudBinIcon(st_x+290, st_y-10, &st_true, NULL, PatchRTFCTOP);
   statusbar.push_back(h);
 
-  // health slider
-  h = new HudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
-  statusbar.push_back(h);
-
   // inventory system
-  h = new HudInventory(st_x+34, st_y+1, &invopen, &itemuse, st_invslots, &st_curpos,
+  h = new HudInventory(st_x+34, st_y+1, &invopen, &st_itemuse, st_invslots, &st_curpos,
                        PatchSNum, PatchARTI, Patch_InvBar);
   statusbar.push_back(h);
 
@@ -1397,6 +1114,13 @@ void HUD::CreateDoomWidgets()
   int i;
   HudWidget *h;
 
+  // health sliders, faces
+  for (int k=0; k<MAX_GLVIEWPORTS; k++)
+    {
+      sliders[k] = NULL;
+      faces[k] = new HudFace(st_x+143, st_y);
+    }
+
   // ready weapon ammo
   h = new HudNumber(st_x+44, st_y+3, 3, &st_readywp_ammo, PatchBNum);
   statusbar.push_back(h);
@@ -1435,7 +1159,7 @@ void HUD::CreateDoomWidgets()
 	{
 	  // these are shown
 	  const int wsel[] = {wp_pistol, wp_shotgun, wp_chaingun, wp_missile, wp_plasma, wp_bfg};
-	  h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_oldweaponsowned[wsel[i]],
+	  h = new HudBinIcon(st_x+111+(i%3)*12, st_y+4+(i/3)*10, &st_weaponsowned[wsel[i]],
 			     PatchArms[i][0], PatchArms[i][1]);
 	  statusbar.push_back(h);
 	}
@@ -1443,10 +1167,6 @@ void HUD::CreateDoomWidgets()
 
   // arms background
   h = new HudBinIcon(st_x+104, st_y, &st_notdeathmatch, NULL, PatchArmsBack);
-  statusbar.push_back(h);
-
-  // face
-  h = new HudMultIcon(st_x+143, st_y, &st_faceindex, PatchFaces);
   statusbar.push_back(h);
 
   // Key icon positions.
@@ -1475,6 +1195,14 @@ void HUD::ST_CreateWidgets()
     delete keybar[i];
   keybar.clear();
 
+  for (int k=0; k<MAX_GLVIEWPORTS; k++)
+    {
+      if (sliders[k]) delete sliders[k];
+      sliders[k] = NULL;
+      if (faces[k]) delete faces[k];
+      faces[k] = NULL;
+    }
+
   switch (game.mode)
     {
     case gm_hexen:
@@ -1492,32 +1220,29 @@ void HUD::ST_CreateWidgets()
 }
 
 
-void HUD::ST_Drawer(bool refresh)
+void HUD::ST_Drawer(int vp)
 {
   int i;
 
-  if (!st_active)
-    return;
-
-  //st_refresh = st_refresh || refresh;
-  st_refresh = true;
-
-  // Do red-/gold-shifts from damage/items
-  PaletteFlash();
-
   // is either statusbar or overlay on?
-  if (!(statusbar_on || overlay_on))
-    return;
-
-  // and draw them
   if (statusbar_on)
     {
+      if (rendermode == render_opengl)
+	st_refresh = true; // draw always
+
       // after ST_Start(), screen refresh needed, or vid mode change
       if (st_refresh)
         {
           // draw status bar background to off-screen buff
           ST_RefreshBackground();
         }
+
+
+      if (game.mode < gm_heretic)
+	faces[vp]->Update(st_refresh);
+      else
+	sliders[vp]->Update(st_refresh);
+
 
       for (i = statusbar.size()-1; i>=0; i--)
 	statusbar[i]->Update(st_refresh);
@@ -1528,10 +1253,8 @@ void HUD::ST_Drawer(bool refresh)
       else if (automap.active)
 	for (i = keybar.size()-1; i>=0; i--)
 	  keybar[i]->Update(st_refresh);
-
-      st_refresh = false;
     }
-  else
+  else if (overlay_on)
     {
       if (!drawscore || cv_splitscreen.value)
 	for (i = overlay.size()-1; i>=0; i--)
@@ -1541,52 +1264,24 @@ void HUD::ST_Drawer(bool refresh)
 
 
 
-// stops the status bar, "detaches" it from a playerpawn
-
+// stops the status bar
 void HUD::ST_Stop()
 {
   if (!st_active)
     return;
 
-  st_player = NULL;
   vid.SetPalette(0);
-
   st_active = false;
 }
 
 
-// sets up status bar to follow pawn p
-// 'link' the statusbar display to a player, which could be
-// another player than consoleplayer, for example, when you
-// change the view in a multiplayer demo with F12.
-
-void HUD::ST_Start(PlayerInfo *p)
+// activates status bar
+void HUD::ST_Start()
 {
-  int i;
-
   if (st_active)
     ST_Stop();
 
-  st_player = p;
-
   st_palette = -1;
-
-  if (game.mode == gm_heretic || game.mode == gm_hexen)
-    {
-      //ST_SetClassData(pawndata[p->ptype].pclass, p->number); TODO FIXME
-    }
-  else
-    {
-      // Doom
-      // face initialization
-      st_faceindex = 0;
-      st_oldhealth = -1;
-      st_maxhealth = 100; //p->maxhealth / 2;
-
-      for (i=0;i<NUMWEAPONS;i++)
-        st_oldweaponsowned[i] = false; //sbpawn->weaponowned[i]; FIXME too
-    }
-
   st_active = true;
 }
 
@@ -1615,7 +1310,7 @@ void HUD::CreateOverlayWidgets()
       switch (c)
         {
         case 'i': // inventory
-          h = new HudInventory(st_x+34, st_y+9, &invopen, &itemuse, st_invslots, &st_curpos,
+          h = new HudInventory(st_x+34, st_y+9, &invopen, &st_itemuse, st_invslots, &st_curpos,
                                PatchSNum, PatchARTI, Patch_InvBar);
           overlay.push_back(h);
           break;

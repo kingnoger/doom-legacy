@@ -129,7 +129,7 @@ public:
   void R_Subsector(int num);
   void R_RenderBSPNode (int bspnum);
 
-  void R_RenderPlayerView(int viewport, PlayerInfo *player);
+  void R_RenderPlayerView(PlayerInfo *player);
 
   void R_RenderThickSideRange(drawseg_t *ds, int x1, int x2, ffloor_t *ffloor);
 

@@ -94,6 +94,8 @@ class Pawn : public Actor
 public:
   const class PawnAI *info; ///< Pawn type.
 
+  class skin_t *skin; // TEMP
+
   byte  pclass;    ///< Current player class, a Hexen kludge. Affects many things.
   int   maxhealth; ///< Maximum health value.
   float speed;     ///< Walking speed (units/tic), runspeed = 2*speed.

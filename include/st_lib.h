@@ -25,6 +25,7 @@
 #ifndef st_lib_h
 #define st_lib_h 1
 
+#include "d_items.h"
 
 /// \brief ABC for HUD widgets
 ///
@@ -34,7 +35,6 @@ class HudWidget
 {
 protected:
   int x, y; ///< screen coordinates
-  //int type;    ///< overlay, shadowed, translucent...
 
   virtual void Draw() = 0; ///< pure virtual drawing routine
 
@@ -118,6 +118,45 @@ public:
   HudBinIcon(int x, int y, const bool *status, Material *p0, Material *p1);
   virtual void Update(bool force);
 };
+
+
+
+#define ST_NUMPAINFACES         5
+#define ST_NUMSTRAIGHTFACES     3
+#define ST_NUMTURNFACES         2
+#define ST_NUMSPECIALFACES      3
+#define ST_FACESTRIDE (ST_NUMSTRAIGHTFACES+ST_NUMTURNFACES+ST_NUMSPECIALFACES)
+#define ST_NUMEXTRAFACES        2
+#define ST_NUMFACES (ST_FACESTRIDE*ST_NUMPAINFACES+ST_NUMEXTRAFACES)
+
+/// \brief Marine face widget
+class HudFace : public HudWidget
+{
+private:
+  int     priority; ///< priority of current expression
+  int        count; ///< count until next change
+
+  int    oldhealth; ///< to get appopriately pained face
+  int    maxhealth;
+  int rampagecount; ///< tics to go until rampage
+  bool oldweaponsowned[NUMWEAPONS]; 
+  int        color; ///< pawn color, determines face background color
+  
+  int    faceindex; ///< icon to draw
+  int oldfaceindex; ///< previous icon number
+
+  Material   **faces; ///< array of icons
+  Material *faceback; ///< face background
+
+  int calcPainOffset(int health);
+  virtual void Draw();
+
+public:
+  HudFace(int x, int y);
+  void updateFaceWidget(const class PlayerInfo *p);
+  virtual void Update(bool force);
+};
+
 
 
 

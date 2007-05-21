@@ -51,21 +51,6 @@
 */
 
 
-/// \brief Estimation of 2D vector length (not exact)
-/// \ingroup g_geoutils
-/*!
-  Sort of octagonal norm.
-*/
-fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
-{
-  dx = abs(dx);
-  dy = abs(dy);
-  if (dx < dy)
-    return dx+dy-(dx>>1);
-  return dx+dy-(dy>>1);
-}
-
-
 /// \brief On which side of a 2D line the point is?
 /// \ingroup g_geoutils
 /*!

@@ -124,43 +124,44 @@ public:
 //                    Sprite skins
 //========================================================
 
-#define SKINNAMESIZE 16
-#define MAXSKINS 10
 
-
-struct skin_t
+struct skin_t : public cacheitem_t
 {
   // 10 customisable sounds for Skins
   enum skinsound_t
   {
-  SKSPLPAIN,
-  SKSSLOP,
-  SKSOOF,
-  SKSPLDETH,
-  SKSPDIEHI,
-  SKSNOWAY,
-  SKSPUNCH,
-  SKSRADIO,
-  SKSJUMP,
-  SKSOUCH,
-  NUMSKINSOUNDS
+    SKSPLPAIN,
+    SKSSLOP,
+    SKSOOF,
+    SKSPLDETH,
+    SKSPDIEHI,
+    SKSNOWAY,
+    SKSPUNCH,
+    SKSRADIO,
+    SKSJUMP,
+    SKSOUCH,
+    NUMSKINSOUNDS
   };
 
-  char        name[SKINNAMESIZE+1];   // short descriptive name of the skin
-  sprite_t   *spritedef;
-  char        faceprefix[4];          // 3 chars+'\0', default is "STF"
+#define ST_NUMFACES 42
+
+  sprite_t *sprite;
+  char      faceprefix[4];      ///< 3 chars+'\0', default is "STF"
+  Material *faces[ST_NUMFACES]; ///< marine face graphics
+  Material *faceback;           ///< face background
 
   // specific sounds per skin
-  short       soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
+  //short       soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
+
+public:
+  skin_t(const char *name, const char *spritename, const char *fprefix);
+  ~skin_t();
 };
 
 
-extern int       numskins;
-extern skin_t    skins[MAXSKINS+1];
 
-
+skin_t *GetSkin();
 void    SetPlayerSkin(int playernum,char *skinname);
-int     R_SkinAvailable(char* name);
 void    R_AddSkins(int wadnum);
 
 #endif

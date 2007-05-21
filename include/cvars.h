@@ -135,7 +135,7 @@ extern consvar_t cv_usegamma;
 extern consvar_t cv_viewsize;
 extern consvar_t cv_detaillevel;
 extern consvar_t cv_scalestatusbar;
-//extern consvar_t cv_fov;
+extern consvar_t cv_fov;
 
 extern consvar_t cv_screenslink;
 extern consvar_t cv_translucency;
@@ -153,7 +153,6 @@ extern consvar_t cv_grstaticlighting;
 extern consvar_t cv_grmblighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
-extern consvar_t cv_grfov;
 extern consvar_t cv_granisotropy;
 extern consvar_t cv_grpolygonsmooth;
 extern consvar_t cv_grmd2;

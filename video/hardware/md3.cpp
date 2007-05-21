@@ -356,7 +356,6 @@ void MD3_t::Link(const char *tagname, MD3_t *m)
 // interp must be in the range [0, 1]
 void MD3_t::DrawInterpolated(MD3_animstate *st)
 {
-#ifndef NO_OPENGL
   GLfloat v1[3], v2[3], v[3], n1[3], n2[3], norm[3];
   int theta1, phi1, theta2, phi2;
   float interp = st->interp;
@@ -413,13 +412,11 @@ void MD3_t::DrawInterpolated(MD3_animstate *st)
 	}
       glEnd();
     }
-#endif
 }
 
 // draw this model and all the models that have been linked to it
 MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st, float pitch)
 {
-#ifndef NO_OPENGL
   int i, j, k;
   MD3_t *mp;
 
@@ -476,7 +473,7 @@ MD3_animstate *MD3_t::DrawRecursive(MD3_animstate *st, float pitch)
 	  glPopMatrix();
 	}
     }
-#endif
+
   return st;
 }
 

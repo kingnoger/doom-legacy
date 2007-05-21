@@ -387,7 +387,7 @@ int FileCache::ReadLumpHeader(int lump, void *dest, unsigned size, unsigned offs
 
 
 // caches the given lump
-void *FileCache::CacheLumpNum(int lump, int tag)
+void *FileCache::CacheLumpNum(int lump, int tag, bool add_NUL)
 {
   int item = lump & 0xffff;
   unsigned int file = lump >> 16;
@@ -397,5 +397,14 @@ void *FileCache::CacheLumpNum(int lump, int tag)
   if (item >= vfiles[file]->numitems)
     I_Error("FileCache::CacheLumpNum: %i >= numitems", item);
 
-  return vfiles[file]->CacheItem(item, tag);
+  if (add_NUL)
+    {
+      int size = vfiles[file]->GetItemSize(item);
+      char *p = (char *)Z_Malloc(size + 1, tag, NULL);
+      vfiles[file]->ReadItem(item, p, size);
+      p[size] = '\0';
+      return p;
+    }
+  else
+    return vfiles[file]->CacheItem(item, tag);
 }

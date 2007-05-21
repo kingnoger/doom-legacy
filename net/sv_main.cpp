@@ -150,7 +150,7 @@ consvar_t cv_maxplayers     = {"maxplayers", "32", CV_NETVAR, maxplayers_cons_t,
 CV_PossibleValue_t teamplay_cons_t[]={{0, "Off"},{1, "Color"},{2, "Skin"},{3, NULL}};
 CV_PossibleValue_t deathmatch_cons_t[]={{0, "Coop"},{1, "1"},{2, "2"},{3, "3"},{0, NULL}};
 CV_PossibleValue_t fraglimit_cons_t[]={{0, "MIN"},{1000, "MAX"},{0, NULL}};
-CV_PossibleValue_t exitmode_cons_t[]={{0, "no exit"},{1, "first"},{2, "last"},{3, "individual"},{4, NULL}};
+CV_PossibleValue_t exitmode_cons_t[]={{0, "no"},{1, "any"},{2, "personal"},{3, "all"},{4, NULL}};
 
 void TeamPlay_OnChange();
 void Deathmatch_OnChange();

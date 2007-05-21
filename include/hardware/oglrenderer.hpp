@@ -102,6 +102,10 @@ public:
 
   bool In2DMode() const {return consolemode;}
 
+  void SetGlobalColor(float *rgba);
+
+  void SetFullScreenViewport();
+  void SetViewport(unsigned vp);
   void Setup2DMode();
   void Draw2DGraphic(GLfloat left, GLfloat bottom, GLfloat right, GLfloat top, Material *mat,
 		     GLfloat texleft=0.0, GLfloat texbottom=1.0, GLfloat texright=1.0, GLfloat textop=0.0);
@@ -112,13 +116,17 @@ public:
 
   void Setup3DMode();
 
-  void SetupViewport(const unsigned int numplayers, const unsigned int curplayer);
   void RenderPlayerView(PlayerInfo *player);
   void Render3DView(Actor *pov);
   void DrawPSprites(class PlayerPawn *p);
   void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, bool flip);
 
   bool CheckVis(int fromss, int toss);
+
+  /// Draw the border around viewport.
+  static void DrawViewBorder() {}
+  static void DrawFill(int x, int y, int w, int h, int color) {}
+  static void FadeScreenMenuBack(unsigned color, int height) {}
 };
 
 extern OGLRenderer *oglrenderer;

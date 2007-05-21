@@ -358,6 +358,7 @@ void AutoMap::Close()
   mp = NULL;
   mpawn = NULL;
   active = false;
+  hud.RefreshStatusbar();
 }
 
 
@@ -462,7 +463,7 @@ void AutoMap::InitVariables()
     AMcolor = AMcolors[0]; // doom
 
   // inform the status bar of the change
-  hud.st_refresh = true;
+  hud.RefreshStatusbar();
 }
 
 

@@ -945,7 +945,6 @@ void Command_Meminfo_f()
   CONS_Printf("purgable memory    : %7d kB\n", cache>>10);
   CONS_Printf("largest free block : %7d kB\n", largefreeblock>>10);
 
-#ifndef NO_OPENGL
   // FIXME: Hurdler: this is probably not accurate with the new renderer
   if (rendermode != render_soft)
     {
@@ -954,7 +953,6 @@ void Command_Meminfo_f()
       CONS_Printf("Plane polygon      : %7d kB\n", Z_TagUsage(PU_HWRPLANE)>>10);
       //CONS_Printf("HW Texture used    : %7d kB\n", HWR.GetTextureUsed()>>10);
     }
-#endif
 
   CONS_Printf("\2System Memory Info\n");
   freebytes = I_GetFreeMem(&totalbytes);

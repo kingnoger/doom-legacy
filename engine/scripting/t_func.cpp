@@ -2347,7 +2347,6 @@ void SF_SetHUPicDisplay()
 // Hurdler: I'm enjoying FS capability :)
 #warning setcorona: Hurdler, must be uncommented once the new dynamic light code is OK
 #if 0
-#ifndef NO_OPENGL
 extern light_t lspr[];
 
 int String2Hex(const char *s)
@@ -2421,7 +2420,6 @@ void SF_SetCorona()
         lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius);
     }
 }
-#endif
 #endif // if 0
 
 
@@ -2619,8 +2617,6 @@ void FS_init_functions()
 
   // Hurdler's stuff :)
 #if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
-#ifndef NO_OPENGL
   new_function("setcorona", SF_SetCorona);
-#endif
 #endif
 }

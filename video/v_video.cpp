@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -36,10 +36,6 @@
 #include "i_video.h"
 #include "z_zone.h"
 
-#ifndef NO_OPENGL
-# include "hardware/hwr_render.h"
-#endif
-
 #include "hardware/oglrenderer.hpp"
 
 using namespace std;
@@ -68,14 +64,13 @@ void Material::Draw(float x, float y, int scrn)
 
   int flags = scrn & V_FLAGMASK;
   scrn &= V_SCREENMASK;
-  byte *dest_tl = vid.screens[scrn]; // destination top left in LFB
+  byte *dest_tl = vid.screens[scrn] + vid.scaledofs; // destination top left in LFB
 
   // location scaling
   if (flags & V_SLOC)
     {
       x *= vid.dupx;
       y *= vid.dupy;
-      dest_tl += vid.scaledofs;
     }
 
   // size scaling
@@ -284,8 +279,8 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
              srcscrn, width, height, destx, desty, destscrn);
 #endif
 
-  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx;
-  byte *dest = vid.screens[destscrn]+vid.width*desty+destx;
+  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx + vid.scaledofs;
+  byte *dest = vid.screens[destscrn]+vid.width*desty+destx + vid.scaledofs;
 
   for (; height>0 ; height--)
     {
@@ -326,13 +321,11 @@ void VID_BlitLinearScreen(byte *src, byte *dest, int width, int height,
 //  Fills a box of pixels with a single color, NOTE: scaled to screen size
 void V_DrawFill(int x, int y, int w, int h, int c)
 {
-#ifndef NO_OPENGL
   if (rendermode != render_soft)
     {
-      HWR.DrawFill(x, y, w, h, c);
+      OGLRenderer::DrawFill(x, y, w, h, c);
       return;
     }
-#endif
 
   byte *dest = vid.screens[0] + y*vid.dupy*vid.width + x*vid.dupx + vid.scaledofs;
 
@@ -353,13 +346,11 @@ void V_DrawFill(int x, int y, int w, int h, int c)
 //
 void V_DrawFadeScreen()
 {
-#ifndef NO_OPENGL
   if (rendermode != render_soft)
     {
-      HWR.FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
+      OGLRenderer::FadeScreenMenuBack(0x01010160, 0);  //faB: hack, 0 means full height :o
       return;
     }
-#endif
 
   int w = vid.width>>2;
 
@@ -401,13 +392,11 @@ void V_DrawFadeScreen()
 /// Simple translucence with one color, coords are true LFB coords
 void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 {
-#ifndef NO_OPENGL
   if (rendermode!=render_soft)
     {
-      HWR.FadeScreenMenuBack(0x00500000, y2);
+      OGLRenderer::FadeScreenMenuBack(0x00500000, y2);
       return;
     }
-#endif
 
   if (vid.BytesPerPixel == 1)
     {
@@ -530,7 +519,6 @@ void font_t::DrawString(float x, float y, const char *str, int flags)
 
   if (rendermode == render_opengl)
     {
-      // TODO damn scaledofs
       if (flags & V_SSIZE)
 	{
 	  dupx = vid.fdupx;
@@ -558,10 +546,6 @@ void font_t::DrawString(float x, float y, const char *str, int flags)
 	  y *= vid.dupy;
 	  flags &= ~V_SLOC; // not passed on to Texture::Draw
 	}
-
-      // unravel scaledofs
-      x += vid.scaledofs % vid.width;
-      y += vid.scaledofs / vid.width;
     }
 
   // cursor coordinates

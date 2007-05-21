@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -42,9 +41,6 @@ extern int              viewwidth;
 extern int              viewheight;
 extern int              viewwindowx;
 extern int              viewwindowy;
-
-extern int              scaledviewwidth;
-
 
 extern int              centerx;
 extern int              centery;
@@ -178,13 +174,6 @@ extern int              extralight;
 // Number of diminishing brightness levels.
 // There a 0-31, i.e. 32 LUT in the COLORMAP lump.
 #define NUMCOLORMAPS            32
-
-
-
-
-// Blocky/low detail mode. remove this?
-// 0 = high, 1 = low
-extern int detailshift;
 
 
 

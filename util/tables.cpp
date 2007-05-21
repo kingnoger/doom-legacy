@@ -98,12 +98,17 @@ int SlopeDiv (unsigned  num, unsigned den)
 
 extern angle_t tantoangle[SLOPERANGE+1];
 
-// To get a global angle from cartesian coordinates,
-//  the coordinates are flipped until they are in
-//  the first octant of the coordinate system, then
-//  the y (<=x) is scaled and divided by x to get a
-//  tangent (slope) value which is looked up in the
-//  tantoangle[] table.
+
+/// \brief Directional angle from point 1 to point 2
+/// \ingroup g_geoutils
+/*!
+  To get a global angle from cartesian coordinates,
+  the coordinates are flipped until they are in
+  the first octant of the coordinate system, then
+  the y (<=x) is scaled and divided by x to get a
+  tangent (slope) value which is looked up in the
+  tantoangle[] table.
+*/
 angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
 {
   x1 -= x2;
@@ -183,6 +188,11 @@ angle_t R_PointToAngle2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
 }
 
 
+/// \brief XY distance between two points
+/// \ingroup g_geoutils
+/*!
+  Computed using tabulated trigonometric functions.
+*/
 fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
 {
   fixed_t dx = abs(x1 - x2);
@@ -201,6 +211,21 @@ fixed_t R_PointToDist2(fixed_t x2, fixed_t y2, fixed_t x1, fixed_t y1)
   int angle = ArcTan(dy / dx) >> ANGLETOFINESHIFT;
 
   return dx/finecosine[angle];
+}
+
+
+/// \brief Estimation of 2D vector length (not exact)
+/// \ingroup g_geoutils
+/*!
+  Sort of octagonal norm.
+*/
+fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
+{
+  dx = abs(dx);
+  dy = abs(dy);
+  if (dx < dy)
+    return dx+dy-(dx>>1);
+  return dx+dy-(dy>>1);
 }
 
 

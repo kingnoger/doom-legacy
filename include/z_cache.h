@@ -208,6 +208,9 @@ public:
     source.Inventory();
   }
 
+  /// Returns the number of items in the cache.
+  inline unsigned Size() const { return source.Size(); }
+
   /// Removes unused data items from cache
   inline int Cleanup() { return source.Cleanup(); };
 };

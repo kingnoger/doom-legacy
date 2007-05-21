@@ -87,37 +87,6 @@ OGLRenderer::~OGLRenderer()
 }
 
 
-#ifdef NO_OPENGL
-
-// Stub implementation of OpenGL renderer (now we don't have to link in OpenGL libs)
-void OGLRenderer::InitGLState() {}
-void OGLRenderer::StartFrame() {}
-void OGLRenderer::FinishFrame() {}
-void OGLRenderer::ClearDrawColor() {}
-bool OGLRenderer::WriteScreenshot(const char *fname) { return false; }
-bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen) { return false; }
-void OGLRenderer::Setup2DMode() {}
-void OGLRenderer::Setup3DMode() {}
-void OGLRenderer::Draw2DGraphic(GLfloat top, GLfloat left, GLfloat bottom, GLfloat right, Material *mat,
-				GLfloat textop, GLfloat texbottom, GLfloat texleft, GLfloat texright) {}
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat) {}
-void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *mat) {}
-void OGLRenderer::ClearAutomap() {}
-void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color) {}
-void OGLRenderer::Render3DView(PlayerInfo *player) {}
-void OGLRenderer::RenderBSPNode(int nodenum) {}
-void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Texture *tex, bool isFloor) {}
-void OGLRenderer::RenderGLSubsector(int num) {}
-void OGLRenderer::RenderActors(sector_t *sec) {}
-void OGLRenderer::RenderGLSeg(int num) {}
-void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) {}
-void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Texture *t, bool flip) {}
-bool OGLRenderer::CheckVis(int fromss, int toss) { return false; }
-void OGLRenderer::DrawSimpleSky() {}
-
-
-#else
-
 
 /// Sets up those GL states that never change during rendering.
 void OGLRenderer::InitGLState()
@@ -125,10 +94,8 @@ void OGLRenderer::InitGLState()
   glShadeModel(GL_SMOOTH);
   glEnable(GL_TEXTURE_2D);
 
-  // Gets rid of "black boxes" around sprites. Might also speed up
-  // rendering a bit?
-  //  glEnable(GL_ALPHA_TEST);
-  glAlphaFunc(GL_GEQUAL, 1.0);
+  // GL_ALPHA_TEST gets rid of "black boxes" around sprites. Might also speed up rendering a bit?
+  glAlphaFunc(GL_GEQUAL, 0.5); // 0.5 is an optimal value for linear magfiltering
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -190,6 +157,10 @@ void OGLRenderer::ClearDrawColor()
   glColor4f(1.0, 1.0, 1.0, 1.0);
 }
 
+
+void OGLRenderer::SetGlobalColor(float *rgba)
+{
+}
 
 
 // Writes a screen shot to the specified file. Writing is done in BMP
@@ -343,15 +314,8 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 
   workinggl = true;
 
-  // ADD: currently we only use one viewport, so we set it here. When
-  // multiple subwindows are added this should be set somewhere else.
-  SetupViewport(1, 0);
-
   // Reset matrix transformations.
-  if(consolemode)
-    Setup2DMode();
-  else 
-    Setup3DMode();
+  SetFullScreenViewport();
 
   InitGLState();
 
@@ -372,28 +336,34 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   return true;
 }
 
-// Set up viewport projection matrix.
-//
-// SetupViewport(1, 0) makes everything fullscreen again.
-
-void OGLRenderer::SetupViewport(const unsigned int numplayers, const unsigned int curplayer) {
-  GLfloat *mult;
-
-  if(numplayers == 0)
-    I_Error("Tried to set viewport with 0 players.\n");
-
-  if(numplayers > 4)
-    I_Error("System supports only 4 local players, %d requested.\n", numplayers);
-
-  if(curplayer >= numplayers)
-    I_Error("Tried to set viewport for non-existin player %d (max value %d).\n", curplayer, numplayers);
-
-  mult = viewport_multipliers[numplayers-1][curplayer];
-  viewportw = GLint(screen->w * mult[2]);
-  viewporth = GLint(screen->h * mult[3]);
-  glViewport(GLint(screen->w*mult[0]), GLint(screen->h*mult[1]), viewportw, viewporth);
+// Set up viewport projection matrix, and 2D mode using the new aspect ratio.
+void OGLRenderer::SetFullScreenViewport()
+{
+  viewportw = screen->w;
+  viewporth = screen->h;
   viewportar = GLfloat(viewportw)/viewporth;
+  glViewport(0, 0, viewportw, viewporth);
+  Setup2DMode();
 }
+
+
+void OGLRenderer::SetViewport(unsigned vp)
+{
+  // Splitscreen.
+  int n = min(cv_splitscreen.value + 1, MAX_GLVIEWPORTS) - 1;
+
+  if (vp > n)
+    return;
+
+  viewportdef_t *v = &gl_viewports[n][vp];
+
+  viewportw = GLint(screen->w * v->w);
+  viewporth = GLint(screen->h * v->h);
+  viewportar = GLfloat(viewportw)/viewporth;
+  glViewport(GLint(screen->w * v->x), GLint(screen->h * v->y), viewportw, viewporth);
+}
+
+
 
 /// Set up the GL matrices so that we can draw 2D stuff like menus.
 void OGLRenderer::Setup2DMode()
@@ -443,14 +413,10 @@ void OGLRenderer::Setup3DMode()
   glLoadIdentity();
 
   // Read projection information from consvars. Currently only fov.
-  fov = cv_grfov.value;
-  if(fov > 180) // Sanity checks.
-    fov = 180;
-  if(fov < 1)
-    fov = 1;
+  fov = max(1.0f, min(float(cv_fov.value), 180.0f));
 
   // Load clipping planes from consvars.
-  gluPerspective(fov/(viewportar*0.75), viewportar, cv_grnearclippingplane.Get().Float(), cv_grfarclippingplane.Get().Float());
+  gluPerspective(fov*hudar/viewportar, viewportar, cv_grnearclippingplane.Get().Float(), cv_grfarclippingplane.Get().Float());
 
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -513,8 +479,8 @@ void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
     }
   else
     {
-      l = x / viewportw;
-      t = y / viewporth;
+      l = x / screen->w;
+      t = y / screen->h;
     }
 
   Material::TextureRef &tr = mat->tex[0];
@@ -531,11 +497,11 @@ void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
     }
   else
     {
-      l -= mat->leftoffs / viewportw;
-      r = l + tr.worldwidth / viewportw;
+      l -= mat->leftoffs / screen->w;
+      r = l + tr.worldwidth / screen->w;
 
-      t -= mat->topoffs / viewporth;
-      b = t + tr.worldheight / viewporth;
+      t -= mat->topoffs / screen->h;
+      b = t + tr.worldheight / screen->h;
     }
 
   Draw2DGraphic(l, 1-b, r, 1-t, mat);
@@ -593,6 +559,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
   if (mp->glvertexes == NULL)
     I_Error("Trying to render level but level geometry is not set.\n");
 
+  Setup3DMode();
 
   if (!mp->skybox_pov)
     // This simple sky rendering algorithm uses 2D mode. We should
@@ -684,8 +651,8 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 /// It is usually the place where the player is currently located.
 void OGLRenderer::Render3DView(Actor *pov)
 {
-  Setup3DMode();
   glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
 
   x = pov->pos.x.Float();
   y = pov->pos.y.Float();
@@ -699,6 +666,9 @@ void OGLRenderer::Render3DView(Actor *pov)
   curssec = pov->subsector;
 
   RenderBSPNode(mp->numnodes-1);
+
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
 }
 
 
@@ -1391,4 +1361,3 @@ void OGLRenderer::DrawSimpleSky()
   glMatrixMode(GL_PROJECTION);
   glPopMatrix();
 }
-#endif // !NO_OPENGL

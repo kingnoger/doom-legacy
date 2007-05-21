@@ -57,6 +57,7 @@
 
 #include "v_video.h"
 #include "i_video.h"
+#include "hud.h"
 
 #include "keys.h"
 #include "w_wad.h"
@@ -2053,9 +2054,7 @@ static menuitem_t VideoOptions_MI[]=
   menuitem_t(IT_CVAR, NULL, "Splats"          , &cv_splats        , 0),
   menuitem_t(IT_CVAR, NULL, "Bloodtime"       , &cv_bloodtime     , 0),
   menuitem_t(IT_CVAR, NULL, "Screenslink effect", &cv_screenslink , 0),
-#ifndef NO_OPENGL
   menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "OpenGL options...", M_OpenGLOption, 20),
-#endif
 };
 
 Menu VideoOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(VideoOptions_MI), 60, 40);
@@ -3124,6 +3123,8 @@ void Menu::Close(bool callexitmenufunc)
   // unpause the game if necessary
   if (!game.netgame)
     game.paused = false;
+
+  hud.RefreshStatusbar();
 }
 
 
@@ -3289,14 +3290,12 @@ void Menu::Init()
 // OpenGL specific options
 //======================================================================
 
-#ifndef NO_OPENGL
-
 extern Menu OGL_LightingDef, OGL_FogDef, OGL_ColorDef, OGL_DevDef;
 
 static menuitem_t OpenGLOptions_MI[]=
 {
   //menuitem_t(IT_CVAR, NULL, "Mouse look"          , &cv_grcrappymlook     ,  0),
-  menuitem_t(IT_CVAR, NULL, "Field of view"       , &cv_grfov             , 10),
+  menuitem_t(IT_CVAR, NULL, "Field of view"       , &cv_fov             , 10),
   menuitem_t(IT_CVAR, NULL, "Quality"             , &cv_scr_depth         , 20),
   menuitem_t(IT_CVAR, NULL, "Texture Filter"      , &cv_grfiltermode      , 30),
   menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Anisotropy", &cv_granisotropy , 40),
@@ -3304,15 +3303,15 @@ static menuitem_t OpenGLOptions_MI[]=
   menuitem_t(IT_LINK, NULL, "Lighting..."       , &OGL_LightingDef   , 60),
   menuitem_t(IT_LINK, NULL, "Fog..."            , &OGL_FogDef        , 70),
   menuitem_t(IT_LINK, NULL, "Gamma..."          , &OGL_ColorDef      , 80),
-  menuitem_t(IT_LINK, NULL, "Development..."    , &OGL_DevDef        , 90),
+  //menuitem_t(IT_LINK, NULL, "Development..."    , &OGL_DevDef        , 90),
 };
 
 static menuitem_t OGL_Lighting_MI[]=
 {
   menuitem_t(IT_CVAR, NULL, "Coronas"                 , &cv_grcoronas         ,  0),
-  menuitem_t(IT_CVAR, NULL, "Coronas size"            , &cv_grcoronasize      , 10),
+  menuitem_t(IT_CVAR, NULL, "Corona size"            , &cv_grcoronasize      , 10),
   menuitem_t(IT_CVAR, NULL, "Dynamic lighting"        , &cv_grdynamiclighting , 20),
-  menuitem_t(IT_CVAR, NULL, "Static lighting"         , &cv_grstaticlighting  , 30),
+  //menuitem_t(IT_CVAR, NULL, "Static lighting"         , &cv_grstaticlighting  , 30),
   //menuitem_t(IT_CVAR, NULL, "Monsters' balls lighting", &cv_grmblighting      , 40),
 };
 
@@ -3334,9 +3333,9 @@ static menuitem_t OGL_Color_MI[]=
 
 static menuitem_t OGL_Dev_MI[]=
 {
-  //    menuitem_t(IT_CVAR, "Polygon smooth"  , &cv_grpolygonsmooth ,  0),
-  // menuitem_t(IT_CVAR, NULL, "MD2 models"      , &cv_grmd2              , 10),
-  menuitem_t(IT_CVAR, NULL, "Translucent walls", &cv_grtranswall       , 20),
+  //menuitem_t(IT_CVAR, "Polygon smooth"  , &cv_grpolygonsmooth ,  0),
+  //menuitem_t(IT_CVAR, NULL, "MD2 models"      , &cv_grmd2              , 10),
+  //menuitem_t(IT_CVAR, NULL, "Translucent walls", &cv_grtranswall       , 20),
 };
 
 Menu  OpenGLOptionDef("M_OPTTTL", "OPTIONS", &VideoOptionsDef, ITEMS(OpenGLOptions_MI), 60, 40);
@@ -3360,5 +3359,3 @@ void Menu::OGL_DrawColor()
   hud_font->DrawString(x, y+currentMenu->items[0].alphaKey-10, "Gamma correction", V_WHITEMAP | V_SCALE);
 }
 */
-
-#endif

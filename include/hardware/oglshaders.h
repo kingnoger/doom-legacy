@@ -94,7 +94,6 @@ class Shader : public cacheitem_t
 {
 public:
   Shader(const char *name, bool vertex_shader = true) : cacheitem_t(name) {}
-  void Link() {};
 };
 
 
@@ -104,11 +103,11 @@ class ShaderProg : public cacheitem_t
 public:
   ShaderProg(const char *name) : cacheitem_t(name) {}
   static void DisableShaders() {}
+  void AttachShader(Shader *s) {};
+  void Link() {};
   void Use() {}
   void SetUniforms() {}
   void SetAttributes(shader_attribs_t *a) {}
-  void Link() {};
-  void AttachShader(Shader *s) {};
 };
 
 

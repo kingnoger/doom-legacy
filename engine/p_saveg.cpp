@@ -2139,7 +2139,7 @@ void GameInfo::LoadGame(int slot)
 
   // TODO have other playerinfos waiting for clients to rejoin
   if (ViewPlayers.size())
-    hud.ST_Start(ViewPlayers[0]);
+    hud.ST_Start();
   // done
   /*
   if (setsizeneeded)

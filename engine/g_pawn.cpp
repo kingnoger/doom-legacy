@@ -180,6 +180,7 @@ Pawn::Pawn()
   : Actor()
 {
   info = NULL;
+  skin = GetSkin();
 
   pclass = PCLASS_NONE;
   maxhealth = 0;
@@ -254,6 +255,8 @@ Pawn::Pawn(fixed_t x, fixed_t y, fixed_t z, int type)
 
   info = pawn_aid[type];
   pclass = info->pclass;
+
+  skin = GetSkin();
 
   const float AutoArmorSave[] = { 0.0, 0.15, 0.10, 0.05, 0.0 };
   toughness = AutoArmorSave[pclass];

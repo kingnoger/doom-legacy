@@ -207,6 +207,11 @@ tex_prop ::= FILTERING str(A) str(B) SEMICOLON.
     d->tr->min_filter = temp;
   }
 
+tex_prop ::= MAX_ANISOTROPY num(A) SEMICOLON.
+  {
+    d->tr->max_anisotropy = A;
+  }
+
 // string
 str(A) ::= STR(B). { A = B.stype; }
 

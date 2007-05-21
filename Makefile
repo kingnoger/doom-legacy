@@ -235,11 +235,6 @@ export video_objects = \
 	$(objdir)/r_splats.o \
 	$(objdir)/r_sprite.o \
 	$(objdir)/r_things.o \
-	$(objdir)/hw_trick.o \
-	$(objdir)/hwr_render.o \
-	$(objdir)/hwr_bsp.o \
-	$(objdir)/hwr_geometry.o \
-	$(objdir)/hwr_states.o \
 	$(objdir)/oglrenderer.o \
 	$(objdir)/oglshaders.o \
 	$(objdir)/oglhelpers.o

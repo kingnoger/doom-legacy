@@ -55,6 +55,7 @@ public:
   string       obituary; ///< Obituary message for players killed by "instances" of this DECORATE class.
   string    hitobituary; ///< Same, but for melee attacks.
   string      modelname; ///< Name of MD3 model to be used to represent this class.
+  string       skinname; ///< Name of skin to use (either sprite skin or model skin).
   bool     spawn_always; ///< Do not care about mapthing "when-to-spawn" flags.
 
 public:

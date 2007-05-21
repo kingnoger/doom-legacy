@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,8 +24,6 @@
 #define p_maputl_h 1
 
 #include <vector>
-#include "vect.h"
-#include "m_fixed.h"
 #include "tables.h"
 
 using namespace std;
@@ -176,21 +174,8 @@ extern bool floatok;
 extern class bbox_t tmb;
 
 
-
-fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 int     P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line);
 int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
 fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
-
-inline angle_t R_PointToAngle2(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
-{
-  return R_PointToAngle2(a.x, a.y, b.x, b.y);
-}
-
-inline fixed_t P_XYdist(const vec_t<fixed_t>& a, const vec_t<fixed_t>& b)
-{
-  return P_AproxDistance(a.x - b.x, a.y - b.y);
-}
-
 
 #endif

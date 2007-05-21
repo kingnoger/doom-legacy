@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2006 by DooM Legacy Team.
+// Copyright (C) 2006-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -17,31 +17,24 @@
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// Utility functions for OpenGL renderer.
+
+#include "command.h"
 #include "r_data.h"
 #include "doomdef.h"
 #include "hardware/oglhelpers.hpp"
+
 
 static const GLubyte *gl_extensions = NULL;
 
 static byte lightleveltonumlut[256];
 
-// This array has the multipliers necessary to render multiple player
-// views onto the screen. The first index tells how many total players
-// there are on this screen (values 1-4). The second one tells the
-// current player number and must be less or equal to the first one.
-// These give an array of four values: bottom left x and y followed by
-// top right x and y.
-//
-// Setting up the screen to render the view of player one of total of
-// two players, you would do this.
-//
-// x0 = viewport_multipliers[1][0][0] * screen_width;
-// y0 = viewport_multipliers[1][0][1] * screen_height;
-// vw = viewport_multipliers[1][0][2] * screen_width;
-// vh = viewport_multipliers[1][0][3] * screen_height;
-// glViewPort(x0, y0, x1, y0);
-
-GLfloat viewport_multipliers[4][4][4] = {
+// This array has the fractional screen coordinates necessary to render multiple player
+// views onto the screen. The first index tells how many total viewports-1
+// there are on this screen. The second one tells the viewport number
+// and must be less or equal to the first one.
+viewportdef_t gl_viewports[MAX_GLVIEWPORTS][MAX_GLVIEWPORTS] = {
   // 1 Player
   {{0.0, 0.0, 1.0, 1.0}},
 
@@ -62,11 +55,61 @@ GLfloat viewport_multipliers[4][4][4] = {
 };
 
 
+
+// Only list mipmapping filter modes, since we always use them.
+CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "NN"}, {1, "LN"}, {2, "NL"}, {3, "LL"}, {0, NULL} };
+consvar_t cv_grfiltermode = {"gr_filtermode", "NN", CV_SAVE, grfiltermode_cons_t, NULL};
+
+CV_PossibleValue_t granisotropy_cons_t[]= {{1,"MIN"}, {16,"MAX"}, {0,NULL}};
+consvar_t cv_granisotropy = {"gr_anisotropy", "1", CV_SAVE, granisotropy_cons_t, NULL};
+
+consvar_t cv_grnearclippingplane = {"gr_nearclippingplane",   "0.9", CV_SAVE|CV_FLOAT, NULL};
+consvar_t cv_grfarclippingplane  = {"gr_farclippingplane", "9000.0", CV_SAVE|CV_FLOAT, NULL};
+
+consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff};
+consvar_t cv_grcoronas         = {"gr_coronas",         "On", CV_SAVE, CV_OnOff};
+consvar_t cv_grcoronasize      = {"gr_coronasize",       "1", CV_SAVE|CV_FLOAT, NULL};
+
+//CV_PossibleValue_t grgamma_cons_t[]= {{1,"MIN"}, {255,"MAX"}, {0,NULL} };
+static void CV_Gamma_OnChange() {} // FIXME
+consvar_t cv_grgammared   = {"gr_gammared",   "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
+consvar_t cv_grgammagreen = {"gr_gammagreen", "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
+consvar_t cv_grgammablue  = {"gr_gammablue",  "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
+
+consvar_t cv_grfog        = {"gr_fog",            "On", CV_SAVE, CV_OnOff};
+consvar_t cv_grfogcolor   = {"gr_fogcolor",   "000000", CV_SAVE, NULL};
+consvar_t cv_grfogdensity = {"gr_fogdensity",    "100", CV_SAVE, CV_Unsigned};
+
+
+void OGL_AddCommands()
+{
+  cv_grgammared.Reg();
+  cv_grgammagreen.Reg();
+  cv_grgammablue.Reg();
+
+  cv_grfiltermode.Reg();
+  cv_granisotropy.Reg();
+
+  cv_grnearclippingplane.Reg();
+  cv_grfarclippingplane.Reg();
+
+  cv_grdynamiclighting.Reg();
+  cv_grcoronas.Reg();
+  cv_grcoronasize.Reg();
+
+
+  cv_grfog.Reg();
+  cv_grfogdensity.Reg();
+  cv_grfogcolor.Reg();
+}
+
+
+
 // Converts Doom sector light values to suitable background pixel
 // color. extralight is for temporary brightening of the screen due to
 // muzzle flashes etc.
-
-byte LightLevelToLum(int l, int extralight) {
+byte LightLevelToLum(int l, int extralight)
+{
   /* 
   if (fixedcolormap)
     return 255;
@@ -78,27 +121,26 @@ byte LightLevelToLum(int l, int extralight) {
   return l;
 }
 
-// Hurdler's magical mystery mapping function initializer.
 
-void InitLumLut() {
-    int i;
-    float k;
-    for (i = 0; i < 256; i++)
+
+// Hurdler's magical mystery mapping function initializer.
+void InitLumLut()
+{
+  for (int i = 0; i < 256; i++)
     {
-        // this polygone is the solution of equ : f(0)=0, f(1)=1
-        // f(.5)=.5, f'(0)=0, f'(1)=0), f'(.5)=K
+      // this polygone is the solution of equ : f(0)=0, f(1)=1
+      // f(.5)=.5, f'(0)=0, f'(1)=0), f'(.5)=K
 #define K   2
 #define A  (-24+16*K)
 #define B  ( 60-40*K)
 #define C  (32*K-50)
 #define D  (-8*K+15)
-        float x = (float) i / 255;
-        float xx, xxx;
-        xx = x * x;
-        xxx = x * xx;
-        k = 255 * (A * xx * xxx + B * xx * xx + C * xxx + D * xx);
-
-        lightleveltonumlut[i] = 255 < k ? 255 : int(k); //min(255, k);
+      float x = (float) i / 255;
+      float xx, xxx;
+      xx = x * x;
+      xxx = x * xx;
+      float k = 255 * (A * xx * xxx + B * xx * xx + C * xxx + D * xx);
+      lightleveltonumlut[i] = 255 < k ? 255 : int(k); //min(255, k);
     }
 }
 

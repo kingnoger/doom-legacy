@@ -218,7 +218,7 @@ PlayerInfo::PlayerInfo(const LocalPlayerInfo *p)
   viewz = viewheight = deltaviewheight = 0;
   palette = -1;
   damagecount = bonuscount = 0;
-  itemuse = false;
+  itemuse = 0;
 
   Reset(false, true);  // clear score, frags...
 
@@ -344,11 +344,11 @@ U32 PlayerInfo::packUpdate(GhostConnection *c, U32 mask, class BitStream *stream
 	stream->write(damagecount);
       if (stream->writeFlag(bonuscount))
 	stream->write(bonuscount);
-      damagecount = bonuscount = 0;
+
+      stream->writeFlag(itemuse);
     }
 
-  stream->writeFlag(itemuse);
-  itemuse = false;
+
 
 
   // the return value from packUpdate can set which states still
@@ -404,9 +404,11 @@ void PlayerInfo::unpackUpdate(GhostConnection *c, BitStream *stream)
 	stream->read(&damagecount);
       if (stream->readFlag())
 	stream->read(&bonuscount);
+
+      itemuse = stream->readFlag();
     }
 
-  itemuse = stream->readFlag();
+
 }
 
 
@@ -462,6 +464,21 @@ PLAYERINFO_RPC_C2S(c2sIntermissionDone, (), ())
 }
 
 
+
+void PlayerInfo::Ticker()
+{
+  if (bonuscount > 0)
+    bonuscount--;
+
+  if (damagecount > 100)
+    damagecount = 100;  // teleport stomp does 10k points...
+  else if (damagecount > 0)
+    damagecount--;
+
+  // inventory
+  if (itemuse > 0)
+    itemuse--;
+}
 
 // send a message to the player
 void PlayerInfo::SetMessage(const char *msg, int priority, int type)

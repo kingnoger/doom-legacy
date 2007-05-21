@@ -68,6 +68,8 @@
 
 #include "i_video.h" // rendermode! fix!
 
+#include "hardware/oglrenderer.hpp"
+
 
 /*!
   \defgroup g_central The most central classes of Doom Legacy
@@ -257,8 +259,6 @@ bool force_wipe = false; // TODO into renderer module...
 
 void GameInfo::Display()
 {
-  extern int scaledviewwidth;
-
   static gamestate_t oldgamestate = GS_NULL;
   static int borderdrawcount;
   static int screenwipe = 0; // screen wipe progress
@@ -298,32 +298,32 @@ void GameInfo::Display()
   // BP: Used only by linux GGI version
   I_UpdateNoBlit();
 
-  bool redrawsbar = false;
-
   // do buffered drawing
   switch (state)
     {
     case GS_LEVEL:
       if (game.tic)
-        {
-          hud.HU_Erase();
-          if (screenwipe || rendermode != render_soft)
-            redrawsbar = true;
-        }
+	hud.HU_Erase();
 
       // see if the border needs to be initially drawn
       if (oldgamestate != GS_LEVEL)
         R_FillBackScreen();    // draw the pattern into the back screen  ->s1
 
+      // if wiping, refresh entire HUD
+      if (screenwipe)
+	hud.RefreshStatusbar();
+
       // draw either automap or game
       if (automap.active)
 	{
 	  automap.Drawer();
+	  if (ViewPlayers.size())
+	    hud.Draw(ViewPlayers[0], 0); // draw hud on top anyway
 	}
       else
         {
           // see if the border needs to be updated to the screen
-          if (scaledviewwidth != vid.width)
+          if (viewwidth != vid.width)
             {
               // the menu may draw over parts out of the view window,
               // which are refreshed only when needed
@@ -338,8 +338,7 @@ void GameInfo::Display()
             }
           Drawer();
         }
-
-      hud.Draw(redrawsbar); // draw hud on top anyway
+      hud.DrawCommon();
       break;
 
     case GS_INTERMISSION:
@@ -448,7 +447,7 @@ void GameInfo::Display()
 }
 
 
-
+void R_SetViewport(int i);
 
 /// Renders the game view
 void GameInfo::Drawer()
@@ -460,15 +459,33 @@ void GameInfo::Drawer()
 
   for (int i = 0; i < n; i++)
     {
+      // select correct viewport
+      if (rendermode == render_opengl)
+	oglrenderer->SetViewport(i);
+      else
+	R_SetViewport(i);
+
       PlayerInfo *p = ViewPlayers[i];
 
       if (p->pov && p->mp)
 	{
 	  if (!paused)
 	    p->CalcViewHeight(); // bob the view
-	  R.R_RenderPlayerView(i, p);
+
+	  if (rendermode == render_opengl)
+	    oglrenderer->RenderPlayerView(p);
+	  else
+	    R.R_RenderPlayerView(p);
 	}
+
+      hud.Draw(p, i); // draw hud on top anyway (uses Texture::Draw funcs)
     }
+
+  // back to fullscreen rendering for menu, automap, console etc.
+  if (rendermode == render_opengl)
+    oglrenderer->SetFullScreenViewport();
+  else
+    vid.scaledofs = 0;
 
   //CONS_Printf("GI::Draw done\n");
 }
