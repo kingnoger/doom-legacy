@@ -794,15 +794,16 @@ Material::TextureRef::TextureRef()
   t = NULL;
   xscale = yscale = 1;
 #ifndef NO_OPENGL
-  mag_filter = 0; // If this is zero, take value from consvar.
+  mag_filter = 0; // If these are zero, take values from consvars.
   min_filter = 0;
+  anisotropy = 0;
 #endif
 }
 
 
 void Material::TextureRef::GLSetTextureParams()
 {
-  GLint magf, minf;
+  GLint magf, minf, aniso;
   glBindTexture(GL_TEXTURE_2D, t->GLPrepare()); // bind the texture
 
   if(mag_filter != 0) {
@@ -818,8 +819,11 @@ void Material::TextureRef::GLSetTextureParams()
     }
   }
 
+  aniso = anisotropy ? anisotropy : cv_granisotropy.value;
+
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magf);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, minf);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
 }
 
 

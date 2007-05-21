@@ -74,6 +74,7 @@ static void Command_GrStats_f();
 CV_PossibleValue_t grcrappymlook_cons_t[]= {{0,"Off"}, {1,"On"},{2,"Full"}, {0,NULL} };
 CV_PossibleValue_t grgamma_cons_t[]= {{1,"MIN"}, {255,"MAX"}, {0,NULL} };
 CV_PossibleValue_t grfov_cons_t[]= {{0,"MIN"}, {179,"MAX"}, {0,NULL} };
+CV_PossibleValue_t granisotropy_cons_t[]= {{1,"MIN"}, {16,"MAX"}, {0,NULL}};
 
 // Only list mipmapping filter modes, since we always use them.
 CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "Nearest_Nearest"},
@@ -85,6 +86,7 @@ CV_PossibleValue_t grfiltermode_cons_t[]= {{0, "Nearest_Nearest"},
 consvar_t cv_grrounddown       = {"gr_rounddown",       "Off", 0,       CV_OnOff };
 consvar_t cv_grcrappymlook     = {"gr_mlook",          "Full", CV_SAVE, grcrappymlook_cons_t };
 consvar_t cv_grfov             = {"gr_fov",              "90", CV_SAVE|CV_CALL, grfov_cons_t, CV_grFov_OnChange };
+consvar_t cv_granisotropy      = {"gr_anisotropy",        "1", CV_SAVE, granisotropy_cons_t, NULL };
 consvar_t cv_grsky             = {"gr_sky",              "On", 0,       CV_OnOff };
 consvar_t cv_grfog             = {"gr_fog",              "On", CV_SAVE, CV_OnOff };
 consvar_t cv_grfogcolor        = {"gr_fogcolor",     "000000", CV_SAVE, NULL };
@@ -325,6 +327,7 @@ void HWRend::AddCommands()
   cv_grcoronas.Reg();
   cv_grcoronasize.Reg();
   cv_grfov.Reg();
+  cv_granisotropy.Reg();
   cv_grfogdensity.Reg();
   cv_grfogcolor.Reg();
   cv_grfog.Reg();

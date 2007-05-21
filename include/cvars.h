@@ -154,6 +154,7 @@ extern consvar_t cv_grmblighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
 extern consvar_t cv_grfov;
+extern consvar_t cv_granisotropy;
 extern consvar_t cv_grpolygonsmooth;
 extern consvar_t cv_grmd2;
 extern consvar_t cv_grtranswall;

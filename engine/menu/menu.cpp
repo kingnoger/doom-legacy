@@ -3299,6 +3299,7 @@ static menuitem_t OpenGLOptions_MI[]=
   menuitem_t(IT_CVAR, NULL, "Field of view"       , &cv_grfov             , 10),
   menuitem_t(IT_CVAR, NULL, "Quality"             , &cv_scr_depth         , 20),
   menuitem_t(IT_CVAR, NULL, "Texture Filter"      , &cv_grfiltermode      , 30),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Anisotropy", &cv_granisotropy , 40),
 
   menuitem_t(IT_LINK, NULL, "Lighting..."       , &OGL_LightingDef   , 60),
   menuitem_t(IT_LINK, NULL, "Fog..."            , &OGL_FogDef        , 70),

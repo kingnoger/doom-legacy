@@ -333,6 +333,7 @@ public:
     float worldwidth, worldheight; ///< dimensions in world units
     float xscale, yscale;          ///< texel-size / world-size    
     GLint mag_filter, min_filter;  ///< OpenGL magnification and minification filters to use
+    GLint anisotropy;              ///< Maximum amount of filtering anisotropy.
 
     // TODO blending type
 
