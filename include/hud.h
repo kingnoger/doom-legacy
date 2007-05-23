@@ -67,7 +67,9 @@ protected:
   vector<class HudWidget *> statusbar; ///< status bar
   vector<HudWidget *> mainbar; ///< part of the status bar that is hidden by open inventory
   vector<HudWidget *> keybar;  ///< part of the status bar that is shown under automap
+  vector<HudWidget *> always;  ///< part of the status bar overlapping the 3D viewport, must be drawn always
   vector<HudWidget *> overlay; ///< HUD overlay
+
 
   void UpdateWidgets(class PlayerInfo *p, int vp);
   void PaletteFlash(PlayerInfo *p);

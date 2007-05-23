@@ -318,7 +318,10 @@ void GameInfo::Display()
 	{
 	  automap.Drawer();
 	  if (ViewPlayers.size())
-	    hud.Draw(ViewPlayers[0], 0); // draw hud on top anyway
+	    {
+	      hud.RefreshStatusbar();
+	      hud.Draw(ViewPlayers[0], 0); // draw hud on top anyway
+	    }
 	}
       else
         {

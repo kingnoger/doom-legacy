@@ -1183,9 +1183,9 @@ int Map::Serialize(LArchive &a)
 	  si = li->sideptr[1];
 	  if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
 
-	  if (diff & LD_S2TOPTEX) a << si->toptexture;
-	  if (diff & LD_S2BOTTEX) a << si->bottomtexture;
-	  if (diff & LD_S2MIDTEX) a << si->midtexture;
+	  if (diff2 & LD_S2TOPTEX) a << si->toptexture;
+	  if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;
+	  if (diff2 & LD_S2MIDTEX) a << si->midtexture;
         }
     }
   a << (temp = MARK_END);
@@ -1425,9 +1425,9 @@ int Map::Unserialize(LArchive &a)
       si = li->sideptr[1];
       if (diff2 & LD_S2TEXOFF) a << si->textureoffset;
 
-      if (diff & LD_S2TOPTEX) a << si->toptexture;
-      if (diff & LD_S2BOTTEX) a << si->bottomtexture;
-      if (diff & LD_S2MIDTEX) a << si->midtexture;
+      if (diff2 & LD_S2TOPTEX) a << si->toptexture;
+      if (diff2 & LD_S2BOTTEX) a << si->bottomtexture;
+      if (diff2 & LD_S2MIDTEX) a << si->midtexture;
     }
 
   //----------------------------------------------

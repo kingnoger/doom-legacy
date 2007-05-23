@@ -689,9 +689,17 @@ void HUD::UpdateWidgets(PlayerInfo *st_player, int vp)
   if (game.mode == gm_heretic || game.mode == gm_hexen)
     {
       if (st_player->invTics)
-        invopen = true;
+	{
+	  if (!invopen)
+	    st_refresh = true;
+	  invopen = true;
+	}
       else
-        invopen = false;
+	{
+	  if (invopen)
+	    st_refresh = true;
+	  invopen = false;
+	}
 
       mainbar_on = statusbar_on && !invopen && !automap.active;
 
@@ -975,7 +983,7 @@ void HUD::CreateHexenWidgets()
 
   // gargoyle wings
   h = new HudBinIcon(st_x, st_y-27, &st_true, NULL, PatchH2TOP);
-  statusbar.push_back(h);
+  always.push_back(h);
 
   // mainbar (closed inventory shown)
   // frags / health
@@ -1057,9 +1065,9 @@ void HUD::CreateHereticWidgets()
 
   // gargoyle horns
   h = new HudBinIcon(st_x, st_y-10, &st_true, NULL, PatchLTFCTOP);
-  statusbar.push_back(h);
+  always.push_back(h);
   h = new HudBinIcon(st_x+290, st_y-10, &st_true, NULL, PatchRTFCTOP);
-  statusbar.push_back(h);
+  always.push_back(h);
 
   // inventory system
   h = new HudInventory(st_x+34, st_y+1, &invopen, &st_itemuse, st_invslots, &st_curpos,
@@ -1195,6 +1203,10 @@ void HUD::ST_CreateWidgets()
     delete keybar[i];
   keybar.clear();
 
+  for (int i = always.size()-1; i>=0; i--)
+    delete always[i];
+  always.clear();
+
   for (int k=0; k<MAX_GLVIEWPORTS; k++)
     {
       if (sliders[k]) delete sliders[k];
@@ -1237,12 +1249,13 @@ void HUD::ST_Drawer(int vp)
           ST_RefreshBackground();
         }
 
+      for (i = always.size()-1; i>=0; i--)
+	always[i]->Update(true);
 
       if (game.mode < gm_heretic)
 	faces[vp]->Update(st_refresh);
       else
 	sliders[vp]->Update(st_refresh);
-
 
       for (i = statusbar.size()-1; i>=0; i--)
 	statusbar[i]->Update(st_refresh);

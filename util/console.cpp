@@ -1108,7 +1108,10 @@ void Console::Drawer()
   //hud.font['I'-HU_FONTSTART]->leftoffset = -2;
 
   if (con_height > 0)
-    DrawConsole();
+    {
+      DrawConsole();
+      hud.RefreshStatusbar(); // since the console may be drawn over the statusbar
+    }
   else if (game.state == GameInfo::GS_LEVEL)
     DrawHudlines();
 
