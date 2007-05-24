@@ -17,6 +17,11 @@
 //
 //-----------------------------------------------------------------------------
 
+/// \file
+/// \brief OpenGL renderer.
+
+#define GL_GLEXT_PROTOTYPES 1
+
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
@@ -134,6 +139,14 @@ void OGLRenderer::InitGLState()
 
   GLfloat light_position[] = { 1.0, -1.0, 0.0, 0.0 }; // infinitely far away
   glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+  // red aiming dot parameters
+  glEnable(GL_POINT_SMOOTH);
+  glPointSize(8.0);
+  glPointParameterf(GL_POINT_SIZE_MIN, 2.0);
+  glPointParameterf(GL_POINT_SIZE_MAX, 8.0);
+  GLfloat point_att[3] = {1, 0, 1e-4};
+  glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, point_att);
 }
 
 
@@ -573,6 +586,9 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
       theta = Degrees(player->pov->pitch);
 
       Render3DView(mp->skybox_pov);
+      glMatrixMode(GL_MODELVIEW);
+      glPopMatrix();
+
       glClear(GL_DEPTH_BUFFER_BIT);
       validcount++; // prepare to render same sectors again if necessary
     }
@@ -583,6 +599,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
   Render3DView(player->pov);
 
   // render crosshair
+  GLdouble chx, chy, chz; // Last one is a dummy.
   if (player->pawn)
     {
       float aimsine = 0.0;
@@ -601,7 +618,6 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
       GLdouble model[16];
       GLdouble proj[16];
       GLint vp[4];
-      GLdouble chx, chy, chz; // Last one is a dummy.
       glGetDoublev(GL_MODELVIEW_MATRIX, model);
       glGetDoublev(GL_PROJECTION_MATRIX, proj);
       glGetIntegerv(GL_VIEWPORT, vp);
@@ -611,33 +627,35 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 
       // Draw a red dot there. Used for testing.
       glDisable(GL_DEPTH_TEST);
+      glDisable(GL_LIGHTING);
       glBindTexture(GL_TEXTURE_2D, 0);
-      glColor4f(1.0, 0.0, 0.0, 1.0);
+
+      glColor3f(0.8, 0.0, 0.0);
       glBegin(GL_POINTS);
       glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
       glEnd();
-
-      Setup2DMode();
-
-      extern Material *crosshair[];
-      if (LocalPlayers[0].crosshair) // FIXME
-	{
-	  int c = LocalPlayers[0].crosshair & 3;
-	  Material *mat = crosshair[c-1];
-
-	  GLfloat top, left, bottom, right;
-
-	  left   = (chx - mat->leftoffs) / viewportw;
-	  right  = left + mat->worldwidth / viewportw;
-	  top    = (chy + mat->topoffs) / viewporth;
-	  bottom = top - mat->worldheight / viewporth;
-
-	  Draw2DGraphic(left, bottom, right, top, mat);
-	}
     }
-  else
-    // Pretty soon we want to draw HUD graphics and stuff.
-    Setup2DMode();
+
+  // Pretty soon we want to draw HUD graphics and stuff.
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
+  Setup2DMode();
+
+  if (player->pawn && LocalPlayers[0].crosshair) // FIXME
+    {
+      extern Material *crosshair[];
+      int c = LocalPlayers[0].crosshair & 3;
+      Material *mat = crosshair[c-1];
+
+      GLfloat top, left, bottom, right;
+
+      left   = chx/viewportw - mat->leftoffs/BASEVIDWIDTH;
+      right  = left + mat->worldwidth/BASEVIDWIDTH;
+      top    = chy/viewporth + mat->topoffs/BASEVIDHEIGHT;
+      bottom = top - mat->worldheight/BASEVIDHEIGHT;
+
+      Draw2DGraphic(left, bottom, right, top, mat);
+    }
 
   // Draw weapon sprites.
   bool drawPsprites = (player->pov == player->pawn);
@@ -649,6 +667,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 
 /// Set up state and draw a view of the level from the given viewpoint.
 /// It is usually the place where the player is currently located.
+/// NOTE: Leaves a modelview matrix on the stack, which _must_ be popped by the caller!
 void OGLRenderer::Render3DView(Actor *pov)
 {
   glMatrixMode(GL_MODELVIEW);
@@ -666,9 +685,6 @@ void OGLRenderer::Render3DView(Actor *pov)
   curssec = pov->subsector;
 
   RenderBSPNode(mp->numnodes-1);
-
-  glMatrixMode(GL_MODELVIEW);
-  glPopMatrix();
 }
 
 

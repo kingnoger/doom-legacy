@@ -252,7 +252,7 @@ bool PNGTexture::ReadData(bool read_image, bool sw_rend)
 	  if (png_get_valid(png_p, info_p, PNG_INFO_tRNS))
 	    png_set_tRNS_to_alpha(png_p);
 
-	  if (color_type == PNG_COLOR_TYPE_RGB)
+	  if (!(color_type & PNG_COLOR_MASK_ALPHA))
 	    png_set_filler(png_p, 0xFF, PNG_FILLER_AFTER); // add opaque alpha channel if none present
 
 	  // read it to memory owned by pixels
