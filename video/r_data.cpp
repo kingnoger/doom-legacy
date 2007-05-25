@@ -265,10 +265,11 @@ static void R_ColormapPatch(patch_t *p, byte *colormap)
 //  Texture
 //==================================================================
 
-Texture::Texture(const char *n)
+Texture::Texture(const char *n, int l)
   : cacheitem_t(n)
 {
   pixels = NULL;
+  lump = l;
   leftoffs = topoffs = 0;
   width = height = 0;
   w_bits = h_bits = 0;
@@ -296,7 +297,7 @@ void Texture::GLGetData()
       byte *index_in = pixels;
 
       RGBA_t *result = static_cast<RGBA_t*>(Z_Malloc(sizeof(RGBA_t)*width*height, PU_TEXTURE, NULL));
-      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpNum(materials.GetPaletteLump(0), PU_DAVE)); // FIXME palette
+      RGB_t *palette = static_cast<RGB_t*>(fc.CacheLumpNum(materials.GetPaletteLump(lump >> 16), PU_DAVE));
 
       for (int i=0; i<width; i++)
 	for (int j=0; j<height; j++)
@@ -384,9 +385,8 @@ byte *Texture::GetColumn(fixed_t fcol)
 
 // Flats etc.
 LumpTexture::LumpTexture(const char *n, int l, int w, int h)
-  : Texture(n)
+  : Texture(n, l)
 {
-  lump = l;
   width = w;
   height = h;
   Initialize();
@@ -503,10 +503,8 @@ static void R_DrawColumnInCache(column_t *col, byte *cache, int originy, int cac
 
 
 PatchTexture::PatchTexture(const char *n, int l)
-  : Texture(n)
+  : Texture(n, l)
 {
-  lump = l;
-
   patch_t p;
   fc.ReadLumpHeader(lump, &p, sizeof(patch_t));
   width = SHORT(p.width);
@@ -601,8 +599,8 @@ column_t *PatchTexture::GetMaskedColumn(fixed_t fcol)
 //==================================================================
 
 
-DoomTexture::DoomTexture(const char *n, const maptexture_t *mtex)
-  : Texture(n)
+DoomTexture::DoomTexture(const char *n, int l, const maptexture_t *mtex)
+  : Texture(n, l)
 {
   patchcount = SHORT(mtex->patchcount);
   patches = static_cast<texpatch_t*>(Z_Malloc(sizeof(texpatch_t)*patchcount, PU_TEXTURE, 0));
@@ -707,7 +705,7 @@ byte *DoomTexture::GetData()
         columnofs[i] = i * height;
 
       // prepare texture bitmap
-      memset(pixels, TRANSPARENTPIXEL, size); // TEST
+      memset(pixels, TRANSPARENTPIXEL, size);
 
       texpatch_t *tp;
       // Composite the patches together.
@@ -1226,7 +1224,7 @@ int material_cache_t::ReadTextures()
     int *directory = maptex+1;
 
     int numtextures2, maxoff2;
-    if (fc.FindNumForName ("TEXTURE2") != -1)
+    if (fc.FindNumForName("TEXTURE2") != -1)
       {
 	lump = fc.GetNumForName("TEXTURE2");
 	maptex2 = static_cast<int*>(fc.CacheLumpNum(lump, PU_STATIC));
@@ -1268,7 +1266,7 @@ int material_cache_t::ReadTextures()
 	// used patches in z order from bottom to top
 	maptexture_t *mtex = reinterpret_cast<maptexture_t*>(reinterpret_cast<byte*>(maptex) + offset);
 	strncpy(name8, mtex->name, 8);
-	DoomTexture *tex = new DoomTexture(name8, mtex);
+	DoomTexture *tex = new DoomTexture(name8, lump, mtex); // lump is not so crucial here, it merely needs to belong to the correct datafile
 
 	mappatch_t *mp = mtex->patches;
 	DoomTexture::texpatch_t *p = tex->patches;

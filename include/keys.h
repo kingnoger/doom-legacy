@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,11 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Key codes
+/// \brief Key codes.
 
 #ifndef keys_h
 #define keys_h 1

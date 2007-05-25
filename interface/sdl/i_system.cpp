@@ -77,6 +77,13 @@ vector<SDL_Joystick*> joysticks;
 #ifdef LMOUSE2
 static int fdmouse2 = -1;
 static bool mouse2_started = false;
+
+ CV_PossibleValue_t mouse2port_cons_t[]={{0,"/dev/gpmdata"},{1,"/dev/ttyS0"},{2,"/dev/ttyS1"},{3,"/dev/ttyS2"},{4,"/dev/ttyS3"},{0,NULL}};
+ consvar_t cv_mouse2port  = {"mouse2port","/dev/gpmdata", CV_SAVE, mouse2port_cons_t };
+ consvar_t cv_mouse2opt = {"mouse2opt","0", CV_SAVE, NULL};
+#else
+ CV_PossibleValue_t mouse2port_cons_t[]={{1,"COM1"},{2,"COM2"},{3,"COM3"},{4,"COM4"},{0,NULL}};
+ consvar_t cv_mouse2port  = {"mouse2port","COM2", CV_SAVE, mouse2port_cons_t };
 #endif
 
 static int lastmousex = 0;

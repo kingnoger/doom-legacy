@@ -22,7 +22,7 @@
 /// \brief Legacy menu. Sliders and icons. Kinda widget stuff.
 ///
 /// NOTE:
-///  The menu is scaled to the screen size. The scaling is always an
+///  The menu is scaled to the screen size. In software mode the scaling is always an
 ///  integer multiple of the original size, so that the graphics look good.
 
 #include <unistd.h>
@@ -934,21 +934,15 @@ void M_QuitDOOM(int choice)
 //                                MAIN MENU
 //===========================================================================
 
-void M_SetupPlayer(int choice);
-
 static menuitem_t Main_MI[]=
 {
   menuitem_t(IT_SUBMENU | IT_PATCH, "M_SINGLE", "SINGLE PLAYER", &SinglePlayerDef, 's'),
   menuitem_t(IT_SUBMENU | IT_PATCH, "M_MULTI" , "MULTIPLAYER", &MultiPlayerDef, 'm'),
-  menuitem_t(IT_ACT, "M_OPTION", "OPTIONS", M_SetupPlayer, 'o'),
+  menuitem_t(IT_SUBMENU | IT_PATCH, "M_OPTION", "OPTIONS", &OptionsDef, 'o'),
   menuitem_t(IT_SUBMENU | IT_PATCH, "M_RDTHIS", "INFO", &ReadDef1, 'r'),
   menuitem_t(IT_ACT, "M_QUITG" , "QUIT GAME", M_QuitDOOM, 'q')
 };
 
-enum mainmenu_e
-{
-  MI_main_setup_p1 = 2
-};
 
 // The main menu.
 Menu MainMenuDef("M_DOOM", "Main menu", NULL, ITEMS(Main_MI), 97, 64);
@@ -1420,11 +1414,13 @@ void M_SaveGame(int choice)
 
 void M_StartServerMenu(int choice);
 void M_ConnectMenu(int choice);
-void M_Splitscreen(int choice);
+void M_SetupPlayer(int choice);
 void M_NetOption(int choice);
 
 enum multiplayer_e
 {
+  MI_mp_createserver = 0,
+  MI_mp_twoplayer = 2,
   MI_mp_setup_p1 = 3,
   MI_mp_setup_p2 = 4,
 };
@@ -1432,22 +1428,16 @@ enum multiplayer_e
 
 static menuitem_t MultiPlayer_MI[] =
 {
-  menuitem_t(IT_ACT, "M_STSERV", "CREATE SERVER", M_StartServerMenu ,'a'),
-  menuitem_t(IT_ACT, "M_CONNEC", "CONNECT SERVER", M_ConnectMenu ,'c'),
-  menuitem_t(IT_ACT, "M_2PLAYR", "TWO PLAYER GAME", M_Splitscreen ,'n'),
-  menuitem_t(IT_ACT, "M_SETUPA", "SETUP PLAYER 1",M_SetupPlayer ,'s'),
-  menuitem_t(IT_ACT, "M_SETUPB", "SETUP PLAYER 2",M_SetupPlayer ,'t'),
-  menuitem_t(IT_ACT, "M_OPTION", "OPTIONS",M_NetOption ,'o'),
-  menuitem_t(IT_ACT, "M_ENDGAM", "END GAME",M_EndGame ,'e')
+  menuitem_t(IT_ACT, "M_STSERV", "CREATE SERVER", M_StartServerMenu, 'a'),
+  menuitem_t(IT_ACT, "M_CONNEC", "CONNECT SERVER", M_ConnectMenu, 'c'),
+  menuitem_t(IT_ACT, "M_2PLAYR", "TWO PLAYER GAME", M_StartServerMenu, 'n'),
+  menuitem_t(IT_ACT, "M_SETUPA", "SETUP PLAYER 1",M_SetupPlayer, 's'),
+  menuitem_t(IT_ACT, "M_SETUPB", "SETUP PLAYER 2",M_SetupPlayer, 't'),
+  menuitem_t(IT_ACT, "M_OPTION", "OPTIONS",M_NetOption, 'o'),
+  menuitem_t(IT_ACT, "M_ENDGAM", "END GAME",M_EndGame, 'e')
 };
 
 Menu MultiPlayerDef("M_MULTI", "Multiplayer", &MainMenuDef, ITEMS(MultiPlayer_MI), 85, 40);
-
-
-void M_Splitscreen(int choice)
-{
-  M_StartServerMenu(1);
-}
 
 
 // called at splitscreen changes
@@ -1467,7 +1457,7 @@ void M_SwitchSplitscreen()
 //                             OPTIONS MENU
 //===========================================================================
 
-void M_GameOption(int choice)
+static void M_GameOption(int choice)
 {
   if (!game.server)
     {
@@ -1478,64 +1468,28 @@ void M_GameOption(int choice)
 }
 
 
-static void M_SetupControlsMenu(int choice);
-static bool M_QuitSetupPlayerMenu();
-
-// Hidden menu consvars for player options.
-CV_PossibleValue_t Color_cons_t[] =
-{
-  {0,"green"}, {1,"gray"}, {2,"brown"}, {3,"red"}, {4,"light gray"},
-  {5,"light brown"}, {6,"light red"}, {7,"light blue"}, {8,"blue"}, {9,"yellow"},
-  {10,"beige"}, {0,NULL}
-};
-
-static consvar_t cv_menu_playername  = {"name", "gorak",  CV_HIDDEN, NULL};
-//static consvar_t cv_menu_pawntype    = {"pawntype", "0",  CV_HIDDEN, CV_Unsigned};
-static consvar_t cv_menu_playercolor = {"color", "0", CV_HIDDEN, Color_cons_t};
-//static consvar_t cv_menu_skin        = {"skin", "marine", CV_HIDDEN, NULL};
-static consvar_t cv_menu_autoaim = {"autoaim", "1", CV_HIDDEN, CV_OnOff};
-
-static consvar_t cv_menu_owswitch = {"originalweaponswitch", "0", CV_HIDDEN, CV_OnOff};
-static consvar_t cv_menu_weaponpref  = {"weaponpref", "1567392481457839602224446660000", CV_HIDDEN, NULL};
-CV_PossibleValue_t showmessages_cons_t[] = {{0,"None"}, {1,"Important"}, {2,"All"}, {0,NULL}};
-static consvar_t cv_menu_showmessages = {"showmessages", "1", CV_HIDDEN, showmessages_cons_t};
-
-static consvar_t cv_menu_autorun     = {"autorun", "0",     CV_HIDDEN, CV_OnOff};
-CV_PossibleValue_t crosshair_cons_t[] = {{0,"Off"}, {1,"Cross"}, {2,"Angle"}, {3,"Point"}, {0,NULL}};
-static consvar_t cv_menu_crosshair = {"crosshair", "0", CV_HIDDEN, crosshair_cons_t};
-/*
-static consvar_t cv_menu_chasecam   = {"chasecam", "0",     CV_HIDDEN, CV_OnOff};
-static consvar_t cv_menu_cam_dist   = {"cam_dist", "128",   CV_HIDDEN | CV_FLOAT, NULL};
-static consvar_t cv_menu_cam_height = {"cam_height", "20",  CV_HIDDEN | CV_FLOAT, NULL};
-static consvar_t cv_menu_cam_speed  = {"cam_speed", "0.25", CV_HIDDEN | CV_FLOAT, NULL};
-*/
-
-
 static menuitem_t Options_MI[] =
 {
-  menuitem_t(IT_CVAR, NULL, "Messages:"       ,&cv_menu_showmessages    ,0),
-  menuitem_t(IT_CVAR, NULL, "Always Run"      ,&cv_menu_autorun         ,0),
-  menuitem_t(IT_CVAR, NULL, "Crosshair"       ,&cv_menu_crosshair       ,0),
-//menuitem_t(IT_CVAR, NULL, "Crosshair scale" ,&cv_crosshairscale  ,0),
-  menuitem_t(IT_CVAR, NULL, "Autoaim"         ,&cv_menu_autoaim         ,0),
-  menuitem_t(IT_CVAR, NULL, "Control per key" ,&cv_controlperkey   ,0),
-
-  menuitem_t(IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:", 4),
-  menuitem_t(IT_CONTROLSTR, NULL, "Console"       , gk_console),
-  menuitem_t(IT_CONTROLSTR, NULL, "Talk key"      , gk_talk),
-  menuitem_t(IT_CONTROLSTR, NULL, "Rankings/Score", gk_scores),
-
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Setup Players...", M_SetupPlayer, 0),
 
   menuitem_t(IT_LINK | IT_DY, NULL, "Server Options...",&ServerOptionsDef, 4),
   menuitem_t(IT_CALL | IT_WHITE, NULL, "Game Options..."  ,M_GameOption, 0),
   menuitem_t(IT_LINK, NULL, "Sound Options..."  ,&SoundDef          ,0),
   menuitem_t(IT_LINK, NULL, "Video Options..." ,&VideoOptionsDef   ,0),
-  menuitem_t(IT_LINK, NULL, "Mouse Options..." ,&MouseOptionsDef   ,0),
-  menuitem_t(IT_CALL | IT_WHITE, NULL, "Setup Controls...",M_SetupControlsMenu, 0)
+
+  menuitem_t(IT_CVAR, NULL, "Controls per key" ,&cv_controlperkey   ,0),
+  menuitem_t(IT_NONE | IT_STRING | IT_DISABLED | IT_WHITE | IT_DY, NULL, "Shared controls:", 4),
+  menuitem_t(IT_CONTROLSTR, NULL, "Console"       , gk_console),
+  menuitem_t(IT_CONTROLSTR, NULL, "Talk key"      , gk_talk),
+  menuitem_t(IT_CONTROLSTR, NULL, "Rankings/Score", gk_scores),
 };
 
-Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30,
-		0, NULL, M_QuitSetupPlayerMenu);
+enum mainmenu_e
+{
+  MI_options_setup_p1 = 0
+};
+
+Menu OptionsDef("M_OPTTTL", "OPTIONS", &MainMenuDef, ITEMS(Options_MI), 60, 30);
 
 
 //===========================================================================
@@ -1596,7 +1550,7 @@ void M_StartServerMenu(int choice)
       return;
     }
 
-  if (choice == 1)
+  if (choice == MI_mp_twoplayer)
     cv_splitscreen.Set("1");
 
   // HACK, update map name
@@ -1708,9 +1662,40 @@ void M_ConnectMenu(int choice)
 //                          PLAYER SETUP MENUS
 //===========================================================================
 
-static int setup_player; // is set before entering the MultiPlayer setup menu
+static int current_setup = -1; // HACK
 static presentation_t *multi_pres = NULL;
-static bool setupcontrols_player2 = false;
+
+static void SetupPlayer_OnChange();
+
+// Hidden menu consvars for player options.
+CV_PossibleValue_t setupplayer_cons_t[] = {{0,"MIN"}, {NUM_LOCALHUMANS-1,"MAX"}, {0,NULL}};
+static consvar_t cv_menu_setupplayer  = {"setupplayer", "0", CV_HIDDEN | CV_CALL, setupplayer_cons_t, SetupPlayer_OnChange}; // TODO always call func when Set
+static consvar_t cv_menu_playername  = {"name", "gorak",  CV_HIDDEN, NULL};
+//static consvar_t cv_menu_pawntype    = {"pawntype", "0",  CV_HIDDEN, CV_Unsigned};
+CV_PossibleValue_t Color_cons_t[] =
+{
+  {0,"green"}, {1,"gray"}, {2,"brown"}, {3,"red"}, {4,"light gray"},
+  {5,"light brown"}, {6,"light red"}, {7,"light blue"}, {8,"blue"}, {9,"yellow"},
+  {10,"beige"}, {0,NULL}
+};
+static consvar_t cv_menu_playercolor = {"color", "0", CV_HIDDEN, Color_cons_t};
+//static consvar_t cv_menu_skin        = {"skin", "marine", CV_HIDDEN, NULL};
+static consvar_t cv_menu_autoaim = {"autoaim", "1", CV_HIDDEN, CV_OnOff};
+
+static consvar_t cv_menu_owswitch = {"originalweaponswitch", "0", CV_HIDDEN, CV_OnOff};
+static consvar_t cv_menu_weaponpref  = {"weaponpref", "1567392481457839602224446660000", CV_HIDDEN, NULL};
+CV_PossibleValue_t showmessages_cons_t[] = {{0,"None"}, {1,"Important"}, {2,"All"}, {0,NULL}};
+static consvar_t cv_menu_showmessages = {"showmessages", "1", CV_HIDDEN, showmessages_cons_t};
+
+static consvar_t cv_menu_autorun     = {"autorun", "0",     CV_HIDDEN, CV_OnOff};
+CV_PossibleValue_t crosshair_cons_t[] = {{0,"Off"}, {1,"Cross"}, {2,"Angle"}, {3,"Point"}, {0,NULL}};
+static consvar_t cv_menu_crosshair = {"crosshair", "0", CV_HIDDEN, crosshair_cons_t};
+/*
+static consvar_t cv_menu_chasecam   = {"chasecam", "0",     CV_HIDDEN, CV_OnOff};
+static consvar_t cv_menu_cam_dist   = {"cam_dist", "128",   CV_HIDDEN | CV_FLOAT, NULL};
+static consvar_t cv_menu_cam_height = {"cam_height", "20",  CV_HIDDEN | CV_FLOAT, NULL};
+static consvar_t cv_menu_cam_speed  = {"cam_speed", "0.25", CV_HIDDEN | CV_FLOAT, NULL};
+*/
 
 
 static void M_HandleSetupPlayerClass(int val)
@@ -1732,7 +1717,7 @@ static void M_HandleSetupPlayerClass(int val)
     }
 
   int ptype = allowed_pawntypes[i];
-  LocalPlayers[setup_player].ptype = ptype;
+  LocalPlayers[cv_menu_setupplayer.value].ptype = ptype;
   if (multi_pres)
     {
       delete multi_pres;
@@ -1764,11 +1749,8 @@ static void M_HandleSetupPlayerSkin(int val)
 }
 */
 
-
-static bool M_QuitSetupPlayerMenu()
+static void StorePlayerPrefs(LocalPlayerInfo &p)
 {
-  LocalPlayerInfo &p = LocalPlayers[setup_player];
-
   p.name = cv_menu_playername.str;
   p.color = cv_menu_playercolor.value;
   p.autoaim = cv_menu_autoaim.value;
@@ -1782,6 +1764,15 @@ static bool M_QuitSetupPlayerMenu()
   p.autorun = cv_menu_autorun.value;
   p.crosshair = cv_menu_crosshair.value;
 
+  p.UpdatePreferences();
+}
+
+
+static bool M_QuitSetupPlayerMenu()
+{
+  StorePlayerPrefs(LocalPlayers[current_setup]);
+  current_setup = -1;
+
   if (multi_pres)
     {
       // delete the animated guy
@@ -1789,27 +1780,23 @@ static bool M_QuitSetupPlayerMenu()
       multi_pres = NULL;
     }
 
-  if (!p.info)
-    return true; // nothing else to do if we have no PlayerInfo yet
-
-  if (game.server)
-    {
-      p.info->options = p;
-      p.info->name = p.name;
-      p.info->setMaskBits(0x1); // TODO enum
-    }
-  else
-    game.net->SendPlayerOptions(p.info->number, p);
-
   return true;
+}
+
+
+void M_SetupControls(int choice)
+{
+  setup_gc = gamecontrol[current_setup];  
+  Menu::SetupNextMenu(&ControlDef);
 }
 
 
 static menuitem_t SetupPlayer_MI[] =
 {
-  menuitem_t(IT_TEXTBOX, NULL, "Your name",  &cv_menu_playername, 0),
-  menuitem_t(IT_KEYHANDLER | IT_STRING, NULL, "Your species" , M_HandleSetupPlayerClass, 0),
-  menuitem_t(IT_CVAR, NULL, "Your color",    &cv_menu_playercolor, 0),
+  menuitem_t(IT_CVAR | IT_WHITE | IT_DY, NULL, "Setup player",  &cv_menu_setupplayer, 5),
+  menuitem_t(IT_TEXTBOX, NULL, "Name",  &cv_menu_playername, 0),
+  menuitem_t(IT_KEYHANDLER | IT_STRING, NULL, "Species" , M_HandleSetupPlayerClass, 0),
+  menuitem_t(IT_CVAR, NULL, "Color",    &cv_menu_playercolor, 0),
   //menuitem_t(IT_KEYHANDLER | IT_STRING, NULL, "Your skin" , M_HandleSetupPlayerSkin, 0},
   menuitem_t(IT_CVAR, NULL, "Autoaim",              &cv_menu_autoaim, 0),
   menuitem_t(IT_CVAR, NULL, "Orig. weapon switch",  &cv_menu_owswitch, 0),
@@ -1819,40 +1806,43 @@ static menuitem_t SetupPlayer_MI[] =
   menuitem_t(IT_CVAR, NULL, "Crosshair",       &cv_menu_crosshair, 0),
   //menuitem_t(IT_CVAR, NULL, "Crosshair scale" ,&cv_crosshairscale, 0),
   // TODO chasecam
-  menuitem_t(IT_CALL | IT_WHITE,    0, "Setup Controls...", M_SetupControlsMenu, 0),
+  menuitem_t(IT_CALL | IT_WHITE, NULL, "Setup Controls...", M_SetupControls, 0),
   menuitem_t(IT_LINK, NULL, "Mouse config...",  &MouseOptionsDef, 0)
 };
 
-enum setupplayer_e
-{
-  MI_setupp_mousecfg = 9
-};
 
-
-Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &MultiPlayerDef, ITEMS(SetupPlayer_MI), 20, 30,
+Menu  SetupPlayerDef("M_MULTI", "Multiplayer", &OptionsDef, ITEMS(SetupPlayer_MI), 20, 30,
 		     0, &Menu::DrawSetupPlayer, M_QuitSetupPlayerMenu);
 
 
-
-// setup the local player(s)
-void M_SetupPlayer(int choice)
+enum setupplayer_e
 {
-  if (choice == MI_mp_setup_p1 || choice == MI_main_setup_p1) // First local player
-    {
-      setup_player = 0;
-      setupcontrols_player2 = false;
+  MI_setupp_mousecfg = 10
+};
 
-      SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&MouseOptionsDef);
-    }
+
+static void SetupPlayer_OnChange()
+{
+  unsigned xxx = cv_menu_setupplayer.value;
+
+  if (current_setup >= 0)
+    StorePlayerPrefs(LocalPlayers[current_setup]); // save the current setup before re-using the consvars
+
+  current_setup = xxx;
+
+  if (xxx == 0)
+    SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&MouseOptionsDef);
   else
-    {
-      setup_player = 1;
-      setupcontrols_player2 = true;
+    SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&Mouse2OptionsDef);
 
-      SetupPlayer_MI[MI_setupp_mousecfg].SetMenu(&Mouse2OptionsDef);
+  if (multi_pres)
+    {
+      // delete the animated guy
+      delete multi_pres;
+      multi_pres = NULL;
     }
 
-  LocalPlayerInfo &p = LocalPlayers[setup_player];
+  LocalPlayerInfo &p = LocalPlayers[xxx];
 
   cv_menu_playername.Set(p.name.c_str());
   cv_menu_playercolor.Set(p.color);
@@ -1870,13 +1860,20 @@ void M_SetupPlayer(int choice)
 
   if (p.ptype < 0)
     p.ptype = allowed_pawntypes[0];
+}
 
-  multi_pres = NULL;
 
-  if (choice == 2)
-    Menu::SetupNextMenu(&OptionsDef);
+
+// setup the local player(s)
+void M_SetupPlayer(int choice)
+{
+  if (choice == MI_mp_setup_p1 || choice == MI_options_setup_p1) // First local player
+    cv_menu_setupplayer.Set(0);
   else
-    Menu::SetupNextMenu(&SetupPlayerDef);
+    cv_menu_setupplayer.Set(1);
+
+  current_setup = cv_menu_setupplayer.value;
+  Menu::SetupNextMenu(&SetupPlayerDef);
 }
 
 
@@ -1886,7 +1883,7 @@ void M_SetupPlayer(int choice)
 #define PLBOXH    9
 void Menu::DrawSetupPlayer()
 {
-  LocalPlayerInfo &p = LocalPlayers[setup_player];
+  LocalPlayerInfo &p = LocalPlayers[cv_menu_setupplayer.value];
   // TODO team selection, draw a team symbol...
 
   // draw name string
@@ -2294,7 +2291,7 @@ static menuitem_t MouseOptions_MI[]=
   //#endif
 };
 
-Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &OptionsDef, ITEMS(MouseOptions_MI), 50, 40);
+Menu  MouseOptionsDef("M_OPTTTL", "OPTIONS", &SetupPlayerDef, ITEMS(MouseOptions_MI), 50, 40);
 
 
 //===========================================================================
@@ -2326,30 +2323,6 @@ static bool M_QuitControlsMenu()
   return true;
 }
 
-/// Start the controls menu, setting it up for either (local) player 1 or 2
-static void M_SetupControlsMenu(int choice)
-{
-  Menu::SetupNextMenu(&ControlDef);
-
-  if (setupcontrols_player2 && choice != 10)
-    // menuitem # 10 means that the call came from Options menu, which
-    // always sets player 1 controls. Hack.
-    setup_gc = gamecontrol[1]; // was called from secondary player's multiplayer setup menu
-  else
-    setup_gc = gamecontrol[0]; // was called from main Options (for console player, then)
-}
-
-/// Start the second controls menu, setting it up for either (local) player 1 or 2
-static void M_SetupControlsMenu2(int choice)
-{
-  Menu::SetupNextMenu(&ControlDef2);
-
-  if (setupcontrols_player2)
-    setup_gc = gamecontrol[1]; // was called from secondary player's multiplayer setup menu
-  else
-    setup_gc = gamecontrol[0]; // was called from main Options (for console player, then)
-}
-
 
 static menuitem_t Control_MI[]=
 {
@@ -2368,10 +2341,10 @@ static menuitem_t Control_MI[]=
   menuitem_t(IT_CONTROLSTR, NULL, "Look Down"   , gc_lookdown   ),
   menuitem_t(IT_CONTROLSTR, NULL, "Center View" , gc_centerview ),
   menuitem_t(IT_CONTROLSTR, NULL, "Mouselook"   , gc_mouseaiming),
-  menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "next", M_SetupControlsMenu2, 20)
+  menuitem_t(IT_LINK | IT_DY, NULL, "more", &ControlDef2, 20)
 };
 
-Menu  ControlDef("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control_MI), 40, 40,
+Menu  ControlDef("M_CONTRO", "Setup Controls", &SetupPlayerDef, ITEMS(Control_MI), 40, 40,
 		 0, &Menu::DrawControl, &M_QuitControlsMenu);
 
 
@@ -2392,11 +2365,11 @@ static menuitem_t Control2_MI[]=
   menuitem_t(IT_CONTROLSTR, NULL, "Inventory Right", gc_invnext),
   menuitem_t(IT_CONTROLSTR, NULL, "Inventory Use"  , gc_invuse ),
   menuitem_t(IT_CONTROLSTR, NULL, "Fly down"       , gc_flydown),
-  menuitem_t(IT_CALL | IT_WHITE | IT_DY, NULL, "next", M_SetupControlsMenu, 20)
+  menuitem_t(IT_LINK | IT_DY, NULL, "more", &ControlDef, 20)
 };
 
 
-Menu  ControlDef2("M_CONTRO", "Setup Controls", &OptionsDef, ITEMS(Control2_MI), 40, 40,
+Menu  ControlDef2("M_CONTRO", "Setup Controls", &SetupPlayerDef, ITEMS(Control2_MI), 40, 40,
 		  0, &Menu::DrawControl, &M_QuitControlsMenu);
 
 
@@ -2407,7 +2380,7 @@ void Menu::DrawControl()
   // draw title, strings and submenu
   DrawMenu();
 
-  M_CenterText(y-12, (setupcontrols_player2 ?
+  M_CenterText(y-12, (cv_menu_setupplayer.value ?
 		      "SET CONTROLS FOR SECONDARY PLAYER" :
 		      "ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 }
@@ -2870,8 +2843,15 @@ bool Menu::MenuResponder(int key)
           return true;
         }
       lastOn = itemOn;
+
       if (parent)
         {
+	  if (quitroutine)
+	    {
+	      if (!quitroutine())
+		return true; // we can't quit this menu (also used to set parameter from the menu)
+	    }
+
           SetupNextMenu(parent);
           S_StartLocalAmbSound(sfx_menu_close); // it's a matter of taste which sound to choose
         }
@@ -3130,11 +3110,6 @@ void Menu::Close(bool callexitmenufunc)
 
 void Menu::SetupNextMenu(Menu *m)
 {
-  if (currentMenu->quitroutine)
-    {
-      if (!currentMenu->quitroutine())
-        return; // we can't quit this menu (also used to set parameter from the menu)
-    }
   currentMenu = m;
   itemOn = currentMenu->lastOn;
 

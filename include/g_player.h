@@ -53,6 +53,7 @@ enum playerstate_t
 
 
 /// \brief Network player options and preferences.
+/// \ingroup g_central
 ///
 /// Things about your avatar that can be changed locally,
 /// and which you can setup _before_ entering a game.
@@ -91,6 +92,7 @@ public:
 
 
 /// \brief Player options and preferences.
+/// \ingroup g_central
 ///
 /// This class adds the purely local options which are never sent to server.
 class LocalPlayerInfo : public PlayerOptions
@@ -107,6 +109,8 @@ public:
 public:
   LocalPlayerInfo(const string &n = "bot", int keyset = 0);
   void GetInput(int elapsed);
+
+  void UpdatePreferences(); ///< Propagates the preferences to the PlayerInfo or sends them to the server.
 };
 
 
@@ -248,15 +252,6 @@ public:
 };
 
 
-
-
-// TEMP
-enum
-{
-  NUM_LOCALHUMANS = 2,
-  NUM_LOCALBOTS = 10,
-  NUM_LOCALPLAYERS = NUM_LOCALHUMANS + NUM_LOCALBOTS
-};
 
 /// Local human players, then local bot players
 extern LocalPlayerInfo LocalPlayers[NUM_LOCALPLAYERS];

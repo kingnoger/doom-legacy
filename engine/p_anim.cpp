@@ -118,6 +118,7 @@ public:
 
 protected:
   Texture *Update();
+  virtual void GLGetData() {};
 
 public:
   AnimatedTexture(const char *p, int n);
@@ -139,7 +140,6 @@ public:
   virtual column_t *GetMaskedColumn(fixed_t col) { return Update()->GetMaskedColumn(col); }
   virtual byte *GetColumn(fixed_t col) { return Update()->GetColumn(col); }
   virtual byte *GetData() { return Update()->GetData(); }
-  virtual void GLGetData() {};
 
   /// The glid of the metatexture is never changed from NOTEXTURE
   virtual GLuint GLPrepare() { return Update()->GLPrepare(); }
@@ -152,7 +152,7 @@ public:
 
 
 AnimatedTexture::AnimatedTexture(const char *p, int n)
-  : Texture(p)
+  : Texture(p, -1)
 {
   numframes = n;
   currentframe = 0;
@@ -164,7 +164,7 @@ AnimatedTexture::AnimatedTexture(const char *p, int n)
 
 
 AnimatedTexture::AnimatedTexture(const AnimatedTexture &m, int f)
-  : Texture(m.frames[f].tx->GetName())
+  : Texture(m.frames[f].tx->GetName(), -1)
 {
   // copy most fields from the master
   numframes = m.numframes;

@@ -41,6 +41,16 @@ extern char LEGACY_VERSION_BANNER[];
 #define TICRATE 35
 
 
+/// Max. numbers of local players (human and bot) on a client.
+enum
+{
+  NUM_LOCALHUMANS = 4,
+  NUM_LOCALBOTS = 10,
+  NUM_LOCALPLAYERS = NUM_LOCALHUMANS + NUM_LOCALBOTS
+};
+
+
+
 /// development mode (-devparm)
 extern bool devparm;
 

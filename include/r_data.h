@@ -106,6 +106,7 @@ protected:
   byte *pixels;
 
 public:
+  int    lump; ///< lump where the texture data comes from
   short  leftoffs, topoffs; ///< external image offsets in pixels (mostly unused)
   short  width, height;  ///< bitmap dimensions in texels
   byte   w_bits, h_bits; ///< largest power-of-two sizes <= actual bitmap size
@@ -136,7 +137,7 @@ public:
   //@}
 
 public:
-  Texture(const char *name);
+  Texture(const char *name, int lump);
   virtual ~Texture();
 
   /// \name Software renderer
@@ -168,9 +169,6 @@ public:
 /// ideally by redefining the constructor and the *GetData() functions only.
 class LumpTexture : public Texture
 {
-public:
-  int    lump;
-
 protected:
   virtual void GLGetData(); ///< Sets up pixels as RGBA row-major. Subclasses should redefine this.
 
@@ -238,7 +236,6 @@ public:
 class PatchTexture : public Texture
 {
 protected:
-  int   lump;
   byte *patch_data; ///< texture in patch_t format, pixels has it in raw column-major format
 
   patch_t *GeneratePatch();
@@ -283,11 +280,10 @@ public:
 protected:
   short       widthmask;  ///<  (1 << w_bits) - 1
 
-protected:
   patch_t *GeneratePatch();
 
 public:
-  DoomTexture(const char *name, const struct maptexture_t *mtex);
+  DoomTexture(const char *name, int lump, const struct maptexture_t *mtex);
   virtual ~DoomTexture();
 
   virtual bool Masked() { return (patchcount == 1); };

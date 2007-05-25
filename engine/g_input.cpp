@@ -51,38 +51,29 @@ CV_PossibleValue_t usemouse_cons_t[]={{0,"Off"},{1,"On"},{2,"Force"},{0,NULL}};
 
 consvar_t cv_controlperkey = {"controlperkey","1",CV_SAVE,onecontrolperkey_cons_t};
 
-consvar_t cv_usemouse[2] = {{"use_mouse","1", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse},
-			    {"use_mouse2","0", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse2}};
+#define NUM_MICE 2  // Only two supported for now:)
+consvar_t cv_usemouse[NUM_MICE] = {{"use_mouse", "1", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse},
+				   {"use_mouse2","0", CV_SAVE | CV_CALL,usemouse_cons_t,I_StartupMouse2}};
 
 #define MAXMOUSESENSITIVITY 40 // sensitivity steps
-CV_PossibleValue_t mousesens_cons_t[]={{1,"MIN"},{MAXMOUSESENSITIVITY,"MAX"},{0,NULL}};
-
-consvar_t cv_mousesensx[2]  = {{"mousesensx","10",  CV_SAVE, mousesens_cons_t},
-			       {"mousesensx2","10", CV_SAVE, mousesens_cons_t}};
-consvar_t cv_mousesensy[2]  = {{"mousesensy","10",  CV_SAVE, mousesens_cons_t},
-			       {"mousesensy2","10", CV_SAVE, mousesens_cons_t}};
-consvar_t cv_automlook[2]   = {{"automlook",  "0",   CV_SAVE, CV_OnOff},
-			       {"automlook2", "0",   CV_SAVE, CV_OnOff}};
-consvar_t cv_mousemove[2]   = {{"mousemove",  "1",   CV_SAVE, CV_OnOff},
-			       {"mousemove2", "1",   CV_SAVE, CV_OnOff}};
-consvar_t cv_invertmouse[2] = {{"invertmouse",  "0", CV_SAVE, CV_OnOff},
-			       {"invertmouse2", "0", CV_SAVE, CV_OnOff}};
-
-#ifdef LMOUSE2
- CV_PossibleValue_t mouse2port_cons_t[]={{0,"/dev/gpmdata"},{1,"/dev/ttyS0"},{2,"/dev/ttyS1"},{3,"/dev/ttyS2"},{4,"/dev/ttyS3"},{0,NULL}};
- consvar_t cv_mouse2port  = {"mouse2port","/dev/gpmdata", CV_SAVE, mouse2port_cons_t };
- consvar_t cv_mouse2opt = {"mouse2opt","0", CV_SAVE, NULL};
-#else
- CV_PossibleValue_t mouse2port_cons_t[]={{1,"COM1"},{2,"COM2"},{3,"COM3"},{4,"COM4"},{0,NULL}};
- consvar_t cv_mouse2port  = {"mouse2port","COM2", CV_SAVE, mouse2port_cons_t };
-#endif
+CV_PossibleValue_t mousesens_cons_t[] = {{1,"MIN"}, {MAXMOUSESENSITIVITY,"MAX"}, {0,NULL}};
+consvar_t cv_mousesensx[NUM_MICE]  = {{"mousesensx","10",  CV_SAVE, mousesens_cons_t},
+				      {"mousesensx2","10", CV_SAVE, mousesens_cons_t}};
+consvar_t cv_mousesensy[NUM_MICE]  = {{"mousesensy","10",  CV_SAVE, mousesens_cons_t},
+				      {"mousesensy2","10", CV_SAVE, mousesens_cons_t}};
+consvar_t cv_automlook[NUM_MICE]   = {{"automlook",  "0",   CV_SAVE, CV_OnOff},
+				      {"automlook2", "0",   CV_SAVE, CV_OnOff}};
+consvar_t cv_mousemove[NUM_MICE]   = {{"mousemove",  "1",   CV_SAVE, CV_OnOff},
+				      {"mousemove2", "1",   CV_SAVE, CV_OnOff}};
+consvar_t cv_invertmouse[NUM_MICE] = {{"invertmouse",  "0", CV_SAVE, CV_OnOff},
+				      {"invertmouse2", "0", CV_SAVE, CV_OnOff}};
 
 
 //========================================================================
 //   Input status
 //========================================================================
 
-static int mousex[2], mousey[2];
+static int mousex[NUM_MICE], mousey[NUM_MICE];
 
 /// current state of the keys : true if down
 bool gamekeydown[NUMINPUTS];
@@ -96,7 +87,7 @@ void G_ReleaseKeys()
 
 
 /// Two key (or virtual key) codes per game control
-short gamecontrol[2][num_gamecontrols][2];
+short gamecontrol[NUM_LOCALHUMANS][num_gamecontrols][2];
 
 /// Control keys common to all local players (talk, console etc)
 short commoncontrols[num_commoncontrols][2];
@@ -183,13 +174,12 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 #define KB_LOOKSPEED    (1<<25)
 #define SLOWTURNTICS    6
 
-  int i;
-  int c = pref->controlkeyset; // atm must be 0 or 1
-  short (*gc)[2]   = gamecontrol[c];
+  int cks = pref->controlkeyset;
+  short (*gc)[2]   = gamecontrol[cks];
   PlayerPawn *pawn = pref->info ? pref->info->pawn : NULL;
 
   int  speed = ControlDown(gc[gc_speed]) ^ pref->autorun;
-  bool mouseaiming = ControlDown(gc[gc_mouseaiming]) ^ cv_automlook[c].value;
+  bool mouseaiming = (cks < NUM_MICE) ? ControlDown(gc[gc_mouseaiming]) ^ cv_automlook[cks].value : false;
   bool strafe = ControlDown(gc[gc_strafe]);
 
   bool turnright = ControlDown(gc[gc_turnright]);
@@ -221,12 +211,12 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   else
     {
       if (turnleft || turnright)
-	turnheld[c] += realtics;
+	turnheld[cks] += realtics;
       else
-	turnheld[c] = 0;
+	turnheld[cks] = 0;
 
       int tspeed;
-      if (turnheld[c] < SLOWTURNTICS)
+      if (turnheld[cks] < SLOWTURNTICS)
 	tspeed = 2;             // slow turn
       else
 	tspeed = speed;
@@ -280,7 +270,7 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
 	  buttons |= ((NextWeapon(pawn, -1) + 1) << WEAPONSHIFT);
 	  ReleaseControl(gc[gc_prevweapon]);
 	}
-      else for (i = gc_weapon1; i <= gc_weapon8; i++)
+      else for (int i = gc_weapon1; i <= gc_weapon8; i++)
 	if (gamekeydown[gc[i][0]] || gamekeydown[gc[i][1]])
 	  {
 	    buttons |= ((pawn->FindWeapon(i - gc_weapon1) + 1) << WEAPONSHIFT);
@@ -293,55 +283,55 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   static bool keyboard_look[NUM_LOCALHUMANS]; // true if lookup/down using keyboard
 
   // spring back if not using keyboard neither mouselookin'
-  if (!keyboard_look[c] && !mouseaiming)
+  if (!keyboard_look[cks] && !mouseaiming)
     pitch = 0;
 
   if (ControlDown(gc[gc_lookup]))
     {
       pitch += KB_LOOKSPEED;
-      keyboard_look[c] = true;
+      keyboard_look[cks] = true;
     }
   else if (ControlDown(gc[gc_lookdown]))
     {
       pitch -= KB_LOOKSPEED;
-      keyboard_look[c] = true;
+      keyboard_look[cks] = true;
     }
   else if (ControlDown(gc[gc_centerview]))
     {
       pitch = 0;
-      keyboard_look[c] = false;
+      keyboard_look[cks] = false;
     }
 
-  // Mice. Only two supported for now:)
-  if (c < 2)
+  // Mice.
+  if (cks < NUM_MICE)
     {
       if (mouseaiming)
 	{
-	  keyboard_look[c] = false;
+	  keyboard_look[cks] = false;
 
 	  // looking up/down
-	  if (cv_invertmouse[c].value)
-	    pitch -= mousey[c] << 3;
+	  if (cv_invertmouse[cks].value)
+	    pitch -= mousey[cks] << 3;
 	  else
-	    pitch += mousey[c] << 3;
+	    pitch += mousey[cks] << 3;
 	}
-      else if (cv_mousemove[c].value)
-	fw += mousey[c];
+      else if (cv_mousemove[cks].value)
+	fw += mousey[cks];
 
       if (strafe)
-	sd += mousex[c] << 1;
+	sd += mousex[cks] << 1;
       else
-	yaw -= mousex[c] << 3;
+	yaw -= mousex[cks] << 3;
 
-      mousex[c] = mousey[c] = 0;
+      mousex[cks] = mousey[cks] = 0;
     }
 
   // Finally the joysticks.
-  for (i=0; i < int(joybindings.size()); i++)
+  for (unsigned i=0; i < joybindings.size(); i++)
     {
       joybinding_t &j = joybindings[i];
 
-      if (j.playnum != c)
+      if (j.playnum != cks)
 	continue;
 
       int value = int(j.scale * SDL_JoystickGetAxis(joysticks[j.joynum], j.axisnum));
@@ -836,7 +826,7 @@ void G_SavePlayerPrefs(FILE *f)
 
 void G_SaveKeySetting(FILE *f)
 {
-  for (int j = 0; j < 2; j++)
+  for (int j = 0; j < NUM_LOCALHUMANS; j++)
     for (int i = 1; i < num_gamecontrols; i++)
       //if (gamecontrol[j][i][0])
 	{
@@ -866,7 +856,7 @@ void G_SaveJoyAxisBindings(FILE *f)
 void G_CheckDoubleUsage(int keynum)
 {
   if (cv_controlperkey.value == 1)
-    for (int i=0; i<2; i++)
+    for (int i=0; i<NUM_LOCALHUMANS; i++)
       for (int j=0; j<num_gamecontrols; j++)
 	for (int k=0; k<2; k++)
 	  if (gamecontrol[i][j][k] == keynum)
@@ -885,8 +875,8 @@ void Command_Setcontrol_f()
       return;
     }
 
-  int p = atoi(COM_Argv(1));
-  short (*gc)[2] = gamecontrol[p % 2];
+  int p = max(0, min(atoi(COM_Argv(1)), NUM_LOCALHUMANS-1));
+  short (*gc)[2] = gamecontrol[p];
 
   char *cname = COM_Argv(2);
 

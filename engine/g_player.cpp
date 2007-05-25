@@ -37,6 +37,7 @@
 #include "a_functions.h"
 
 #include "n_connection.h"
+#include "n_interface.h"
 
 #include "r_sprite.h"
 #include "hardware/md3.h"
@@ -53,7 +54,8 @@
 /// Local human players, then local bot player
 LocalPlayerInfo LocalPlayers[NUM_LOCALPLAYERS] =
 {
-  LocalPlayerInfo("Batman", 0), LocalPlayerInfo("Robin", 1)
+  // these constructors are required only define correct control key sets for the human players, otherwise the default constructor is enough
+  LocalPlayerInfo("Batman", 0), LocalPlayerInfo("Robin", 1), LocalPlayerInfo("Alfred", 2), LocalPlayerInfo("Barbara", 3)
 };
 
 /// Locally observed players (multiple viewports...)
@@ -181,6 +183,23 @@ void LocalPlayerInfo::GetInput(int elapsed)
     ai->BuildInput(info, elapsed);
   else
     info->cmd.Build(this, elapsed);
+}
+
+
+// Propagates the preferences to the PlayerInfo or sends them to the server.
+void LocalPlayerInfo::UpdatePreferences()
+{
+  if (!info)
+    return; // nothing else to do if we have no PlayerInfo yet
+
+  if (game.server)
+    {
+      info->options = *this;
+      info->name = name;
+      info->setMaskBits(PlayerInfo::M_IDENTITY);
+    }
+  else
+    game.net->SendPlayerOptions(info->number, *this);
 }
 
 

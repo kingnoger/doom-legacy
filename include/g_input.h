@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,12 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
-/// Handles mouse/keyboard/joystick inputs,
-/// maps inputs to game controls (forward, use, open...)
+/// \brief Mouse/keyboard/joystick inputs, game controls (forward, use, fire...)
 
 #ifndef g_input_h
 #define g_input_h 1
@@ -93,7 +91,7 @@ struct joybinding_t
 
 
 // per-player keys (two (virtual) key codes per game control)
-extern short gamecontrol[2][num_gamecontrols][2];
+extern short gamecontrol[NUM_LOCALHUMANS][num_gamecontrols][2];
 
 // shared control keys
 extern short commoncontrols[num_commoncontrols][2];
