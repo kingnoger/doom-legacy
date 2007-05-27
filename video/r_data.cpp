@@ -47,7 +47,7 @@
 #include "z_zone.h"
 
 #include "hardware/oglshaders.h"
-#include "hardware/oglrenderer.hpp" // TODO temporary
+
 
 extern byte gammatable[5][256];
 
@@ -331,12 +331,6 @@ GLuint Texture::GLPrepare()
     {
       GLGetData();
 
-      // Discard old texture if we had one.
-      /*
-      if(gl_id != NOTEXTURE)
-	glDeleteTextures(1, &gl_id);
-      */
-
       glGenTextures(1, &gl_id);
       glBindTexture(GL_TEXTURE_2D, gl_id);
       // default params
@@ -345,7 +339,8 @@ GLuint Texture::GLPrepare()
       gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, gl_format, GL_UNSIGNED_BYTE, pixels);
 
       //  CONS_Printf("Created GL texture %d for %s.\n", gl_id, name);
-      // TODO free and null pixels?
+      Z_Free(pixels); // no longer needed
+      pixels = NULL;
     }
 
   return gl_id;
@@ -663,7 +658,7 @@ patch_t *DoomTexture::GeneratePatch()
       // FIXME should use patch width here? texture may be wider!
       if (width > p->width)
 	{
-	  CONS_Printf("masked tex '%s' too wide\n", name); // FIXME TEMP behavior
+	  CONS_Printf("masked tex '%s' too wide\n", name);
 	  width = p->width;
 	  Initialize();
 	  widthmask = (1 << w_bits) - 1;
@@ -2105,7 +2100,6 @@ void Map::PrecacheMap()
     }
     Z_Free(spritepresent);
 
-    //FIXME: this is no more correct with glide render mode
     if (devparm)
     {
         CONS_Printf("Precache level done:\n"

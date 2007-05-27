@@ -119,7 +119,15 @@ public:
   void RenderPlayerView(PlayerInfo *player);
   void Render3DView(Actor *pov);
   void DrawPSprites(class PlayerPawn *p);
-  void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, bool flip);
+
+  enum spriteflag_t
+  {
+    BLEND_CONST = 0x00,
+    BLEND_ADD   = 0x01,
+    BLEND_MASK  = 0x03,
+    FLIP_X      = 0x10,    
+  };
+  void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, int flags, float alpha);
 
   bool CheckVis(int fromss, int toss);
 

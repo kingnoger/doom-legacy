@@ -24,7 +24,7 @@
 #include "r_data.h"
 #include "doomdef.h"
 #include "hardware/oglhelpers.hpp"
-
+#include "i_video.h"
 
 static const GLubyte *gl_extensions = NULL;
 
@@ -70,11 +70,17 @@ consvar_t cv_grdynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff}
 consvar_t cv_grcoronas         = {"gr_coronas",         "On", CV_SAVE, CV_OnOff};
 consvar_t cv_grcoronasize      = {"gr_coronasize",       "1", CV_SAVE|CV_FLOAT, NULL};
 
-//CV_PossibleValue_t grgamma_cons_t[]= {{1,"MIN"}, {255,"MAX"}, {0,NULL} };
-static void CV_Gamma_OnChange() {} // FIXME
-consvar_t cv_grgammared   = {"gr_gammared",   "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
-consvar_t cv_grgammagreen = {"gr_gammagreen", "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
-consvar_t cv_grgammablue  = {"gr_gammablue",  "0.5", CV_SAVE|CV_CALL|CV_FLOAT, NULL, CV_Gamma_OnChange};
+static void CV_Gamma_OnChange();
+static CV_PossibleValue_t gamma_cons_t[]= {{1,"MIN"}, {20,"MAX"}, {0,NULL}};
+consvar_t cv_grgammared   = {"gr_gammared",   "10", CV_SAVE|CV_CALL, gamma_cons_t, CV_Gamma_OnChange};
+consvar_t cv_grgammagreen = {"gr_gammagreen", "10", CV_SAVE|CV_CALL, gamma_cons_t, CV_Gamma_OnChange};
+consvar_t cv_grgammablue  = {"gr_gammablue",  "10", CV_SAVE|CV_CALL, gamma_cons_t, CV_Gamma_OnChange};
+
+static void CV_Gamma_OnChange()
+{
+  I_SetGamma(cv_grgammared.value/10.0f, cv_grgammagreen.value/10.0f, cv_grgammablue.value/10.0f);
+}
+
 
 consvar_t cv_grfog        = {"gr_fog",            "On", CV_SAVE, CV_OnOff};
 consvar_t cv_grfogcolor   = {"gr_fogcolor",   "000000", CV_SAVE, NULL};

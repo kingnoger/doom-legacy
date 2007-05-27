@@ -157,7 +157,7 @@ HudMultIcon::HudMultIcon(int nx, int ny, const int *inumber, Material **tex)
 
 void HudMultIcon::Update(bool force)
 {
-  if ((oldinum != *inum || force) && (*inum != -1))
+  if (oldinum != *inum || force)
     Draw();
 }
 
@@ -167,6 +167,7 @@ void HudMultIcon::Draw()
   if ((oldinum != -1) && !hud.overlay_on && rendermode == render_soft && icons[oldinum])
     {
       // sw mode: background is not always fully redrawn
+      // restore background if necessary
       int w, h;
       int dx, dy;
       dx = x - icons[oldinum]->leftoffs;
@@ -176,10 +177,11 @@ void HudMultIcon::Draw()
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
+
   int i = *inum;
   if (i >= 0 && icons[i])
     icons[i]->Draw(x, y, fgbuffer);
-  // FIXME! *inum might go beyond allowed limits!
+
   oldinum = i;
 }
 
@@ -206,14 +208,9 @@ void HudBinIcon::Update(bool force)
 
 void HudBinIcon::Draw()
 {
-  oldstatus = *status;
-
-  if (oldstatus == true)
-    icons[1]->Draw(x, y, fgbuffer);
-  else if (icons[0] != NULL)
-    icons[0]->Draw(x, y, fgbuffer);
-  else if (!hud.overlay_on && rendermode == render_soft)
+  if (icons[oldstatus] && !hud.overlay_on && rendermode == render_soft)
     {
+      // restore background if necessary
       int w, h;
       int dx, dy;
       dx = x - icons[1]->leftoffs;
@@ -223,6 +220,13 @@ void HudBinIcon::Draw()
 
       V_CopyRect(dx, dy, BG, w, h, dx, dy, fgbuffer);
     }
+
+  oldstatus = *status;
+
+  if (oldstatus) // assume we always have icon1
+    icons[1]->Draw(x, y, fgbuffer);
+  else if (icons[0])
+    icons[0]->Draw(x, y, fgbuffer);
 }
 
 

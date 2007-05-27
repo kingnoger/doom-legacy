@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Video system interface
+/// \brief Video system interface.
 
 
 #ifndef i_video_h
@@ -36,11 +36,12 @@ enum rendermode_t
 extern rendermode_t rendermode;
 
 
-bool I_StartupGraphics();    //setup video mode
-void I_ShutdownGraphics();   //restore old video mode
+bool I_StartupGraphics();
+void I_ShutdownGraphics();
 
-// Takes full 8 bit values.
-void I_SetPalette(RGB_t* palette);
+
+void I_SetPalette(RGB_t* palette); // Takes full 8 bit values.
+void I_SetGamma(float r, float g, float b); // Set display gamma exponents.
 
 #ifdef __MACOS__
 /* void macConfigureInput(); */

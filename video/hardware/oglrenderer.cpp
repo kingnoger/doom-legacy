@@ -1236,8 +1236,20 @@ void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloa
 // the 3D view. Translations and rotations are done with OpenGL
 // matrices.
 
-void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, bool flip)
+void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int flags, float alpha)
 {
+  if (alpha < 1.0)
+    {
+      glBlendColor(alpha, alpha, alpha, 1.0);
+      switch (flags & BLEND_MASK)
+	{
+	case BLEND_CONST:
+	  glBlendFunc(GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR); break;
+	case BLEND_ADD:
+	  glBlendFunc(GL_CONSTANT_COLOR, GL_ONE); break;
+	}
+    }
+
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
   GLboolean isAlpha; // Alpha test enabled.
@@ -1254,7 +1266,7 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, bool 
   if(!isAlpha)
     glEnable(GL_ALPHA_TEST);
 
-  if(flip) {
+  if (flags & FLIP_X) {
     texleft = 1.0;
     texright = 0.0;
   } else {
@@ -1284,6 +1296,11 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, bool 
   glNormal3f(-1.0, 0.0, 0.0);
 
   mat->GLUse();
+
+  // TEST FIXME
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
   glBegin(GL_QUADS);
   glTexCoord2f(texleft, texbottom);
   glVertex3f(0.0, left, bottom);
@@ -1311,6 +1328,8 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, bool 
   // Restore alpha testing to the state it was.
   if(!isAlpha)
     glDisable(GL_ALPHA_TEST);
+
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // normal
 }
 
 

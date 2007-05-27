@@ -30,6 +30,7 @@
 #include "r_sprite.h"
 #include "r_things.h"
 #include "r_render.h"
+#include "r_draw.h"
 #include "i_video.h"
 #include "hardware/oglrenderer.hpp"
 
@@ -830,7 +831,7 @@ bool spritepres_t::Draw(const Actor *p)
   spriteframe_t *sprframe = &spr->spriteframes[frame];
 
   Material *mat;
-  bool      flip;
+  bool flip;
 
   // decide which patch to use for sprite relative to player
   if (sprframe->rotate)
@@ -849,32 +850,27 @@ bool spritepres_t::Draw(const Actor *p)
       flip = sprframe->flip[0];
     }
 
-  /*
-  float alpha;
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // normal
-
   // TODO color translation maps, TFF_FULLBRIGHT
+  int flags = OGLRenderer::BLEND_CONST;
+  float alpha = 1.0;
   if (state->frame & TFF_TRANSMASK)
     {
-      const float convert[] = {1, 0.5, 0.2, 0.1, 0.5, 1}; // hack, not perfect
+      const float convert[] = {1, 0.5, 0.2, 0.1, 0.5, 1}; // HACK, not perfect
       int tr_table = (state->frame & TFF_TRANSMASK) >> TFF_TRANSSHIFT;
       alpha = convert[tr_table];
 
-      if (tr_table == tr_transfir)
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive
+      if (tr_table >= tr_transfir)
+	flags = OGLRenderer::BLEND_ADD;
     }
   else if (state->frame & TFF_SMOKESHADE)
     alpha = 0.5;
   else if (p->flags & (MF_SHADOW | MF_ALTSHADOW))
-    alpha = 0.25; // TODO ALTSHADOW reverses src and dest (transposes the transmap)
-  else
-    alpha = 1.0;
-  */
+    alpha = 0.1; // TODO ALTSHADOW reverses src and dest (transposes the transmap)
+
+  if (flip)
+    flags |= OGLRenderer::FLIP_X;
 
   // hardware renderer part
-  oglrenderer->DrawSpriteItem(p->pos, mat, flip);
-
-
-  //CONS_Printf("spritepres_t::Draw: Not yet implemented\n");
+  oglrenderer->DrawSpriteItem(p->pos, mat, flags, alpha);
   return true;
 }

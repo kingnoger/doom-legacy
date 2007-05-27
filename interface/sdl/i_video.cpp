@@ -204,6 +204,14 @@ void I_SetPalette(RGB_t* palette)
 }
 
 
+
+void I_SetGamma(float r, float g, float b)
+{
+  SDL_SetGamma(r, g, b);
+}
+
+
+
 // return number of fullscreen or windowed modes
 int I_NumVideoModes()
 {
