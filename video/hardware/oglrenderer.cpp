@@ -233,11 +233,12 @@ bool OGLRenderer::WriteScreenshot(const char *fname)
       Uint32 *p1;
       Uint32 *p2;
       p1 = static_cast<Uint32*>(buffer->pixels) + j*buffer->w + i;
-      p2 = static_cast<Uint32*>(buffer->pixels) + (buffer->h-j)*buffer->w + i;
+      p2 = static_cast<Uint32*>(buffer->pixels) + (buffer->h-j-1)*buffer->w + i;
       temp = *p1;
       *p1 = *p2;
       *p2 = temp;
     }
+
   SDL_UnlockSurface(buffer);
   success = !SDL_SaveBMP(buffer, finalname.c_str());
   SDL_FreeSurface(buffer);
