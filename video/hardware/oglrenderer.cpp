@@ -106,19 +106,15 @@ void OGLRenderer::InitGLState()
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_CULL_FACE);
 
+  // lighting
+  glEnable(GL_COLOR_MATERIAL);
+  glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE); // now we can use glColor4 to do alpha effects
+  glColor4f(1.0, 1.0, 1.0, 1.0);
 
-  //glEnable(GL_NORMALIZE); // TODO expensive...
-
-  // TEST lighting
-  //glEnable(GL_LIGHTING);
-  //glEnable(GL_COLOR_MATERIAL);
-  //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE); // like this we could use glColor to do lighting...HACKy
-
-  GLfloat mat_ad[]  = { 1.0, 1.0, 1.0, 1.0 };
-
+  //GLfloat mat_ad[]  = { 1.0, 1.0, 1.0, 1.0 };
   //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, );
   //glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, );
-  glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_ad);
+  //glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, mat_ad);
   //glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, );
   //glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 0.0);
   //glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, );
@@ -364,7 +360,7 @@ void OGLRenderer::SetFullScreenViewport()
 void OGLRenderer::SetViewport(unsigned vp)
 {
   // Splitscreen.
-  int n = min(cv_splitscreen.value + 1, MAX_GLVIEWPORTS) - 1;
+  unsigned n = min(cv_splitscreen.value + 1, MAX_GLVIEWPORTS) - 1;
 
   if (vp > n)
     return;
@@ -922,7 +918,6 @@ void OGLRenderer::RenderGLSubsector(int num)
 
   // Set up sector lighting.
   GLfloat light = LightLevelToLum(s->lightlevel) / 255.0;
-  //glColor3f(light, light, 0.1*light);
   GLfloat lmodel_ambient[] = {light, light, light, 1.0};
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
 
@@ -1238,32 +1233,25 @@ void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloa
 
 void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int flags, float alpha)
 {
-  if (alpha < 1.0)
-    {
-      glBlendColor(alpha, alpha, alpha, 1.0);
-      switch (flags & BLEND_MASK)
-	{
-	case BLEND_CONST:
-	  glBlendFunc(GL_CONSTANT_COLOR, GL_ONE_MINUS_CONSTANT_COLOR); break;
-	case BLEND_ADD:
-	  glBlendFunc(GL_CONSTANT_COLOR, GL_ONE); break;
-	}
-    }
-
-  GLfloat top, bottom, left, right;
-  GLfloat texleft, texright, textop, texbottom;
-  GLboolean isAlpha; // Alpha test enabled.
-
   // You can't draw the invisible.
   if (!mat)
     return;
 
+  if (alpha < 1.0)
+    {
+      glColor4f(1.0, 1.0, 1.0, alpha); // set material params
+      //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // on by default
+    }
+
+  GLfloat top, bottom, left, right;
+  GLfloat texleft, texright, textop, texbottom;
+
   // Rendering sprite items requires skipping totally transparent
   // pixels. Since alpha testing may slow down rendering we want to
   // use it as little as possible.
-  isAlpha = 0; // Shut up compiler.
+  GLboolean isAlpha = 0; // Shut up compiler.
   glGetBooleanv(GL_ALPHA_TEST, &isAlpha);
-  if(!isAlpha)
+  if (!isAlpha)
     glEnable(GL_ALPHA_TEST);
 
   if (flags & FLIP_X) {
@@ -1278,14 +1266,14 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int f
   texbottom = 1.0;
   textop = 0.0;
 
-  //left = t->width/(2.0*xscale);
-  //right = -left;
-  right = -mat->leftoffs;
-  left = right + mat->worldwidth;
+  left = mat->leftoffs;
+  right = left - mat->worldwidth;
  
-  bottom = 0.0;
-  top = mat->worldheight; // HACK
-  //top = mat->topoffs; // FIXME this is correct but looks stupid???
+  // top = mat->worldheight; bottom = 0; // HACK, too high
+  top = mat->topoffs; // this is correct but causes the sprite to penetrate the floor, hence the depth test trick
+  bottom = top - mat->worldheight;
+  // sprites must be drawn without depth test, but must also update depth buffer
+  glDepthFunc(GL_ALWAYS);
 
 
   glMatrixMode(GL_MODELVIEW);
@@ -1326,10 +1314,12 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int f
   glPopMatrix();
 
   // Restore alpha testing to the state it was.
-  if(!isAlpha)
+  if (!isAlpha)
     glDisable(GL_ALPHA_TEST);
 
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // normal
+  glDepthFunc(GL_LESS); // back to normal depth testing
+
+  glColor4f(1.0, 1.0, 1.0, 1.0); // back to normal material params
 }
 
 
