@@ -1251,6 +1251,10 @@ void Map::LoadGLSegs(const int lump, const int glversion)
   else // Assume version 5.
     numsegs = fc.LumpLength(lump) / sizeof(mapgl5seg_t);
 
+  // Unload regular segs.
+  if(segs)
+    Z_Free(segs);
+
   segs = (seg_t *)Z_Malloc(numsegs*sizeof(seg_t), PU_LEVEL, 0);
   memset(segs, 0, numsegs*sizeof(seg_t)); // clear all fields to zero
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
@@ -1368,6 +1372,10 @@ void Map::LoadGLSubsectors(const int lump, const int glversion)
   else // Assume version 5.
     numsubsectors = fc.LumpLength(lump) / sizeof(mapgl5subsector_t);
 
+  // The code may have loaded regular subsectors. Release them.
+  if(subsectors)
+    Z_Free(subsectors);
+
   subsectors = (subsector_t *)Z_Malloc(numsubsectors * sizeof(subsector_t), PU_LEVEL, 0);
   memset(subsectors, 0, numsubsectors * sizeof(subsector_t));
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
@@ -1408,6 +1416,10 @@ void Map::LoadGLNodes(const int lump, const int glversion)
     numnodes = fc.LumpLength(lump) / sizeof(mapnode_t);
   else // Assume version 5.
     numnodes = fc.LumpLength(lump) / sizeof(mapgl5node_t);
+
+  // Unload regular nodes if they are loaded.
+  if(nodes)
+    Z_Free(nodes);
 
   nodes = (node_t *)Z_Malloc(numnodes*sizeof(node_t), PU_LEVEL, 0);
   byte *data = (byte*)fc.CacheLumpNum(lump, PU_STATIC);
