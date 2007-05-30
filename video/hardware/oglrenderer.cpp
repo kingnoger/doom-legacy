@@ -223,17 +223,17 @@ bool OGLRenderer::WriteScreenshot(const char *fname)
 
   // OpenGL keeps the pixel data "upside down" for some reason. Flip
   // the surface.
-  for(int i=0; i < buffer->w; i++)
-    for(int j=0; j<buffer->h/2; j++) {
-      Uint32 temp;
-      Uint32 *p1;
-      Uint32 *p2;
-      p1 = static_cast<Uint32*>(buffer->pixels) + j*buffer->w + i;
-      p2 = static_cast<Uint32*>(buffer->pixels) + (buffer->h-j-1)*buffer->w + i;
-      temp = *p1;
-      *p1 = *p2;
-      *p2 = temp;
-    }
+  char *templine = new char[buffer->pitch];
+  for(int j=0; j<buffer->h/2; j++) {
+    char *p1;
+    char *p2;
+    p1 = static_cast<char*>(buffer->pixels) + j*buffer->pitch;
+    p2 = static_cast<char*>(buffer->pixels) + (buffer->h-j-1)*buffer->pitch;
+    memcpy(templine, p1, buffer->pitch);
+    memcpy(p1, p2, buffer->pitch);
+    memcpy(p2, templine, buffer->pitch);
+  }
+  delete[] templine;
 
   SDL_UnlockSurface(buffer);
   success = !SDL_SaveBMP(buffer, finalname.c_str());
