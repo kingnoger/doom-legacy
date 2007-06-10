@@ -61,6 +61,8 @@ struct bbox_t
   bool PointInBox(fixed_t x, fixed_t y);
   bool CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius);
   bool BoxTouchBox(const bbox_t &other);
+  bool LineCrossesEdge(const fixed_t x1, const fixed_t y1,
+		       const fixed_t x2, const fixed_t y2) const;
   int  BoxOnLineSide(const struct line_t *ld);
 };
 

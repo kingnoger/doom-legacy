@@ -25,7 +25,7 @@
 
 #include "doomtype.h"
 #include "m_bbox.h"
-
+#include "p_maputl.h"
 
 void bbox_t::Clear()
 {
@@ -86,6 +86,29 @@ bool bbox_t::BoxTouchBox(const bbox_t &other)
   return true;
 }
 
+// Returns true if line drawn between given points intercepts any edge
+// of the box.
+
+bool bbox_t::LineCrossesEdge(const fixed_t x1, const fixed_t y1,
+			      const fixed_t x2, const fixed_t y2) const {
+  if(P_LinesegsCross(x1, y1, x2, y2, 
+		     box[BOXLEFT], box[BOXTOP], box[BOXLEFT], box[BOXBOTTOM]))
+    return true;
+
+  if(P_LinesegsCross(x1, y1, x2, y2, 
+		     box[BOXLEFT], box[BOXBOTTOM], box[BOXRIGHT], box[BOXBOTTOM]))
+    return true;
+
+  if(P_LinesegsCross(x1, y1, x2, y2, 
+		     box[BOXRIGHT], box[BOXBOTTOM], box[BOXRIGHT], box[BOXTOP]))
+    return true;
+
+  if(P_LinesegsCross(x1, y1, x2, y2, 
+		     box[BOXRIGHT], box[BOXTOP], box[BOXLEFT], box[BOXTOP]))
+    return true;
+
+  return false;
+}
 
 // set temp location and boundingbox
 void bbox_t::Set(fixed_t x, fixed_t y, fixed_t r)
@@ -95,3 +118,4 @@ void bbox_t::Set(fixed_t x, fixed_t y, fixed_t r)
   box[BOXRIGHT]  = x + r;
   box[BOXLEFT]   = x - r;
 }
+

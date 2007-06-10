@@ -54,7 +54,7 @@
 /// \brief On which side of a 2D line the point is?
 /// \ingroup g_geoutils
 /*!
-  \return side number, 0 or 1
+  \return side number, 0 (right side) or 1 (left side)
 */
 int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
 {
@@ -90,7 +90,7 @@ int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
   return 1;                   // back side
 }
 
-/// \brief Does line segments drawn between (x1, y1) and (x2, y2) and
+/// \brief Do line segments drawn between (x1, y1) and (x2, y2) and
 /// between (x3, y3), (x4, y4) cross.
 /// \ingroup g_geoutils
 /*!
