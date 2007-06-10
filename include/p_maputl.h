@@ -174,7 +174,11 @@ extern bool floatok;
 extern class bbox_t tmb;
 
 
-int     P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line);
+int     P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line);
+bool    P_LinesegsCross(const fixed_t x1, const fixed_t y1,
+			const fixed_t x2, const fixed_t y2,
+			const fixed_t x3, const fixed_t y3,
+			const fixed_t x4, const fixed_t y4);
 int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
 fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
 

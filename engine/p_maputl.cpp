@@ -56,7 +56,7 @@
 /*!
   \return side number, 0 or 1
 */
-int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
+int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
 {
   if (!line->dx)
     {
@@ -90,6 +90,47 @@ int P_PointOnLineSide(fixed_t x, fixed_t y, const line_t *line)
   return 1;                   // back side
 }
 
+/// \brief Does line segments drawn between (x1, y1) and (x2, y2) and
+/// between (x3, y3), (x4, y4) cross.
+/// \ingroup g_geoutils
+/*!
+  \return true if segments do cross.
+*/
+bool    P_LinesegsCross(const fixed_t x1, const fixed_t y1,
+			const fixed_t x2, const fixed_t y2,
+			const fixed_t x3, const fixed_t y3,
+			const fixed_t x4, const fixed_t y4){
+  vertex_t v1, v2;
+  line_t l;
+  l.v1 = &v1;
+  l.v2 = &v2;
+
+  // Line segments cross if both pairs of endpoints are on different
+  // sides of the line spanned by the other endpoint.
+  v1.x = x1;
+  v1.y = y1;
+  v2.x = x2;
+  v2.y = y2;
+  l.dx = x2 - x1;
+  l.dy = y2 - y1;
+
+  if(P_PointOnLineSide(x3, y3, &l) ==
+     P_PointOnLineSide(x4, y4, &l))
+    return false;
+
+  v1.x = x3;
+  v1.y = y3;
+  v2.x = x4;
+  v2.y = y4;
+  l.dx = x4 - x3;
+  l.dy = y4 - y3;
+
+  if(P_PointOnLineSide(x1, y1, &l) ==
+     P_PointOnLineSide(x2, y2, &l))
+    return false;
+
+  return true;
+}
 
 /// \brief On which side of a 2D divline the point is?
 /// \ingroup g_geoutils
