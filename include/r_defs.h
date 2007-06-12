@@ -528,15 +528,29 @@ struct seg_t
 };
 
 
+/// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
+/// \ingroup g_geoutils
+struct divline_t 
+{
+  fixed_t   x, y; ///< starting point (v1)
+  fixed_t dx, dy; ///< v2-v1
+
+  /// empty default constructor
+  divline_t() {}
+
+  /// copies the relevant parts of a linedef
+  divline_t(const struct line_t *li);
+
+  /// makes a divline from the XY position and velocity of an Actor
+  divline_t(const class Actor *a);
+};
+
 
 /// \brief BSP node
 /// \ingroup g_mapgeometry
-struct node_t
+/// divline_t is the partition line.
+struct node_t : public divline_t
 {
-  /// Partition line.
-  fixed_t  x, y;
-  fixed_t  dx, dy;
-
   /// Bounding box for each child.
   bbox_t bbox[2];
 

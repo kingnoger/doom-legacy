@@ -55,7 +55,7 @@ void bbox_t::Move(fixed_t x, fixed_t y)
 
 
 
-bool bbox_t::PointInBox(fixed_t x, fixed_t y)
+bool bbox_t::PointInBox(fixed_t x, fixed_t y) const
 {
   if (x < box[BOXLEFT]   || x > box[BOXRIGHT] ||
       y < box[BOXBOTTOM] || y > box[BOXTOP])
@@ -64,7 +64,7 @@ bool bbox_t::PointInBox(fixed_t x, fixed_t y)
   return true;
 }
 
-bool bbox_t::CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius)
+bool bbox_t::CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius) const
 {
   if (box[BOXLEFT  ]-radius > x ||
       box[BOXRIGHT ]+radius < x ||
@@ -75,7 +75,7 @@ bool bbox_t::CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius)
   return true;
 }
 
-bool bbox_t::BoxTouchBox(const bbox_t &other)
+bool bbox_t::BoxTouchBox(const bbox_t &other) const
 {
   if (box[BOXRIGHT] <= other[BOXLEFT]
       || box[BOXLEFT] >= other[BOXRIGHT]
@@ -89,23 +89,37 @@ bool bbox_t::BoxTouchBox(const bbox_t &other)
 // Returns true if line drawn between given points intercepts any edge
 // of the box.
 
-bool bbox_t::LineCrossesEdge(const fixed_t x1, const fixed_t y1,
-			      const fixed_t x2, const fixed_t y2) const {
-  if(P_LinesegsCross(x1, y1, x2, y2, 
-		     box[BOXLEFT], box[BOXTOP], box[BOXLEFT], box[BOXBOTTOM]))
-    return true;
+bool bbox_t::LineCrossesEdge(const fixed_t x1, const fixed_t y1, const fixed_t x2, const fixed_t y2) const
+{
+  divline_t line;
+  line.x = x1;
+  line.y = y1;
+  line.dx = x2-x1;
+  line.dy = y2-y1;
 
-  if(P_LinesegsCross(x1, y1, x2, y2, 
-		     box[BOXLEFT], box[BOXBOTTOM], box[BOXRIGHT], box[BOXBOTTOM]))
-    return true;
+  int s1 = P_PointOnDivlineSide(box[BOXRIGHT], box[BOXTOP], &line); 
+  int s2 = P_PointOnDivlineSide(box[BOXLEFT], box[BOXTOP], &line); 
 
-  if(P_LinesegsCross(x1, y1, x2, y2, 
-		     box[BOXRIGHT], box[BOXBOTTOM], box[BOXRIGHT], box[BOXTOP]))
-    return true;
+  if (s1 != s2)
+    // see if line crosses the top edge
+    if ((y1 <= box[BOXTOP]) ^ (y2 <= box[BOXTOP]))
+      return true;
 
-  if(P_LinesegsCross(x1, y1, x2, y2, 
-		     box[BOXRIGHT], box[BOXTOP], box[BOXLEFT], box[BOXTOP]))
-    return true;
+  int s3 = P_PointOnDivlineSide(box[BOXLEFT], box[BOXBOTTOM], &line); 
+
+  if (s2 != s3)
+    if ((x1 <= box[BOXLEFT]) ^ (x2 <= box[BOXLEFT]))
+      return true;
+
+  int s4 = P_PointOnDivlineSide(box[BOXRIGHT], box[BOXBOTTOM], &line); 
+
+  if (s3 != s4)
+    if ((y1 <= box[BOXBOTTOM]) ^ (y2 <= box[BOXBOTTOM]))
+      return true;
+
+  if (s4 != s1)
+    if ((x1 <= box[BOXRIGHT]) ^ (x2 <= box[BOXRIGHT]))
+      return true;
 
   return false;
 }

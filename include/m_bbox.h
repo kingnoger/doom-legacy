@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -58,12 +57,11 @@ struct bbox_t
   };
   inline fixed_t operator[](bbox_e side) const { return box[side]; };
 
-  bool PointInBox(fixed_t x, fixed_t y);
-  bool CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius);
-  bool BoxTouchBox(const bbox_t &other);
-  bool LineCrossesEdge(const fixed_t x1, const fixed_t y1,
-		       const fixed_t x2, const fixed_t y2) const;
-  int  BoxOnLineSide(const struct line_t *ld);
+  bool PointInBox(fixed_t x, fixed_t y) const;
+  bool CircleTouchBox(fixed_t x, fixed_t y, fixed_t radius) const;
+  bool BoxTouchBox(const bbox_t &other) const;
+  bool LineCrossesEdge(const fixed_t x1, const fixed_t y1, const fixed_t x2, const fixed_t y2) const; 
+  int  BoxOnLineSide(const struct line_t *ld) const;
 };
 
 #endif

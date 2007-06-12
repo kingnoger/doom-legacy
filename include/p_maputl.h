@@ -24,6 +24,7 @@
 #define p_maputl_h 1
 
 #include <vector>
+#include "r_defs.h"
 #include "tables.h"
 
 using namespace std;
@@ -71,19 +72,6 @@ public:
 
   /// Returns the opening for an Actor across a line.
   static line_opening_t *Get(struct line_t *line, Actor *thing);
-};
-
-
-
-/// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
-/// \ingroup g_geoutils
-struct divline_t 
-{
-  fixed_t   x, y; ///< starting point (v1)
-  fixed_t dx, dy; ///< v2-v1
-
-  /// copies the relevant parts of a linedef
-  void MakeDivline(const struct line_t *li);
 };
 
 
@@ -174,12 +162,17 @@ extern bool floatok;
 extern class bbox_t tmb;
 
 
-int     P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line);
-bool    P_LinesegsCross(const fixed_t x1, const fixed_t y1,
-			const fixed_t x2, const fixed_t y2,
-			const fixed_t x3, const fixed_t y3,
-			const fixed_t x4, const fixed_t y4);
-int     P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line);
-fixed_t P_InterceptVector(divline_t* v2, divline_t* v1);
+enum lineside_e
+{
+  LS_FRONT = 0,
+  LS_BACK  = 1,
+  LS_ON    = 2
+};
+
+int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line);
+lineside_e P_PointOnDivlineSide(const fixed_t x, const fixed_t y, const divline_t *line);
+
+bool    P_LinesegsCross(const divline_t* v0, const divline_t* v1);
+float P_InterceptVector(const divline_t* v0, const divline_t* v1);
 
 #endif

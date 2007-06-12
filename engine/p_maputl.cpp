@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -54,7 +54,7 @@
 /// \brief On which side of a 2D line the point is?
 /// \ingroup g_geoutils
 /*!
-  \return side number, 0 (right side) or 1 (left side)
+  \return side number, 0 (right side == frontside) or 1 (left side == backside, or on the line)
 */
 int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
 {
@@ -76,18 +76,16 @@ int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
   fixed_t dx = x - line->v1->x;
   fixed_t dy = y - line->v1->y;
 
-#if 1
+  // original formula, not accurate with short lines
+  /*
   fixed_t left = (line->dy >> 16) * dx;  // shift so that it always fits in 32 bits
   fixed_t right = dy * (line->dx >> 16);
-#else
-  // TEST: more accurate PointOnLineSide
-  Sint64 left = line->dy.value() * dx.value();
-  Sint64 right = dy.value() * line->dx.value();
-#endif
+  */
 
-  if (right < left)
-    return 0;               // front side
-  return 1;                   // back side
+  Sint64 left  = line->dy.value() * dx.value();
+  Sint64 right = line->dx.value() * dy.value();
+
+  return (right >= left); // backside?
 }
 
 /// \brief Do line segments drawn between (x1, y1) and (x2, y2) and
@@ -96,37 +94,21 @@ int P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line)
 /*!
   \return true if segments do cross.
 */
-bool    P_LinesegsCross(const fixed_t x1, const fixed_t y1,
-			const fixed_t x2, const fixed_t y2,
-			const fixed_t x3, const fixed_t y3,
-			const fixed_t x4, const fixed_t y4){
-  vertex_t v1, v2;
-  line_t l;
-  l.v1 = &v1;
-  l.v2 = &v2;
-
+bool P_LinesegsCross(const divline_t *v0, const divline_t *v1)
+{
   // Line segments cross if both pairs of endpoints are on different
   // sides of the line spanned by the other endpoint.
-  v1.x = x1;
-  v1.y = y1;
-  v2.x = x2;
-  v2.y = y2;
-  l.dx = x2 - x1;
-  l.dy = y2 - y1;
 
-  if(P_PointOnLineSide(x3, y3, &l) ==
-     P_PointOnLineSide(x4, y4, &l))
+  fixed_t x2 = v0->x + v0->dx;
+  fixed_t y2 = v0->y + v0->dy;
+
+  if (P_PointOnDivlineSide(v0->x, v0->y, v1) == P_PointOnDivlineSide(x2, y2, v1))
     return false;
 
-  v1.x = x3;
-  v1.y = y3;
-  v2.x = x4;
-  v2.y = y4;
-  l.dx = x4 - x3;
-  l.dy = y4 - y3;
+  x2 = v1->x + v1->dx;
+  y2 = v1->y + v1->dy;
 
-  if(P_PointOnLineSide(x1, y1, &l) ==
-     P_PointOnLineSide(x2, y2, &l))
+  if (P_PointOnDivlineSide(v1->x, v1->y, v0) == P_PointOnDivlineSide(x2, y2, v0))
     return false;
 
   return true;
@@ -135,58 +117,77 @@ bool    P_LinesegsCross(const fixed_t x1, const fixed_t y1,
 /// \brief On which side of a 2D divline the point is?
 /// \ingroup g_geoutils
 /*!
-  \return side number, 0 or 1
+  \return side number, 0 (right side == frontside) or 1 (left side == backside) or 2 (on the line)
 */
-int P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
+lineside_e P_PointOnDivlineSide(const fixed_t x, const fixed_t y, const divline_t *line)
 {
   if (!line->dx)
     {
-      if (x <= line->x)
-	return line->dy > 0;
+      if (x == line->x)
+        return LS_ON;
 
-      return line->dy < 0;
+      return ((x < line->x) ^ (line->dy > 0)) ? LS_FRONT : LS_BACK;
     }
+
   if (!line->dy)
     {
-      if (y <= line->y)
-	return line->dx < 0;
+      if (y == line->y)
+        return LS_ON;
 
-      return line->dx > 0;
+      return ((y > line->y) ^ (line->dx > 0)) ? LS_FRONT : LS_BACK;
     }
 
   fixed_t dx = x - line->x;
   fixed_t dy = y - line->y;
 
-  // try to quickly decide by looking at sign bits
+  // Try to quickly decide by looking at sign bits (works with 0.5 probability).
+  // If the line and d vectors point to adjacent quadrants, we may decide
+  // the side of line where d lies by checking which half-planes they point to.
+  /*
   if ((line->dy.value() ^ line->dx.value() ^ dx.value() ^ dy.value())&0x80000000)
     {
       if ((line->dy.value() ^ dx.value()) & 0x80000000)
 	return 1;           // (left is negative)
       return 0;
     }
+  */
 
-#if 1
+  // original formula, not accurate with short lines or near the line
+  /*
   fixed_t left = (line->dy >> 8) * (dx >> 8); // shift so result always fits in 32 bits
   fixed_t right = (dy >> 8) * (line->dx >> 8);
-#else
-  // TEST: more accurate PointOnDivlineSide
-  Sint64 left = line->dy.value() * dx.value();
-  Sint64 right = dy.value() * line->dx.value();
-#endif
+  */
+
+  Sint64 left  = line->dy.value() * dx.value();
+  Sint64 right = line->dx.value() * dy.value();
 
   if (right < left)
-    return 0;               // front side
-  return 1;                   // back side
+    return LS_FRONT; // frontside
+
+  if (left == right)
+    return LS_ON; // on the line
+
+  return LS_BACK; // backside
 }
 
 
-void divline_t::MakeDivline(const line_t *li)
+
+divline_t::divline_t(const line_t *li)
 {
   x = li->v1->x;
   y = li->v1->y;
   dx = li->dx;
   dy = li->dy;
 }
+
+divline_t::divline_t(const Actor *a)
+{
+  x = a->pos.x;
+  y = a->pos.y;
+  dx = a->vel.x;
+  dy = a->vel.y;
+}
+
 
 
 /// \brief On which side of a 2D line the bounding box is?
@@ -195,7 +196,7 @@ void divline_t::MakeDivline(const line_t *li)
   Considers the line to be infinite in length.
   \return side number, 0 or 1, or -1 if box crosses the line
 */
-int bbox_t::BoxOnLineSide(const line_t *ld)
+int bbox_t::BoxOnLineSide(const line_t *ld) const
 {
   int         p1;
   int         p2;
@@ -250,56 +251,24 @@ int bbox_t::BoxOnLineSide(const line_t *ld)
   This is only called by the addthings and addlines traversers.
   \return fractional intercept point along the first divline
 */
-fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
+float P_InterceptVector(const divline_t *v0, const divline_t *v1)
 {
-#if 0
-  // FIXME TEST, new version, more accurate
-  Sint64 den = v1->dy.value() * v2->dx.value() - v1->dx.value() * v2->dy.value();
-  den >>= fixed_t::FBITS;
+  float den = v1->dy.value() * v0->dx.value() - v1->dx.value() * v0->dy.value();
   if (den == 0)
     return 0; // parallel lines
 
-  Sint64 num = (v2->y.value() - v1->y.value()) * v1->dx.value();
-  num += -(v2->x.value() - v1->x.value()) * v1->dy.value();
+  float num = (v0->y.value() - v1->y.value()) * v1->dx.value() -(v0->x.value() - v1->x.value()) * v1->dy.value();
 
-  fixed_t res;
-  res.setvalue(num / den);
-  return res;
+  return num/den;
 
-#elif 1
+  // Original formula, not accurate with short divlines.
+  /*
   fixed_t den = (v1->dy >> 8) * v2->dx - (v1->dx >> 8) * v2->dy;
-
   if (den == 0)
     return 0;
-  //  I_Error ("P_InterceptVector: parallel");
-
   fixed_t num = ((v1->x - v2->x) >> 8) * v1->dy + ((v2->y - v1->y) >> 8) * v1->dx;
-
   return num / den;
-#else   // UNUSED, float debug.
-  float       frac,num,den;
-  float       v1x,v1y,v1dx,v1dy;
-  float       v2x,v2y,v2dx,v2dy;
-
-  v1x = (float)v1->x/FRACUNIT;
-  v1y = (float)v1->y/FRACUNIT;
-  v1dx = (float)v1->dx/FRACUNIT;
-  v1dy = (float)v1->dy/FRACUNIT;
-  v2x = (float)v2->x/FRACUNIT;
-  v2y = (float)v2->y/FRACUNIT;
-  v2dx = (float)v2->dx/FRACUNIT;
-  v2dy = (float)v2->dy/FRACUNIT;
-
-  den = v1dy*v2dx - v1dx*v2dy;
-
-  if (den == 0)
-    return 0;       // parallel
-
-  num = (v1x - v2x)*v1dy + (v2y - v1y)*v1dx;
-  frac = num / den;
-
-  return frac*FRACUNIT;
-#endif
+  */
 }
 
 
@@ -836,9 +805,8 @@ static bool PIT_AddLineIntercepts(line_t *ld)
     return true;    // line isn't crossed
 
   // hit the line
-  divline_t  dl;
-  dl.MakeDivline(ld);
-  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
+  divline_t  dl(ld);
+  float frac = P_InterceptVector(&trace.dl, &dl);
 
   if (frac < 0)
     return true;    // behind source
@@ -850,7 +818,7 @@ static bool PIT_AddLineIntercepts(line_t *ld)
     }
 
   intercept_t in;
-  in.frac = frac.Float();
+  in.frac = frac;
   in.isaline = true;
   in.line = ld;
   trace.intercepts.push_back(in);
@@ -902,13 +870,13 @@ static bool PIT_AddThingIntercepts(Actor *thing)
   dl.dx = x2-x1;
   dl.dy = y2-y1;
 
-  fixed_t frac = P_InterceptVector(&trace.dl, &dl);
+  float frac = P_InterceptVector(&trace.dl, &dl);
 
   if (frac < 0)
     return true;            // behind source
 
   intercept_t in;
-  in.frac = frac.Float();
+  in.frac = frac;
   in.isaline = false;
   in.thing = thing;
   trace.intercepts.push_back(in);

@@ -1575,11 +1575,10 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
   if (target_line)
     {
       // hit wall, make a wall splat
-      divline_t divl;
-      divl.MakeDivline(target_line);
-      fixed_t fr = P_InterceptVector(&divl, &trace.dl);
+      divline_t divl(target_line);
+      float frac = P_InterceptVector(&divl, &trace.dl);
       int side = P_PointOnLineSide(trace.start.x, trace.start.y, target_line);
-      mp->R_AddWallSplat(target_line, side, "A_DMG1", trace.lastz, fr, SPLATDRAWMODE_SHADE);
+      mp->R_AddWallSplat(target_line, side, "A_DMG1", trace.lastz, frac, SPLATDRAWMODE_SHADE);
 
       // position a bit closer
       ipoint = trace.Point(trace.frac - 4.0 / trace.length);
@@ -1706,10 +1705,8 @@ static bool PTR_BloodTraverse(intercept_t *in)
 	    return true; // nope
 	}
 
-      divline_t divl;
-      divl.MakeDivline(li);
-
-      fixed_t frac = P_InterceptVector(&divl, &trace.dl);
+      divline_t divl(li);
+      float frac = P_InterceptVector(&divl, &trace.dl);
       if (game.mode >= gm_heretic)
 	trace.mp->R_AddWallSplat(li, P_PointOnLineSide(blood_x,blood_y,li),"BLODC0", z, frac, SPLATDRAWMODE_TRANS);
       else

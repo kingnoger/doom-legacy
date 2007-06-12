@@ -186,32 +186,30 @@ bool GLExtAvailable(char *extension)
 // This function runs some unit and sanity tests to the plane geometry
 // & other routines.
 
-void GeometryUnitTests() {
-  bbox_t bb;
-  line_t l;
-  vertex_t v1, v2;
-  l.v1 = &v1;
-  l.v2 = &v2;
-  bb.Set(0.5, 0.5, 0.5);
-
+void GeometryUnitTests()
+{
   CONS_Printf("Starting geometry unit tests.\n");
 
+  bbox_t bb;
+  bb.Set(0.5, 0.5, 0.5);
+
+  divline_t l;
+  l.x = 0.5;
+  l.y = -0.5;
+  l.dx = 1.0;
+  l.dy = 1.5;
+
   // Point on line side.
-  v1.x = 0.5;
-  v1.y = -0.5;
-  v2.x = 1.5;
-  v2.y = 1;
-  l.dx = l.v2->x - l.v1->x;
-  l.dy = l.v2->y - l.v1->y;
-  if(P_PointOnLineSide(0, 0, &l) ==
-     P_PointOnLineSide(1, 0, &l))
+  if(P_PointOnDivlineSide(0, 0, &l) ==
+     P_PointOnDivlineSide(1, 0, &l))
     CONS_Printf("Point on line side test #1 failed.\n");
 
-  if(P_PointOnLineSide(1, 0, &l) ==
-     P_PointOnLineSide(1, 1, &l))
+  if(P_PointOnDivlineSide(1, 0, &l) ==
+     P_PointOnDivlineSide(1, 1, &l))
     CONS_Printf("Point on line side test #2 failed.\n");
 
   // Inspect line crossings.
+  /*
   if(!P_LinesegsCross(0, 0, 1, 1, 0, 1, 1, 0))
     CONS_Printf("Crossing test #1 failed.\n");
 
@@ -226,10 +224,10 @@ void GeometryUnitTests() {
 
   if(!P_LinesegsCross(1, 0, 1, 1, 0.5, -0.5, 1.5, 1))
     CONS_Printf("Crossing test #5 failed.\n");
-
+  */
 
   // Bounding boxes.
-  if(bb.LineCrossesEdge(-2, 0, 1000, 0.5))
+  if(!bb.LineCrossesEdge(-2, 0, 1000, 0.5))
     CONS_Printf("Bounding box test #1 failed.\n");
 
   if(!bb.LineCrossesEdge(-1, 0.5, 10, 0.5))

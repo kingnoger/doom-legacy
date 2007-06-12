@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -34,77 +32,12 @@
 //
 // P_CheckSight
 //
-fixed_t         sightzstart;            // eye z of looker
-fixed_t         topslope;
-fixed_t         bottomslope;            // slopes to top and bottom of target
+static fixed_t sightzstart;           // eye z of looker
+static fixed_t topslope, bottomslope; // slopes to top and bottom of target
 
 static divline_t strace;                 // from t1 to t2
 static fixed_t   t2x, t2y;
 static int       sightcounts[2];
-
-
-/// Returns side 0 (front), 1 (back), or 2 (on).
-static int P_DivlineSide(fixed_t x, fixed_t y, divline_t* node)
-{
-  if (!node->dx)
-    {
-      if (x==node->x)
-        return 2;
-
-      if (x <= node->x)
-        return node->dy > 0;
-
-      return node->dy < 0;
-    }
-
-  if (!node->dy)
-    {
-      if (x==node->y)
-        return 2;
-
-      if (y <= node->y)
-        return node->dx < 0;
-
-      return node->dx > 0;
-    }
-
-  fixed_t dx = x - node->x;
-  fixed_t dy = y - node->y;
-
-#if 1
-  //fixed_t left =  (node->dy>>FRACBITS) * (dx>>FRACBITS); // shift so result always fits in 32 bits
-  //fixed_t right = (dy>>FRACBITS) * (node->dx>>FRACBITS);
-  int left =  node->dy.floor() * dx.floor(); // shift so result always fits in 32 bits
-  int right = dy.floor() * node->dx.floor();
-#else
-  Sint64 left = node->dy.value() * dx.value(); // TEST sharper sight
-  Sint64 right = dy.value() * node->dx.value();
-#endif
-
-  if (right < left)
-    return 0;       // front side
-
-  if (left == right)
-    return 2;
-  return 1;           // back side
-}
-
-
-// Returns the fractional intercept point
-// along the first divline.
-// This is only called by the addthings and addlines traversers.
-static fixed_t P_InterceptVector2(divline_t *v2, divline_t *v1)
-{
-  fixed_t den = (v1->dy>>8) * v2->dx - (v1->dx>>8) * v2->dy;
-
-  if (den == 0)
-    return 0;
-  //  I_Error ("P_InterceptVector: parallel");
-
-  fixed_t num = ((v1->x - v2->x) >> 8) * v1->dy + ((v2->y - v1->y) >> 8) * v1->dx;
-
-  return num / den;
-}
 
 
 // Returns true if strace crosses the given subsector successfully.
@@ -135,8 +68,8 @@ bool Map::CrossSubsector(int num)
 
       vertex_t *v1 = line->v1;
       vertex_t *v2 = line->v2;
-      int s1 = P_DivlineSide(v1->x, v1->y, &strace);
-      int s2 = P_DivlineSide(v2->x, v2->y, &strace);
+      int s1 = P_PointOnDivlineSide(v1->x, v1->y, &strace);
+      int s2 = P_PointOnDivlineSide(v2->x, v2->y, &strace);
 
       // line isn't crossed?
       if (s1 == s2)
@@ -148,8 +81,8 @@ bool Map::CrossSubsector(int num)
       divl.y = v1->y;
       divl.dx = v2->x - v1->x;
       divl.dy = v2->y - v1->y;
-      s1 = P_DivlineSide(strace.x, strace.y, &divl);
-      s2 = P_DivlineSide(t2x, t2y, &divl);
+      s1 = P_PointOnDivlineSide(strace.x, strace.y, &divl);
+      s2 = P_PointOnDivlineSide(t2x, t2y, &divl);
 
       // line isn't crossed?
       if (s1 == s2)
@@ -188,7 +121,7 @@ bool Map::CrossSubsector(int num)
       if (openbottom >= opentop)
         return false;               // stop
 
-      fixed_t frac = P_InterceptVector2(&strace, &divl);      
+      float frac = P_InterceptVector(&strace, &divl);      
 
       if (front->floorheight != back->floorheight)
         {
@@ -227,16 +160,16 @@ bool Map::CrossBSPNode(int bspnum)
   node_t *bsp = &nodes[bspnum];
 
   // decide which side the start point is on
-  int side = P_DivlineSide(strace.x, strace.y, (divline_t *)bsp);
-  if (side == 2)
-    side = 0;       // an "on" should cross both sides
+  int side = P_PointOnDivlineSide(strace.x, strace.y, bsp);
+  if (side == LS_ON)
+    side = LS_FRONT; // an "on" should cross both sides
 
   // cross the starting side
   if (!CrossBSPNode(bsp->children[side]))
     return false;
 
   // the partition plane is crossed here
-  if (side == P_DivlineSide(t2x, t2y,(divline_t *)bsp))
+  if (side == P_PointOnDivlineSide(t2x, t2y, bsp))
     {
       // the line doesn't touch the other side
       return true;

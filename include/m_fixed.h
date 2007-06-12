@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -200,7 +200,7 @@ public:
   inline float   Float() const { return float(val) / float(UNIT); }
 
   // NOTE: the rounding funcs assume that right-shifting negative values continues the sign, ie. (-1 >> n) == -1.
-  // In other words we assume a two's complement represenatation for negative numbers...
+  // In other words we assume a two's complement representation for negative numbers...
   /// round towards zero
   inline value_t trunc() const { return (val >= 0) ? val >> FBITS : ((val-1) >> FBITS)+1; /* return val >> FBITS; */ }
   /// round towards -infinity
@@ -212,7 +212,7 @@ public:
   inline fixed_t frac() const { fixed_t res; res.val = val & FMASK; return res; }
 
   /// conveniences, remove them if you can!
-  inline value_t  value() const { return val; }
+  inline large_t  value() const { return val; }
   inline fixed_t& setvalue(value_t v) { val = v; return *this; }
 
 
