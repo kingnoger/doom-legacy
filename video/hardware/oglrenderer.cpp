@@ -734,91 +734,53 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
 
 // Checks BSP node/subtree bounding box.
 // Returns true if some part of the bbox might be visible.
-bool OGLRenderer::BBoxIntersectsFrustum(const bbox_t& bbox)
-{
-  /*
-  //   | 0 | 1 | 2
-  // --+---+---+---
-  // 0 | 0 | 1 | 2
-  // 1 | 4 | 5 | 6
-  // 2 | 8 | 9 | A
-  const bbox_e checkcoord[11][4] =
-  {
-    {BOXRIGHT,BOXTOP,BOXLEFT,BOXBOTTOM},
-    {BOXRIGHT,BOXTOP,BOXLEFT,BOXTOP},
-    {BOXRIGHT,BOXBOTTOM,BOXLEFT,BOXTOP},
-    {0},       // UNUSED
-    {BOXLEFT,BOXTOP,BOXLEFT,BOXBOTTOM},
-    {0},       // UNUSED
-    {BOXRIGHT,BOXBOTTOM,BOXRIGHT,BOXTOP},
-    {0},       // UNUSED
-    {BOXLEFT,BOXTOP,BOXRIGHT,BOXBOTTOM},
-    {BOXLEFT,BOXBOTTOM,BOXRIGHT,BOXBOTTOM},
-    {BOXLEFT,BOXBOTTOM,BOXRIGHT,BOXTOP}
-  };
+bool OGLRenderer::BBoxIntersectsFrustum(const bbox_t& bbox) const {
+  fixed_t cx, cy; // Tip of frustum.
+  fixed_t lx, ly; // Left edge of frustum.
+  fixed_t rx, ry; // Right edge of frustum.
+  static const double fsize = 10000.0; // Depth of frustum, also a hack.
 
-  int boxpos;
+  // Build frustum points suitable for analysis.
+  cx = x;
+  cy = y;
+  lx = x + fsize*cos((phi+0.5*viewportar*fov)*(M_PI/180.0));
+  ly = y + fsize*sin((phi+0.5*viewportar*fov)*(M_PI/180.0));
 
-  // Find the corners of the box that define the edges from current viewpoint.
-  if (x <= bbox[BOXLEFT])
-    boxpos = 0;
-  else if (x < bbox[BOXRIGHT])
-    boxpos = 1;
-  else
-    boxpos = 2;
+  rx = x + fsize*cos((phi-0.5*viewportar*fov)*(M_PI/180.0));
+  ry = y + fsize*sin((phi-0.5*viewportar*fov)*(M_PI/180.0));
 
-  if (y >= bbox[BOXTOP])
-    boxpos |= 0;
-  else if (y > bbox[BOXBOTTOM])
-    boxpos |= 1<<2;
-  else
-    boxpos |= 2<<2;
-
-  if (boxpos == 5)
+  // If we have intersections, bbox area is visible.
+  if(bbox.LineCrossesEdge(cx, cy, lx, ly))
+    return true;
+  if(bbox.LineCrossesEdge(cx, cy, rx, ry))
+    return true;
+  if(bbox.LineCrossesEdge(lx, ly, rx, ry)) // Is this really necessary?
     return true;
 
-  fixed_t x1 = bbox[checkcoord[boxpos][0]];
-  fixed_t y1 = bbox[checkcoord[boxpos][1]];
-  fixed_t x2 = bbox[checkcoord[boxpos][2]];
-  fixed_t y2 = bbox[checkcoord[boxpos][3]];
+  // At this point the bbox is either entirely outside or entirely
+  // inside the frustum. Find out which.
+  vertex_t v1, v2;
+  line_t l;
+  l.v1 = &v1;
+  l.v2 = &v2;
+  v1.x = cx;
+  v1.y = cy;
+  v2.x = lx;
+  v2.y = ly;
+  l.dx = lx-cx;
+  l.dy = ly-cy;
+ 
+  if(P_PointOnLineSide(bbox.box[BOXLEFT], bbox.box[BOXTOP], &l))
+    return false;
 
-#error frustum cull
-    // check clip list for an open space
-    angle1 = R_PointToAngle (x1, y1) - viewangle;
-    angle2 = R_PointToAngle (x2, y2) - viewangle;
+  v2.x = rx;
+  v2.y = ry;
+  l.dx = rx-cx;
+  l.dy = ry-cy;
 
-    span = angle1 - angle2;
+  if(!P_PointOnLineSide(bbox.box[BOXLEFT], bbox.box[BOXTOP], &l))
+    return false;
 
-    // Sitting on a line?
-    if (span >= ANG180)
-        return true;
-
-
-    tspan = angle1 + clipangle;
-
-    if (tspan > 2*clipangle)
-    {
-        tspan -= 2*clipangle;
-
-        // Totally off the left edge?
-        if (tspan >= span)
-            return false;
-
-        angle1 = clipangle;
-    }
-    tspan = clipangle - angle2;
-    if (tspan > 2*clipangle)
-    {
-        tspan -= 2*clipangle;
-
-        // Totally off the left edge?
-        if (tspan >= span)
-            return false;
-
-        angle2 = -clipangle;
-    }
-
-  */
   return true;
 }
 

@@ -85,7 +85,7 @@ private:
   void DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
   void DrawSimpleSky();
 
-  bool BBoxIntersectsFrustum(const struct bbox_t& bbox); ///< True if bounding box intersects current view frustum.
+  bool BBoxIntersectsFrustum(const struct bbox_t& bbox) const; ///< True if bounding box intersects current view frustum.
 
 public:
   OGLRenderer();
