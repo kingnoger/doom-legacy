@@ -801,7 +801,7 @@ void OGLRenderer::RenderBSPNode(int nodenum)
   node_t *node = &mp->nodes[nodenum];
 
   // Decide which side the view point is on.
-  int side = R_PointOnSide(float(x), float(y), node);
+  int side = node->PointOnSide(x, y);
 
   // OpenGL requires back-to-front drawing for translucency effects to
   // work properly. Thus we first check the back.

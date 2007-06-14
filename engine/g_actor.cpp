@@ -681,12 +681,10 @@ void Actor::XYMovement()
 	      // draw damage on wall
 	      if (PosCheck.block_line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed
                 {
-		  divline_t   divl(PosCheck.block_line);
 		  divline_t   misl(this);
-
-		  float frac = P_InterceptVector(&divl, &misl);
-		  mp->R_AddWallSplat(PosCheck.block_line, P_PointOnLineSide(pos.x, pos.y, PosCheck.block_line),
-				     "A_DMG3", pos.z, frac, SPLATDRAWMODE_SHADE);
+		  float frac = divline_t(PosCheck.block_line).InterceptVector(&misl);
+		  PosCheck.block_line->AddWallSplat("A_DMG3", P_PointOnLineSide(pos.x, pos.y, PosCheck.block_line),
+						    pos.z, frac, SPLATDRAWMODE_SHADE);
                 }
 
 	      flags &= ~MF_MISSILE;

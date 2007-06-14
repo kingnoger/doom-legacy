@@ -1246,7 +1246,7 @@ void Rend::R_DrawSprite(vissprite_t *spr)
 
       if (scale < spr->yscale
 	  || (lowscale < spr->yscale
-	      && !R_PointOnSegSide(spr->px, spr->py, ds->curline)))
+	      && !divline_t(ds->curline).PointOnSide(spr->px, spr->py)))
         {
 	  // masked mid texture?
 	  /*if (ds->maskedtexturecol)

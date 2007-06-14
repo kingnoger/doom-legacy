@@ -97,21 +97,21 @@ bool bbox_t::LineCrossesEdge(const fixed_t x1, const fixed_t y1, const fixed_t x
   line.dx = x2-x1;
   line.dy = y2-y1;
 
-  int s1 = P_PointOnDivlineSide(box[BOXRIGHT], box[BOXTOP], &line); 
-  int s2 = P_PointOnDivlineSide(box[BOXLEFT], box[BOXTOP], &line); 
+  int s1 = line.PointOnSide(box[BOXRIGHT], box[BOXTOP]); 
+  int s2 = line.PointOnSide(box[BOXLEFT], box[BOXTOP]); 
 
   if (s1 != s2)
     // see if line crosses the top edge
     if ((y1 <= box[BOXTOP]) ^ (y2 <= box[BOXTOP]))
       return true;
 
-  int s3 = P_PointOnDivlineSide(box[BOXLEFT], box[BOXBOTTOM], &line); 
+  int s3 = line.PointOnSide(box[BOXLEFT], box[BOXBOTTOM]); 
 
   if (s2 != s3)
     if ((x1 <= box[BOXLEFT]) ^ (x2 <= box[BOXLEFT]))
       return true;
 
-  int s4 = P_PointOnDivlineSide(box[BOXRIGHT], box[BOXBOTTOM], &line); 
+  int s4 = line.PointOnSide(box[BOXRIGHT], box[BOXBOTTOM]); 
 
   if (s3 != s4)
     if ((y1 <= box[BOXBOTTOM]) ^ (y2 <= box[BOXBOTTOM]))

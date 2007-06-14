@@ -200,12 +200,12 @@ void GeometryUnitTests()
   l.dy = 1.5;
 
   // Point on line side.
-  if(P_PointOnDivlineSide(0, 0, &l) ==
-     P_PointOnDivlineSide(1, 0, &l))
+  if(l.PointOnSide(0, 0) ==
+     l.PointOnSide(1, 0))
     CONS_Printf("Point on line side test #1 failed.\n");
 
-  if(P_PointOnDivlineSide(1, 0, &l) ==
-     P_PointOnDivlineSide(1, 1, &l))
+  if(l.PointOnSide(1, 0) ==
+     l.PointOnSide(1, 1))
     CONS_Printf("Point on line side test #2 failed.\n");
 
   // Inspect line crossings.

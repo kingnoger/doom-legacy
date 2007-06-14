@@ -1072,34 +1072,31 @@ int   R_GetPlaneLight(sector_t* sector, fixed_t  planeheight, bool underside)
 //  traversing subtree recursively.
 // Just call with BSP root.
 #if 1
-void Rend::R_RenderBSPNode (int bspnum)
+void Rend::R_RenderBSPNode(int bspnum)
 {
-    node_t*     bsp;
-    int         side;
-
-    // Found a subsector?
-    if (bspnum & NF_SUBSECTOR)
+  // Found a subsector?
+  if (bspnum & NF_SUBSECTOR)
     {
-        if (bspnum == -1)
-            // BP: never happen : bspnum = int, children = unsigned short
-            // except first call if numsubsectors=0 ! who care ?
-            R_Subsector (0);
-        else
-            R_Subsector (bspnum&(~NF_SUBSECTOR));
-        return;
+      if (bspnum == -1)
+	// BP: never happen : bspnum = int, children = unsigned short
+	// except first call if numsubsectors=0 ! who care ?
+	R_Subsector (0);
+      else
+	R_Subsector(bspnum & (~NF_SUBSECTOR));
+      return;
     }
 
-    bsp = &nodes[bspnum];
+  node_t *bsp = &nodes[bspnum];
 
-    // Decide which side the view point is on.
-    side = R_PointOnSide (viewx, viewy, bsp);
+  // Decide which side the view point is on.
+  int side = bsp->PointOnSide(viewx, viewy);
 
-    // Recursively divide front space.
-    R_RenderBSPNode (bsp->children[side]);
+  // Recursively divide front space.
+  R_RenderBSPNode(bsp->children[side]);
 
-    // Possibly divide back space.
-    if (R_CheckBBox (bsp->bbox[side^1]))
-        R_RenderBSPNode (bsp->children[side^1]);
+  // Possibly divide back space.
+  if (R_CheckBBox(bsp->bbox[side^1]))
+    R_RenderBSPNode(bsp->children[side^1]);
 }
 #else
 

@@ -508,9 +508,6 @@ public:
   void FS_AddRunningScript(runningscript_t *s);
 protected:
   bool FS_wait_finished(runningscript_t *script);
-
-public:
-  void R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_t wallfrac, int flags);
 };
 
 

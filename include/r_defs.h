@@ -426,6 +426,10 @@ struct line_t
 
   int transmap;   ///< translucency filter, -1 == none
   int ecolormap;  ///< SoM: Used for 282 linedefs
+
+
+  /// Adds a splat decal on the line.
+  void AddWallSplat(const char *name, int side, fixed_t top, fixed_t wallfrac, int flags);
 };
 
 
@@ -528,6 +532,7 @@ struct seg_t
 };
 
 
+
 /// \brief Encapsulates the XY-plane geometry of a linedef for line traces. 
 /// \ingroup g_geoutils
 struct divline_t 
@@ -535,14 +540,33 @@ struct divline_t
   fixed_t   x, y; ///< starting point (v1)
   fixed_t dx, dy; ///< v2-v1
 
-  /// empty default constructor
+  enum lineside_e
+  {
+    LS_FRONT = 0, // must be 0 (used as an array index)
+    LS_BACK  = 1, // must be 1 (used as an array index)
+    //LS_ON    = 2 // currently not used, instead we return LS_BACK
+  };
+
+  /// Empty default constructor.
   divline_t() {}
 
-  /// copies the relevant parts of a linedef
-  divline_t(const struct line_t *li);
+  /// Copies the relevant parts of a linedef.
+  divline_t(const line_t *li);
 
-  /// makes a divline from the XY position and velocity of an Actor
-  divline_t(const class Actor *a);
+  /// Copies the relevant parts of a seg.
+  divline_t(const seg_t *s);
+
+  /// Makes a divline from the XY position and velocity of an Actor.
+  divline_t(const Actor *a);
+
+  /// Returns the side of the divline the given point is on.
+  lineside_e PointOnSide(const fixed_t px, const fixed_t py) const;
+
+  /// Returns the fractional length along the divline where the other divline intercepts it, or 0 if parallel.
+  float InterceptVector(const divline_t *other) const;
+
+  /// Returns true if the line segments represented by the divlines cross each other.
+  bool  LinesegsCross(const divline_t *other) const;
 };
 
 

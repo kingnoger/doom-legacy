@@ -177,13 +177,6 @@ extern int              extralight;
 
 
 
-// Utility functions.
-
-int R_PointOnSide(fixed_t x, fixed_t y, node_t* node);
-int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t* line);
-
-
-
 // REFRESH - the actual rendering functions.
 
 // initializes the client part of the renderer

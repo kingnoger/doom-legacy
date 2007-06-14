@@ -68,8 +68,8 @@ bool Map::CrossSubsector(int num)
 
       vertex_t *v1 = line->v1;
       vertex_t *v2 = line->v2;
-      int s1 = P_PointOnDivlineSide(v1->x, v1->y, &strace);
-      int s2 = P_PointOnDivlineSide(v2->x, v2->y, &strace);
+      int s1 = strace.PointOnSide(v1->x, v1->y);
+      int s2 = strace.PointOnSide(v2->x, v2->y);
 
       // line isn't crossed?
       if (s1 == s2)
@@ -81,8 +81,8 @@ bool Map::CrossSubsector(int num)
       divl.y = v1->y;
       divl.dx = v2->x - v1->x;
       divl.dy = v2->y - v1->y;
-      s1 = P_PointOnDivlineSide(strace.x, strace.y, &divl);
-      s2 = P_PointOnDivlineSide(t2x, t2y, &divl);
+      s1 = divl.PointOnSide(strace.x, strace.y);
+      s2 = divl.PointOnSide(t2x, t2y);
 
       // line isn't crossed?
       if (s1 == s2)
@@ -121,7 +121,7 @@ bool Map::CrossSubsector(int num)
       if (openbottom >= opentop)
         return false;               // stop
 
-      float frac = P_InterceptVector(&strace, &divl);      
+      float frac = strace.InterceptVector(&divl);
 
       if (front->floorheight != back->floorheight)
         {
@@ -160,16 +160,18 @@ bool Map::CrossBSPNode(int bspnum)
   node_t *bsp = &nodes[bspnum];
 
   // decide which side the start point is on
-  int side = P_PointOnDivlineSide(strace.x, strace.y, bsp);
-  if (side == LS_ON)
-    side = LS_FRONT; // an "on" should cross both sides
+  int side = bsp->PointOnSide(strace.x, strace.y);
+  /*
+  if (side == divline_t::LS_ON)
+    side = divline_t::LS_FRONT; // an "on" should cross both sides
+  */
 
   // cross the starting side
   if (!CrossBSPNode(bsp->children[side]))
     return false;
 
   // the partition plane is crossed here
-  if (side == P_PointOnDivlineSide(t2x, t2y, bsp))
+  if (side == bsp->PointOnSide(t2x, t2y))
     {
       // the line doesn't touch the other side
       return true;
@@ -192,43 +194,35 @@ bool Map::CheckSight(Actor *t1, Actor *t2)
 
   // First check for trivial rejection.
 
-  // Determine subsector entries in REJECT table.
+  // Determine sector entries in REJECT table.
   int s1 = (t1->subsector->sector - sectors);
   int s2 = (t2->subsector->sector - sectors);
   int pnum = s1*numsectors + s2;
-  int bytenum = pnum>>3;
+  int bytenum = pnum >> 3;
   int bitnum = 1 << (pnum&7);
 
   // Check in REJECT table.
-  if (rejectmatrix[bytenum]&bitnum)
+  if (rejectmatrix[bytenum] & bitnum)
     {
       sightcounts[0]++;
 
       // can't possibly be connected
       return false;
     }
-  /*  BP: it seam that it don't work :( TODO: fix it
-      if (gamemode == heretic )
-      {
-      //
-      // check precisely
-      //
-      sightzstart = t1->z + t1->height - (t1->height>>2);
-      topslope = (t2->z+t2->height) - sightzstart;
-      bottomslope = (t2->z) - sightzstart;
 
-      return P_SightPathTraverse ( t1->x, t1->y, t2->x, t2->y );
-      }
-  */
   // An unobstructed LOS is possible.
   // Now look from eyes of t1 to any part of t2.
   sightcounts[1]++;
-
   validcount++;
 
   sightzstart = t1->Top() - (t1->height >> 2);
   topslope = t2->Top() - sightzstart;
   bottomslope = t2->Feet() - sightzstart;
+
+  /*
+  if (gamemode == gm_heretic)
+    return P_SightPathTraverse(t1->x, t1->y, t2->x, t2->y);
+  */
 
   strace.x = t1->pos.x;
   strace.y = t1->pos.y;

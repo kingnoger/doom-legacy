@@ -58,9 +58,6 @@ struct wallsplat_t
 
 void R_ClearLevelSplats();
 
-//void R_AddWallSplat(line_t* wallline, int sectorside, char* patchname, fixed_t top, fixed_t wallfrac, int flags);
-
-
 
 //#define FLOORSPLATS
 #ifdef FLOORSPLATS

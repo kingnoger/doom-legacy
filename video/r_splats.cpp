@@ -93,7 +93,7 @@ static fixed_t P_SegLength(line_t *l)
 // top : top z coord
 // wallfrac : frac along the linedef vector (0 to FRACUNIT)
 // splatpatchname : name of patch to draw
-void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_t wallfrac, int flags)
+void line_t::AddWallSplat(const char *name, int side, fixed_t top, fixed_t wallfrac, int flags)
 {
   //CONS_Printf("wall splat: %s\n", name);
   wallsplat_t *splat = R_AllocWallSplat();
@@ -104,23 +104,23 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   Material *mat = splat->mat = materials.Get(name);
   side ^= 1;
  
-  sector_t *backsector = NULL;
-  if (line->sideptr[side])
+  sector_t *backsec = NULL;
+  if (sideptr[side])
     {
-      backsector = line->sideptr[side]->sector;
+      backsec = sideptr[side]->sector;
 
-      // BUGFIX! first backsector must be checked against NULL value!
-      if (backsector)
+      // BUGFIX! first backsec must be checked against NULL value!
+      if (backsec)
 	{
-	  if (top < backsector->floorheight)
+	  if (top < backsec->floorheight)
 	    {
-	      splat->yoffset = &backsector->floorheight;
-	      top -= backsector->floorheight;
+	      splat->yoffset = &backsec->floorheight;
+	      top -= backsec->floorheight;
 	    }
-	  else if(top > backsector->ceilingheight)
+	  else if (top > backsec->ceilingheight)
 	    {
-	      splat->yoffset = &backsector->ceilingheight;
-	      top -= backsector->ceilingheight;
+	      splat->yoffset = &backsec->ceilingheight;
+	      top -= backsec->ceilingheight;
 	    }
 	}
     }
@@ -130,7 +130,7 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   splat->flags = flags;
   
   // offset needed by draw code for texture mapping
-  fixed_t linelength = P_SegLength(line);
+  fixed_t linelength = P_SegLength(this);
   float temp = mat->tex[0].worldwidth/2;
 
   splat->offset = wallfrac*linelength - temp;
@@ -141,16 +141,16 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   if (wallfrac > linelength)
     return;
   //CONS_Printf("final splat position %f\n",FIXED_TO_FLOAT(wallfrac));
-  splat->v1.x = line->v1->x + (line->dx * wallfrac);
-  splat->v1.y = line->v1->y + (line->dy * wallfrac);
+  splat->v1.x = v1->x + (dx * wallfrac);
+  splat->v1.y = v1->y + (dy * wallfrac);
   wallfrac += fracsplat + fracsplat;
   if (wallfrac < 0)
     return;
-  splat->v2.x = line->v1->x + (line->dx * wallfrac);
-  splat->v2.y = line->v1->y + (line->dy * wallfrac);
+  splat->v2.x = v1->x + (dx * wallfrac);
+  splat->v2.y = v1->y + (dy * wallfrac);
 
 
-  if (line->frontsector && line->frontsector == backsector)
+  if (frontsector && frontsector == backsec)
     {
 /*  BP: dont work texture mapping problem :(
         // in the other side
@@ -165,17 +165,17 @@ void Map::R_AddWallSplat(line_t *line, int side, char *name, fixed_t top, fixed_
   // insert splat in the linedef splat list
   // BP: why not insert in head is mush more simple ?
   // BP: because for remove it is more simple !
-  splat->line = line;
+  splat->line = this;
   splat->next = NULL;
-  if (line->splats)
+  if (splats)
     {
-      wallsplat_t *p = line->splats;
+      wallsplat_t *p = splats;
       while (p->next)
 	p = p->next;
       p->next = splat;
     }
   else
-    line->splats = splat;
+    splats = splat;
 }
 
 

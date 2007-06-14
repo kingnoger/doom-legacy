@@ -146,115 +146,6 @@ consvar_t cv_viewheight = {"viewheight", "41",0,viewheight_cons_t,NULL};
 
 //===========================================
 
-//
-// R_PointOnSide
-// Traverse BSP (sub) tree,
-//  check point against partition plane.
-// Returns side 0 (front) or 1 (back).
-//
-int R_PointOnSide(fixed_t x, fixed_t y, node_t *node)
-{
-  if (!node->dx)
-    {
-      if (x <= node->x)
-	return node->dy > 0;
-
-      return node->dy < 0;
-    }
-  if (!node->dy)
-    {
-      if (y <= node->y)
-	return node->dx < 0;
-
-      return node->dx > 0;
-    }
-
-  fixed_t dx = (x - node->x);
-  fixed_t dy = (y - node->y);
-
-  // Try to quickly decide by looking at sign bits.
-  if ((node->dy.value() ^ node->dx.value() ^ dx.value() ^ dy.value()) & 0x80000000)
-    {
-      if ( (node->dy.value() ^ dx.value()) & 0x80000000 )
-        {
-	  // (left is negative)
-	  return 1;
-        }
-      return 0;
-    }
-
-  fixed_t left = (node->dy >> fixed_t::FBITS) * dx;
-  fixed_t right = dy * (node->dx >> fixed_t::FBITS);
-
-  if (right < left)
-    {
-      // front side
-      return 0;
-    }
-  // back side
-  return 1;
-}
-
-
-int R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line)
-{
-  fixed_t     lx;
-  fixed_t     ly;
-  fixed_t     ldx;
-  fixed_t     ldy;
-  fixed_t     dx;
-  fixed_t     dy;
-  fixed_t     left;
-  fixed_t     right;
-
-  lx = line->v1->x;
-  ly = line->v1->y;
-
-  ldx = line->v2->x - lx;
-  ldy = line->v2->y - ly;
-
-  if (!ldx)
-    {
-      if (x <= lx)
-	return ldy > 0;
-
-      return ldy < 0;
-    }
-  if (!ldy)
-    {
-      if (y <= ly)
-	return ldx < 0;
-
-      return ldx > 0;
-    }
-
-  dx = (x - lx);
-  dy = (y - ly);
-
-  // Try to quickly decide by looking at sign bits.
-  if ( (ldy.value() ^ ldx.value() ^ dx.value() ^ dy.value())&0x80000000 )
-    {
-      if  ( (ldy.value() ^ dx.value()) & 0x80000000 )
-        {
-	  // (left is negative)
-	  return 1;
-        }
-      return 0;
-    }
-
-  left = (ldy>>fixed_t::FBITS) * dx;
-  right = dy * (ldx>>fixed_t::FBITS);
-
-  if (right < left)
-    {
-      // front side
-      return 0;
-    }
-  // back side
-  return 1;
-}
-
-
 
 angle_t Rend::R_PointToAngle(fixed_t x, fixed_t y)
 {
@@ -266,7 +157,6 @@ fixed_t Rend::R_PointToDist(fixed_t x, fixed_t y)
 {
   return R_PointToDist2(viewx, viewy, x, y);
 }
-
 
 
 //
@@ -753,7 +643,7 @@ subsector_t *Map::R_PointInSubsector(fixed_t x, fixed_t y)
   while (! (nodenum & NF_SUBSECTOR) )
     {
       node_t *node = &nodes[nodenum];
-      int side = R_PointOnSide (x, y, node);
+      int side = node->PointOnSide(x, y);
       nodenum = node->children[side];
     }
 
@@ -774,14 +664,14 @@ subsector_t* Map::R_IsPointInSubsector(fixed_t x, fixed_t y)
   while (! (nodenum & NF_SUBSECTOR) )
     {
       node_t *node = &nodes[nodenum];
-      int side = R_PointOnSide (x, y, node);
+      int side = node->PointOnSide(x, y);
       nodenum = node->children[side];
     }
 
   subsector_t *ret = &subsectors[nodenum & ~NF_SUBSECTOR];
   for (unsigned i=0; i<ret->num_segs; i++)
     {
-      if (R_PointOnSegSide(x,y,&segs[ret->first_seg + i]))
+      if (divline_t(&segs[ret->first_seg + i]).PointOnSide(x, y))
 	return 0;
     }
 
