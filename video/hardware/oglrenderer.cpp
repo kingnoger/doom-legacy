@@ -681,6 +681,8 @@ void OGLRenderer::Render3DView(Actor *pov)
 
   curssec = pov->subsector;
 
+  // Build frustum and we are ready to render.
+  CalculateFrustum();
   RenderBSPNode(mp->numnodes-1);
 }
 
@@ -730,31 +732,33 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
     }
 }
 
+// Calculates the 2D view frustum of the current player view. Call
+// before rendering BSP.
 
+void OGLRenderer::CalculateFrustum() {
+  static const double fsize = 10000.0; // Depth of frustum, also a hack.
+
+  // Build frustum points suitable for analysis.
+  fr_cx = x;
+  fr_cy = y;
+
+  fr_lx = x + fsize*cos((phi+0.5*viewportar*fov)*(M_PI/180.0));
+  fr_ly = y + fsize*sin((phi+0.5*viewportar*fov)*(M_PI/180.0));
+
+  fr_rx = x + fsize*cos((phi-0.5*viewportar*fov)*(M_PI/180.0));
+  fr_ry = y + fsize*sin((phi-0.5*viewportar*fov)*(M_PI/180.0));
+
+}
 
 // Checks BSP node/subtree bounding box.
 // Returns true if some part of the bbox might be visible.
 bool OGLRenderer::BBoxIntersectsFrustum(const bbox_t& bbox) const {
-  fixed_t cx, cy; // Tip of frustum.
-  fixed_t lx, ly; // Left edge of frustum.
-  fixed_t rx, ry; // Right edge of frustum.
-  static const double fsize = 10000.0; // Depth of frustum, also a hack.
-
-  // Build frustum points suitable for analysis.
-  cx = x;
-  cy = y;
-  lx = x + fsize*cos((phi+0.5*viewportar*fov)*(M_PI/180.0));
-  ly = y + fsize*sin((phi+0.5*viewportar*fov)*(M_PI/180.0));
-
-  rx = x + fsize*cos((phi-0.5*viewportar*fov)*(M_PI/180.0));
-  ry = y + fsize*sin((phi-0.5*viewportar*fov)*(M_PI/180.0));
-
   // If we have intersections, bbox area is visible.
-  if(bbox.LineCrossesEdge(cx, cy, lx, ly))
+  if(bbox.LineCrossesEdge(fr_cx, fr_cy, fr_lx, fr_ly))
     return true;
-  if(bbox.LineCrossesEdge(cx, cy, rx, ry))
+  if(bbox.LineCrossesEdge(fr_cx, fr_cy, fr_rx, fr_ry))
     return true;
-  if(bbox.LineCrossesEdge(lx, ly, rx, ry)) // Is this really necessary?
+  if(bbox.LineCrossesEdge(fr_lx, fr_ly, fr_rx, fr_ry)) // Is this really necessary?
     return true;
 
   // At this point the bbox is either entirely outside or entirely
@@ -763,20 +767,20 @@ bool OGLRenderer::BBoxIntersectsFrustum(const bbox_t& bbox) const {
   line_t l;
   l.v1 = &v1;
   l.v2 = &v2;
-  v1.x = cx;
-  v1.y = cy;
-  v2.x = lx;
-  v2.y = ly;
-  l.dx = lx-cx;
-  l.dy = ly-cy;
+  v1.x = fr_cx;
+  v1.y = fr_cy;
+  v2.x = fr_lx;
+  v2.y = fr_ly;
+  l.dx = fr_lx-fr_cx;
+  l.dy = fr_ly-fr_cy;
  
   if(P_PointOnLineSide(bbox.box[BOXLEFT], bbox.box[BOXTOP], &l))
     return false;
 
-  v2.x = rx;
-  v2.y = ry;
-  l.dx = rx-cx;
-  l.dy = ry-cy;
+  v2.x = fr_rx;
+  v2.y = fr_ry;
+  l.dx = fr_rx-fr_cx;
+  l.dy = fr_ry-fr_cy;
 
   if(!P_PointOnLineSide(bbox.box[BOXLEFT], bbox.box[BOXTOP], &l))
     return false;

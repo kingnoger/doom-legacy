@@ -71,6 +71,10 @@ private:
 
   double fov;     ///< Field of view in degrees.
 
+  fixed_t fr_cx, fr_cy; // Tip of current viewing frustum.
+  fixed_t fr_lx, fr_ly; // Left edge of frustum.
+  fixed_t fr_rx, fr_ry; // Right edge of frustum.
+
   double hudar;      ///< HUD aspect ratio.
   double screenar;   ///< Aspect ratio of the physical screen (monitor).
   double viewportar; ///< Aspect ratio of current viewport.
@@ -85,6 +89,7 @@ private:
   void DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0);
   void DrawSimpleSky();
 
+  void CalculateFrustum();
   bool BBoxIntersectsFrustum(const struct bbox_t& bbox) const; ///< True if bounding box intersects current view frustum.
 
 public:
