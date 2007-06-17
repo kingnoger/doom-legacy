@@ -622,6 +622,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
 		 model, proj, vp,
 		 &chx, &chy, &chz);
 
+      /*
       // Draw a red dot there. Used for testing.
       glDisable(GL_DEPTH_TEST);
       glDisable(GL_LIGHTING);
@@ -631,6 +632,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
       glBegin(GL_POINTS);
       glVertex3f(target.x.Float(), target.y.Float(), target.z.Float());
       glEnd();
+      */
     }
 
   // Pretty soon we want to draw HUD graphics and stuff.
