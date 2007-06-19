@@ -167,7 +167,7 @@ void OGLRenderer::ClearDrawColor()
 }
 
 
-void OGLRenderer::SetGlobalColor(float *rgba)
+void OGLRenderer::SetGlobalColor(GLfloat *rgba)
 {
 }
 
@@ -317,7 +317,7 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
 	  surfaceflags & SDL_FULLSCREEN)
     screenar = 4.0/3.0;
   else
-    screenar = double(w)/h;
+    screenar = GLfloat(w)/h;
 
   CONS_Printf("Screen aspect ratio %.2f.\n", screenar);
   CONS_Printf("HUD aspect ratio %.2f.\n", hudar);
@@ -423,7 +423,7 @@ void OGLRenderer::Setup3DMode()
   glLoadIdentity();
 
   // Read projection information from consvars. Currently only fov.
-  fov = max(1.0f, min(float(cv_fov.value), 180.0f));
+  fov = max(1.0f, min(GLfloat(cv_fov.value), 180.0f));
 
   // Load clipping planes from consvars.
   gluPerspective(fov*hudar/viewportar, viewportar, cv_grnearclippingplane.Get().Float(), cv_grfarclippingplane.Get().Float());
@@ -470,7 +470,7 @@ void OGLRenderer::Draw2DGraphic(GLfloat left, GLfloat bottom,
 // Just like the earlier one, except the coordinates are given in Doom
 // units. (screen is 320 wide and 200 high.)
 
-void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
+void OGLRenderer::Draw2DGraphic_Doom(GLfloat x, GLfloat y, Material *mat, int flags)
 {
   // OpenGL origin is at the bottom left corner. Doom origin is at top left.
   // Texture coordinates follow the Doom convention.
@@ -479,7 +479,7 @@ void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
   if((x+width) > doomscreenw || (y+height) > doomscreenh)
     printf("Tex %d out of bounds: (%.2f, %.2f) (%.2f, %.2f).\n", tex, x, y, x+width, y+height);  
   */
-  float l, r, t, b;
+  GLfloat l, r, t, b;
 
   // location scaling
   if (flags & V_SLOC)
@@ -517,7 +517,7 @@ void OGLRenderer::Draw2DGraphic_Doom(float x, float y, Material *mat, int flags)
   Draw2DGraphic(l, 1-b, r, 1-t, mat);
 }
 
-void OGLRenderer::Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *mat)
+void OGLRenderer::Draw2DGraphicFill_Doom(GLfloat x, GLfloat y, GLfloat width, GLfloat height, Material *mat)
 {
   //  CONS_Printf("w: %f, h: %f, texw: %f, texh: %f.\n", width, height, texwidth, texheight);
   //  CONS_Printf("xrepeat %.2f, yrepeat %.2f.\n", width/texwidth, height/texheight);
@@ -550,10 +550,10 @@ void OGLRenderer::DrawAutomapLine(const fline_t *line, const int color)
   glBindTexture(GL_TEXTURE_2D, 0);
 
   glBegin(GL_LINES);
-  glVertex2f(line->a.x/float(BASEVIDWIDTH), 
-	     1.0-line->a.y/float(BASEVIDHEIGHT));
-  glVertex2f(line->b.x/float(BASEVIDWIDTH),
-	     1.0-line->b.y/float(BASEVIDHEIGHT));
+  glVertex2f(line->a.x/GLfloat(BASEVIDWIDTH), 
+	     1.0-line->a.y/GLfloat(BASEVIDHEIGHT));
+  glVertex2f(line->b.x/GLfloat(BASEVIDWIDTH),
+	     1.0-line->b.y/GLfloat(BASEVIDHEIGHT));
   glEnd();
 
 }
@@ -599,7 +599,7 @@ void OGLRenderer::RenderPlayerView(PlayerInfo *player)
   GLdouble chx, chy, chz; // Last one is a dummy.
   if (player->pawn)
     {
-      float aimsine = 0.0;
+      GLfloat aimsine = 0.0;
       if(player->options.autoaim) {
 	player->pawn->AimLineAttack(player->pawn->yaw, 3000, aimsine);
       } else {
@@ -712,8 +712,8 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
       Material *mat = sprframe->tex[0];
 
       //added:02-02-98:spriteoffset should be abs coords for psprites, based on 320x200
-      float tx = psp->sx.Float();// - t->leftoffs;
-      float ty = psp->sy.Float();// - t->topoffs;
+      GLfloat tx = psp->sx.Float();// - t->leftoffs;
+      GLfloat ty = psp->sy.Float();// - t->topoffs;
 
       // lots of TODOs for psprites
       /*
@@ -738,7 +738,7 @@ void OGLRenderer::DrawPSprites(PlayerPawn *p)
 // before rendering BSP.
 
 void OGLRenderer::CalculateFrustum() {
-  static const double fsize = 10000.0; // Depth of frustum, also a hack.
+  static const GLfloat fsize = 10000.0; // Depth of frustum, also a hack.
 
   // Build frustum points suitable for analysis.
   fr_cx = x;
@@ -1199,7 +1199,7 @@ void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloa
 // the 3D view. Translations and rotations are done with OpenGL
 // matrices.
 
-void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int flags, float alpha)
+void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int flags, GLfloat alpha)
 {
   // You can't draw the invisible.
   if (!mat)

@@ -55,7 +55,7 @@ class OGLRenderer
   friend class ShaderProg;
 private:
   bool  workinggl;  ///< Do we have a working OpenGL context?
-  float glversion;  ///< Current (runtime) OpenGL version (major.minor).
+  GLfloat glversion;  ///< Current (runtime) OpenGL version (major.minor).
 
   SDL_Surface *screen; ///< Main screen turn on.
   GLint viewportw; ///< Width of current viewport in pixels.
@@ -65,19 +65,19 @@ private:
 
   class Map *mp;  ///< Map to be rendered
   subsector_t *curssec; ///< The gl subsector the camera is in.
-  double x, y, z; ///< Location of camera.
-  double theta;   ///< Rotation angle of camera in degrees.
-  double phi;     ///< Up-down rotation angle of camera in degrees.
+  GLfloat x, y, z; ///< Location of camera.
+  GLfloat theta;   ///< Rotation angle of camera in degrees.
+  GLfloat phi;     ///< Up-down rotation angle of camera in degrees.
 
-  double fov;     ///< Field of view in degrees.
+  GLfloat fov;     ///< Field of view in degrees.
 
   fixed_t fr_cx, fr_cy; // Tip of current viewing frustum.
   fixed_t fr_lx, fr_ly; // Left edge of frustum.
   fixed_t fr_rx, fr_ry; // Right edge of frustum.
 
-  double hudar;      ///< HUD aspect ratio.
-  double screenar;   ///< Aspect ratio of the physical screen (monitor).
-  double viewportar; ///< Aspect ratio of current viewport.
+  GLfloat hudar;      ///< HUD aspect ratio.
+  GLfloat screenar;   ///< Aspect ratio of the physical screen (monitor).
+  GLfloat viewportar; ///< Aspect ratio of current viewport.
 
   RGB_t *palette;  ///< Converting palette data to OGL colors.
 
@@ -107,15 +107,15 @@ public:
 
   bool In2DMode() const {return consolemode;}
 
-  void SetGlobalColor(float *rgba);
+  void SetGlobalColor(GLfloat *rgba);
 
   void SetFullScreenViewport();
   void SetViewport(unsigned vp);
   void Setup2DMode();
   void Draw2DGraphic(GLfloat left, GLfloat bottom, GLfloat right, GLfloat top, Material *mat,
 		     GLfloat texleft=0.0, GLfloat texbottom=1.0, GLfloat texright=1.0, GLfloat textop=0.0);
-  void Draw2DGraphic_Doom(float x, float y, Material *tex, int flags);
-  void Draw2DGraphicFill_Doom(float x, float y, float width, float height, Material *tex);
+  void Draw2DGraphic_Doom(GLfloat x, GLfloat y, Material *tex, int flags);
+  void Draw2DGraphicFill_Doom(GLfloat x, GLfloat y, GLfloat width, GLfloat height, Material *tex);
   void ClearAutomap();
   void DrawAutomapLine(const fline_t *line, const int color);
 
@@ -132,7 +132,7 @@ public:
     BLEND_MASK  = 0x03,
     FLIP_X      = 0x10,    
   };
-  void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, int flags, float alpha);
+  void DrawSpriteItem(const vec_t<fixed_t>& pos, Material *t, int flags, GLfloat alpha);
 
   bool CheckVis(int fromss, int toss);
 
