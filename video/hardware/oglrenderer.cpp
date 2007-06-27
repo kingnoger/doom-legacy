@@ -1003,12 +1003,11 @@ void OGLRenderer::RenderActors(sector_t *sec)
       }
 }
 
+/// Calculates the necessary numbers to render upper, middle, and
+/// lower wall segments. Any quad whose Material pointer is not NULL
+/// after this function is to be rendered.
 
-
-/// Renders one single GL seg. Minisegs and invalid parameters are
-/// silently ignored.
-void OGLRenderer::RenderGLSeg(int num)
-{
+void OGLRenderer::GetSegQuads(int num, quad &u, quad &m, quad &l) const {
   side_t *lsd; // Local sidedef.
   side_t *rsd; // Remote sidedef.
   sector_t *ls; // Local sector.
@@ -1019,6 +1018,8 @@ void OGLRenderer::RenderGLSeg(int num)
   GLfloat utexhei, ltexhei;
   GLfloat ls_height, tex_yoff;
   Material *uppertex, *middletex, *lowertex;
+
+  u.m = m.m = l.m = NULL;
 
   if(num < 0 || num > mp->numsegs)
     return;
@@ -1036,8 +1037,8 @@ void OGLRenderer::RenderGLSeg(int num)
   // Mark this linedef as visited so it gets drawn on the automap.
   ld->flags |= ML_MAPPED;
 
-  vertex_t *v1 = s->v1;
-  vertex_t *v2 = s->v2;
+  u.v1 = m.v1 = l.v1 = s->v1;
+  u.v2 = m.v2 = l.v2 = s->v2;
 
   if(s->side == 0) {
     lsd = ld->sideptr[0];
@@ -1092,12 +1093,13 @@ void OGLRenderer::RenderGLSeg(int num)
       // If the front and back ceilings are sky, do not draw this
       // upper texture.
       if (!ls->SkyCeiling() || !rs->SkyCeiling()) {
-
-	DrawSingleQuad(uppertex, v1, v2, rs_ceil, ls_ceil, 
-		       texleft/uppertex->worldwidth,
-		       texright/uppertex->worldwidth,
-		       textop/uppertex->worldheight,
-		       texbottom/uppertex->worldheight);
+	u.m = uppertex;
+	u.bottom = rs_ceil;
+	u.top = ls_ceil;
+	u.t.l = texleft/uppertex->worldwidth;
+	u.t.r = texright/uppertex->worldwidth;
+	u.t.t = textop/uppertex->worldheight;
+	u.t.b = texbottom/uppertex->worldheight;
       }
     }
     
@@ -1110,11 +1112,13 @@ void OGLRenderer::RenderGLSeg(int num)
 	textop = tex_yoff;
 	texbottom = textop + ltexhei;
       }
-      DrawSingleQuad(lowertex, v1, v2, ls_floor, rs_floor,
-		     texleft/lowertex->worldwidth,
-		     texright/lowertex->worldwidth,
-		     textop/lowertex->worldheight,
-		     texbottom/lowertex->worldheight);
+      l.m = lowertex;
+      l.bottom = ls_floor;
+      l.top = rs_floor;
+      l.t.l = texleft/lowertex->worldwidth;
+      l.t.r = texright/lowertex->worldwidth;
+      l.t.t = textop/lowertex->worldheight;
+      l.t.b = texbottom/lowertex->worldheight;
     }
 
     // Double sided middle textures do not repeat, so we need some
@@ -1136,12 +1140,13 @@ void OGLRenderer::RenderGLSeg(int num)
 	  top = rs_ceil;
 	bottom = top - middletex->worldheight;
       }
-      DrawSingleQuad(middletex, v1, v2, bottom, top,
-		     texleft/middletex->worldwidth,
-		     texright/middletex->worldwidth,
-		     0.0, 1.0);
-      //, textop/middletex->height,
-      //     texbottom/middletex->height);
+      m.m = middletex;
+      m.bottom = bottom;
+      m.top = top;
+      m.t.l = texleft/middletex->worldwidth;
+      m.t.r = texright/middletex->worldwidth;
+      m.t.t = 0.0;
+      m.t.b = 1.0;
     }
   } else if(middletex) {
     // Single sided middle texture.
@@ -1152,17 +1157,44 @@ void OGLRenderer::RenderGLSeg(int num)
       textop = tex_yoff;
       texbottom = textop + ls_height;
     }
-    DrawSingleQuad(middletex, v1, v2, ls_floor, ls_ceil,
-		   texleft/middletex->worldwidth,
-		   texright/middletex->worldwidth,
-		   textop/middletex->worldheight,
-		   texbottom/middletex->worldheight);
+    m.m = middletex;
+    m.bottom = ls_floor;
+    m.top = ls_ceil;
+    m.t.l = texleft/middletex->worldwidth;
+    m.t.r = texright/middletex->worldwidth;
+    m.t.t = textop/middletex->worldheight;
+    m.t.b = texbottom/middletex->worldheight;
   }
 }
 
 
+/// Renders one single GL seg. Minisegs and invalid parameters are
+/// silently ignored.
+void OGLRenderer::RenderGLSeg(int num)
+{
+
+  quad u, m, l;
+
+  GetSegQuads(num, u, m, l);
+
+  // For now, just render the quads. In the future, split each quad
+  // along 3D floors and change light levels accordingly.
+  if(u.m)
+    DrawSingleQuad(&u);
+  if(m.m)
+    DrawSingleQuad(&m);
+  if(l.m)
+    DrawSingleQuad(&l);
+}
+
+
+void OGLRenderer::DrawSingleQuad(const quad *q) const {
+  DrawSingleQuad(q->m, q->v1, q->v2, q->bottom, q->top, 
+		 q->t.l, q->t.r, q->t.t, q->t.b);
+}
+
 /// Draw a single textured wall segment.
-void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom)
+void OGLRenderer::DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft, GLfloat texright, GLfloat textop, GLfloat texbottom) const
 {
   m->GLUse();
 
