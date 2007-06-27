@@ -856,7 +856,7 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material 
     y = v->y.Float();
     
     tx = (x+xoff)/mat->worldwidth;
-    ty = 1.0 - (y+yoff)/mat->worldheight;
+    ty = 1.0 - (y-yoff)/mat->worldheight;
 
     glTexCoord2f(tx, ty);
     glVertex3f(x, y, height);
