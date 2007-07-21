@@ -816,57 +816,18 @@ void PlayerPawn::Move()
 
 void PlayerPawn::ZMovement()
 {
-  if (!player)
+  if (player)
     {
-      // corpses etc.
-      Actor::ZMovement();
-      return;
-    }
-
-  // check for smooth step up
-  if (pos.z < floorz)
-    {
-      player->viewheight -= floorz - pos.z;
-      player->deltaviewheight = (cv_viewheight.value - player->viewheight) >> 3;
-    }
-
-  fixed_t oldz, oldvz;
-  oldz = pos.z;
-  oldvz = vel.z;
-
-  Actor::ZMovement();
-
-  if (oldz + oldvz <= floorz && (oldvz < 0)) // falling
-    // TODO if (eflags & MFE_JUSTHITFLOOR)
-    {
-      jumpdown = 7;// delay any jumping for a short time
-
-      if ((oldvz < -8) && !(eflags & MFE_FLY))
+      // corpses etc. do not do this
+      // check for smooth step up
+      if (pos.z < floorz)
 	{
-	  // Squat down.
-	  // Decrease viewheight for a moment
-	  // after hitting the ground (hard),
-	  // and utter appropriate sound.
-	  player->deltaviewheight = oldvz >> 3;
-
-	  if (oldvz < -12)
-	    {
-	      S_StartSound(this, sfx_land);
-	      S_StartSound(this, info->gruntsound);
-	    }
-	  else if (subsector->sector->floortype < FLOOR_LIQUID)
-	    {
-	      S_StartSound(this, sfx_land);
-	    }
+	  player->viewheight -= floorz - pos.z;
+	  player->deltaviewheight = (cv_viewheight.value - player->viewheight) >> 3;
 	}
     }
 
-  if (oldz+oldvz + height > ceilingz)
-    {
-      // player avatar hits his head on the ceiling, ouch!
-      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && oldvz > 8)
-	S_StartSound(this, sfx_grunt);
-    }
+  Actor::ZMovement();
 }
 
 

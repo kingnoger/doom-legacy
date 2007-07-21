@@ -1015,7 +1015,6 @@ bool PlayerPawn::FallingDamage(float v)
       damage = health - 1;
     }
 
-  S_StartSound(this, sfx_land);
   return Damage(NULL, NULL, damage, dt_crushing);
 }
 

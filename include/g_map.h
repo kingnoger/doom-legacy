@@ -281,7 +281,7 @@ public:
   void RespawnSpecials();
   void RespawnWeapons();
 
-  void SpawnActor(Actor *p);
+  Actor  *SpawnActor(Actor *p);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const class ActorInfo *ai);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   inline DActor *SpawnDActor(const vec_t<fixed_t>& r, mobjtype_t t) { return SpawnDActor(r.x, r.y, r.z, t); }

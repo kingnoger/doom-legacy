@@ -372,9 +372,8 @@ void Actor::UnsetPosition(bool clear_touching_sectorlist)
 	sprev->snext = snext;
       else
 	subsector->sector->thinglist = snext;
-#ifdef PARANOIA
+
       sprev = snext = NULL;
-#endif
     }
 
   if (!(flags & MF_NOBLOCKMAP))

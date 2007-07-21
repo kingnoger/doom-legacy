@@ -198,7 +198,8 @@ public:
   virtual void ZMovement();
   virtual void XYFriction(fixed_t oldx, fixed_t oldy);
   virtual bool Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent = false);
-  virtual float LandOnThing(Actor *a);
+  virtual void LandOnThing(Actor *a);
+  virtual void LandOnFloor(bool floor);
 
   void Reset();
   weapontype_t FindWeapon(int g);

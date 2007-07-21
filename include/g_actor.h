@@ -330,7 +330,8 @@ public:
   float GetMoveFactor();
   virtual void XYMovement();
   virtual void ZMovement();
-  virtual float LandOnThing(Actor *a);
+  virtual void LandOnThing(Actor *a);
+  virtual void LandOnFloor(bool floor = true); ///< hit either floor or ceiling
 
   virtual void XYFriction(fixed_t oldx, fixed_t oldy);
   virtual void Thrust(angle_t angle, fixed_t move);

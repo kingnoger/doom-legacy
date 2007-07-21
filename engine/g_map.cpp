@@ -195,14 +195,44 @@ Map::~Map()
 //===================================================
 
 
-void Map::SpawnActor(Actor *p)
+Actor *Map::SpawnActor(Actor *a)
 {
-  AddThinker(p);     // AddThinker sets Map *mp
-  if (game.server)
-    p->TestLocation(); // TEST, sets tmfloorz, tmceilingz
-  p->SetPosition();  // set subsector and/or block links
-}
+  // NOTE: nz may have the values ONFLOORZ, ONCEILINGZ and FLOATRANDZ in addition to real z coords
+  fixed_t nz = a->pos.z;
 
+  AddThinker(a);     // AddThinker sets Map *mp
+  if (game.server)
+    a->CheckPosition(a->pos, Actor::PC_LINES); // for missiles owner is not yet set => collides, so we only check geometry
+  a->SetPosition();  // set subsector and/or block links
+
+  // set z coordinate properly
+  if (nz == ONFLOORZ || (a->flags2 & MF2_FLOORHUGGER))
+    {
+      a->eflags |= MFE_ONGROUND;
+      a->pos.z = a->floorz;
+    }
+  else if (nz == ONCEILINGZ || (a->flags2 & MF2_CEILINGHUGGER))
+    a->pos.z = a->ceilingz - a->height;
+  else if (nz == FLOATRANDZ)
+    {
+      fixed_t space = a->ceilingz - a->height - a->floorz;
+      if (space > 48)
+        {
+	  space -= 40;
+	  a->pos.z = a->floorz + ((space*P_Random()) >> 8) + 40;
+        }
+      else
+	a->pos.z = a->floorz;
+    }
+
+  if ((a->flags2 & MF2_FOOTCLIP) && (a->subsector->sector->floortype >= FLOOR_LIQUID)
+      && (a->floorz == a->subsector->sector->floorheight))
+    a->floorclip = FOOTCLIPSIZE;
+  else
+    a->floorclip = 0;
+
+  return a;
+}
 
 
 /// when something disturbs a liquid surface, we get a splash
@@ -278,46 +308,9 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 /// Spawns and adds a DActor to a Map.
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
 {
-  DActor *p = new DActor(nx, ny, nz, ai);
-  AddThinker(p);
-
-#warning FIXME redo the ONFLOORZ/mapthing height logic!
-  //p->TestLocation(nx, ny); // TODO Wrong, since for missiles owner is not yet set => collides
-  // set subsector and/or block links
-  p->SetPosition();
-
-  p->floorz = p->subsector->sector->floorheight;
-  p->ceilingz = p->subsector->sector->ceilingheight;
-
-  if (nz == ONFLOORZ || (p->flags2 & MF2_FLOORHUGGER))
-    {
-      //added:28-02-98: defaults onground
-      p->eflags |= MFE_ONGROUND;
-      p->pos.z = p->floorz;
-    }
-  else if (nz == ONCEILINGZ || (p->flags2 & MF2_CEILINGHUGGER))
-    p->pos.z = p->ceilingz - p->height;
-  else if (nz == FLOATRANDZ)
-    {
-      fixed_t space = p->ceilingz - p->height - p->floorz;
-      if (space > 48)
-        {
-	  space -= 40;
-	  p->pos.z = ((space*P_Random()) >> 8) + p->floorz + 40;
-        }
-      else
-	p->pos.z = p->floorz;
-    }
-  else
-    p->pos.z = nz;
-
-  if ((p->flags2 & MF2_FOOTCLIP) && (p->subsector->sector->floortype >= FLOOR_LIQUID)
-      && (p->floorz == p->subsector->sector->floorheight))
-    p->floorclip = FOOTCLIPSIZE;
-  else
-    p->floorclip = 0;
-
-  return p;
+  DActor *a = new DActor(nx, ny, nz, ai);
+  SpawnActor(a);
+  return a;
 }
 
 
@@ -327,18 +320,14 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai
 //  between levels.
 void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 {
-  fixed_t     nx, ny, nz;
-
-  nx = mthing->x;
-  ny = mthing->y;
-  nz = ONFLOORZ;
+  vec_t<fixed_t> loc(mthing->x, mthing->y, ONFLOORZ);
 
   PlayerPawn *p;
 
   // the player may have his old pawn from the previous level
   if (!pi->pawn)
     {
-      p = new PlayerPawn(nx, ny, nz, pi->options.ptype);
+      p = new PlayerPawn(loc.x, loc.y, loc.z, pi->options.ptype);
       p->player = pi;
       p->team = pi->team;
       pi->pawn  = p;
@@ -346,18 +335,16 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
   else
     {
       p = pi->pawn;
-      p->pos.Set(nx, ny, nz);
+      p->pos = loc;
       p->vel.Set(0, 0, 0);
     }
 
   SpawnActor(p); // spawn the pawn
+  p->TeleportMove(p->pos); // teleport to current location to telefrag bothersome obstacles (read: other players)
 
   // Boris stuff
   if (!pi->options.originalweaponswitch)
     p->UseFavoriteWeapon();
-
-  p->eflags |= MFE_ONGROUND;
-  p->pos.z = p->floorz;
 
   // FIXME set skin sprite here
   // set color translations for player sprites

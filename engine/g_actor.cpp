@@ -719,7 +719,7 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 
 
 
-float Actor::LandOnThing(Actor *onmobj)
+void Actor::LandOnThing(Actor *onmobj)
 {
   // conservation of momentum
   float nv = (onmobj->eflags & MFE_ONGROUND) ? 0
@@ -741,18 +741,17 @@ float Actor::LandOnThing(Actor *onmobj)
     }
 
   vel.z = onmobj->vel.z = nv;
-
-  return nv;
 }
 
 
-float PlayerPawn::LandOnThing(Actor *onmobj)
+void PlayerPawn::LandOnThing(Actor *onmobj)
 {
-  float nv = Actor::LandOnThing(onmobj);
-  float dv = nv - vel.z.Float();
+  float dv = - vel.z.Float();
+  Actor::LandOnThing(onmobj);
+  dv += vel.z.Float();
 
   if (fabs(dv) <= 8)
-    return nv;
+    return;
 
   player->deltaviewheight += dv/8.0;
 
@@ -761,11 +760,58 @@ float PlayerPawn::LandOnThing(Actor *onmobj)
 
   if (dv < -12)
     S_StartSound(this, info->gruntsound);
-
-  return nv;
 }
 
 
+
+void Actor::LandOnFloor(bool floor)
+{
+  float v = vel.z.Float();
+
+  if (subsector->sector->floortype >= FLOOR_LIQUID)
+    v *= 0.5; // less falling damage
+
+  if (cv_fallingdamage.value && v < -cv_fallingdamage.value)
+    FallingDamage(v); // TODO floor may be moving, use relative v...
+
+  vel.z = 0;
+}
+
+
+void PlayerPawn::LandOnFloor(bool floor)
+{
+  if (!floor)
+    {
+      // player avatar hits his head on the ceiling, ouch!
+      if (!(cheats & CF_FLYAROUND) && !(eflags & MFE_FLY) && vel.z > 8)
+	S_StartSound(this, sfx_grunt);
+
+      return;
+    }
+
+  jumpdown = 7;// delay any jumping for a short time
+
+  if (vel.z < -8 && !(eflags & MFE_FLY))
+    {
+      // Squat down.
+      // Decrease viewheight for a moment
+      // after hitting the ground (hard),
+      // and utter appropriate sound.
+      player->deltaviewheight = vel.z >> 3;
+
+      if (vel.z < -12)
+	{
+	  S_StartSound(this, sfx_land);
+	  S_StartSound(this, info->gruntsound);
+	}
+      else if (subsector->sector->floortype < FLOOR_LIQUID)
+	{
+	  S_StartSound(this, sfx_land);
+	}
+    }
+
+  Actor::LandOnFloor(floor);
+}
 
 // vertical movement
 void Actor::ZMovement()
@@ -907,9 +953,7 @@ void Actor::ZMovement()
 	}
       else if (flags & MF_SHOOTABLE) // usually player or blasted mobj falling
 	{
-	  if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
-	    FallingDamage(vel.z.Float()); // TODO floor may be moving, use relative v...
-	  vel.z = 0;
+	  LandOnFloor(true);
 	}
       else
 	vel.z = 0;
@@ -920,6 +964,10 @@ void Actor::ZMovement()
       if (eflags & MFE_SKULLFLY)
 	{
 	  vel.z = -vel.z; // skull slammed into roof
+	}
+      else if (flags & MF_SHOOTABLE) // usually player jumping
+	{
+	  LandOnFloor(false);
 	}
       else
 	vel.z = 0;
@@ -1211,11 +1259,6 @@ void DActor::Think()
     {
       BlasterMissileThink();
       return;
-    }
-
-  if (type == MT_TROOPSHOT)
-    {
-      int x = 2;
     }
 
   /*
