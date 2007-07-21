@@ -523,23 +523,25 @@ void A_SorcererRise(DActor *actor)
 
 void DActor::DSparilTeleport()
 {
-  fixed_t nx, ny;
-
   int n = mp->BossSpots.size(); 
-  if (n == 0)
-    { // No spots
-      return;
-    }
+  if (!n)
+    return; // No spots, no teleport.
+
+  vec_t<fixed_t> p;
+
   int i = P_Random();
+  int count = 0; // avoid possible infinite loop
   do {
-    i++;
-    nx = mp->BossSpots[i%n]->x;
-    ny = mp->BossSpots[i%n]->y;
-  } while (P_AproxDistance(pos.x - nx, pos.y - ny) < 128);
+    count++;
+    i = (i+1) % n;
+    p.x = mp->BossSpots[i]->x;
+    p.y = mp->BossSpots[i]->y;
+  } while (P_XYdist(pos, p) < 128 && count < n);
+  p.z = mp->R_PointInSubsector(p.x, p.y)->sector->floorheight + mp->BossSpots[i]->height;
 
   vec_t<fixed_t> prev_pos(pos);
 
-  if (TeleportMove(nx, ny))
+  if (TeleportMove(p))
     {
       DActor *mo = mp->SpawnDActor(prev_pos, MT_SOR2TELEFADE);
       S_StartSound(mo, sfx_teleport);

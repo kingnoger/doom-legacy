@@ -905,9 +905,9 @@ void PlayerPawn::XYFriction(fixed_t oldx, fixed_t oldy)
 
 
 
-bool PlayerPawn::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
+bool PlayerPawn::Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent)
 {
-  bool ret = Actor::Teleport(nx, ny, nangle, silent);
+  bool ret = Actor::Teleport(p, nangle, silent);
 
   // don't move for a bit
   if (!silent && !powers[pw_weaponlevel2])

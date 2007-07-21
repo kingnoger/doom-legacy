@@ -40,21 +40,18 @@ extern int boomsupport;
 /// linedef specials
 enum linedefspecial_e
 {
-  PO_LINE_START = 1,
-  PO_LINE_EXPLICIT = 5,
+  LINE_PO_START = 1,
+  LINE_PO_EXPLICIT = 5,
 
   /// All Legacy extensions to Hexen linedef system are under this type.
-  LEGACY_EXT = 150,
+  LINE_LEGACY_EXT = 150,
   /// subtypes, stored in args[0]
-  LEGACY_BOOM_SCROLLERS = 0,
-  LEGACY_BOOM_FRICTION  = 1,
-  LEGACY_BOOM_PUSHERS   = 2,
-  LEGACY_BOOM_RENDERER  = 3,
-  LEGACY_BOOM_EXOTIC    = 4,
-  LEGACY_FAKEFLOOR      = 10,
-  LEGACY_RENDERER       = 11,
-  LEGACY_MISC           = 13,
-  LEGACY_FS             = 128,
+  LINE_LEGACY_BOOM_SCROLLERS = 0,
+  LINE_LEGACY_EXOTIC_TEXTURE = 4,
+  LINE_LEGACY_FAKEFLOOR      = 10,
+  LINE_LEGACY_RENDERER       = 11,
+  LINE_LEGACY_MISC           = 13,
+  LINE_LEGACY_FS             = 128,
 };
 
 /// Editor numbers for certain special mapthings (more are defined in p_setup.cpp)

@@ -1133,10 +1133,9 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       int sideAngle = (pawn->yaw - ANG90) >> ANGLETOFINESHIFT;
       fixed_t cpx = (forwardmove * finecosine[forwardAngle] + sidemove * finecosine[sideAngle]) >> 5;
       fixed_t cpy = (forwardmove * finesine[forwardAngle] + sidemove * finesine[sideAngle]) >> 5;
-      fixed_t nx = pawn->pos.x + pawn->vel.x + cpx;
-      fixed_t ny = pawn->pos.y + pawn->vel.y + cpy;
+      vec_t<fixed_t> npos = pawn->pos + pawn->vel + vec_t<fixed_t>(cpx, cpy, 0);
 
-      bool blocked = !pawn->TestLocation(nx, ny) || // FIXME wrong
+      bool blocked = !pawn->TestLocation(npos) || // FIXME wrong
 	PosCheck.op.bottom - pawn->Feet() > 24 ||
 	PosCheck.op.Range() < pawn->height;
       //if its time to change strafe directions, 

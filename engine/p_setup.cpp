@@ -307,16 +307,16 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
   else
     nummapthings = fc.LumpLength(lump)/sizeof(doom_mapthing_t);
 
-  mapthings    = (mapthing_t *)Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL);
+  mapthings    = static_cast<mapthing_t*>(Z_Malloc(nummapthings*sizeof(mapthing_t), PU_LEVEL, NULL));
   // this memset is crucial, it initializes the mapthings to all zeroes.
   memset(mapthings, 0, nummapthings*sizeof(mapthing_t));
 
   NumPolyobjs  = 0;
 
-  char *data   = (char *)fc.CacheLumpNum(lump, PU_STATIC);
+  char *data   = static_cast<char*>(fc.CacheLumpNum(lump, PU_STATIC));
 
-  doom_mapthing_t *mt = (doom_mapthing_t *)data;
-  hex_mapthing_t *ht = (hex_mapthing_t *)data;
+  doom_mapthing_t *mt = reinterpret_cast<doom_mapthing_t*>(data);
+  hex_mapthing_t  *ht = reinterpret_cast<hex_mapthing_t *>(data);
 
   mapthing_t *t = mapthings;
 
@@ -386,7 +386,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           t->tid = SHORT(ht->tid);
           t->x = SHORT(ht->x);
           t->y = SHORT(ht->y);
-          t->z = SHORT(ht->height); // temp
+          t->height = SHORT(ht->height);
           t->angle  = SHORT(ht->angle);
           ednum     = SHORT(ht->type);
           t->flags  = SHORT(ht->flags);
@@ -434,7 +434,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
       // common polyobjects
       if (ednum == EN_PO_ANCHOR || ednum == EN_PO_SPAWN || ednum == EN_PO_SPAWNCRUSH)
 	{
-	  t->z = ednum; // internally we use the same numbers
+	  t->height = ednum; // HACK, internally we use the same numbers
 	  polyspawn.push_back(t);
 	  if (ednum != EN_PO_ANCHOR)
 	    NumPolyobjs++; // a polyobj spawn spot
@@ -480,7 +480,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           // from other things  => polyspawn vector
           if (ednum == EN_HEXEN_PO_ANCHOR || ednum == EN_HEXEN_PO_SPAWN || ednum == EN_HEXEN_PO_SPAWNCRUSH)
             {
-              t->z = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR;
+              t->height = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR; // HACK
               polyspawn.push_back(t);
               if (ednum != EN_HEXEN_PO_ANCHOR)
                 NumPolyobjs++; // a polyobj spawn spot
@@ -730,9 +730,9 @@ void Map::LoadSideDefs2(int lump)
 
       // specials where texture names might be something else
       line_t *ld = sd->line;
-      if (ld && ld->special == LEGACY_EXT) // TODO shouldn't all sidedefs have a corresponding linedef?
+      if (ld && ld->special == LINE_LEGACY_EXT) // TODO shouldn't all sidedefs have a corresponding linedef?
 	{
-	  if (ld->args[0] == LEGACY_BOOM_EXOTIC)
+	  if (ld->args[0] == LINE_LEGACY_EXOTIC_TEXTURE)
 	    switch (ld->args[1])
 	      {
 	      case 1:  // BOOM: 242 fake ceiling/floor, variable colormaps
@@ -768,7 +768,7 @@ void Map::LoadSideDefs2(int lump)
 	      default:
 		I_Error("Unknown linedef type extension (%d)\n.", ld->args[1]);
 	      }
-	  else if (ld->args[0] == LEGACY_FAKEFLOOR)
+	  else if (ld->args[0] == LINE_LEGACY_FAKEFLOOR)
 	    switch (ld->args[1])
 	      {
 		// Legacy: alpha value for translucent 3D-floors/water, TODO not good
@@ -1850,7 +1850,7 @@ bool ConvertMapToHexen(int lumpnum)
       // tag
       int tag = SHORT(ld->tag);
 
-      if (hld[i].special == LEGACY_EXT) // different tag handling (full 16-bit tag stored)
+      if (hld[i].special == LINE_LEGACY_EXT) // different tag handling (full 16-bit tag stored)
 	{
 	  hld[i].args[3] = tag & 0xFF;
 	  hld[i].args[4] = tag >> 8;

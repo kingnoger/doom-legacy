@@ -146,7 +146,8 @@ enum mobjeflag_t
   MFE_ONGROUND      = 0x0001,  ///< Stands on solid floor (not on another Actor or in air)
   MFE_ONMOBJ        = 0x0002,  ///< Stands on top of another Actor
   // (instant damage in lava/slime sectors to prevent jump cheat..)
-  MFE_JUSTHITFLOOR  = 0x0004,  ///< Just hit the floor while falling, cleared on next frame
+  MFE_JUSTHITFLOOR   = 0x0004,  ///< Just hit the floor while falling, cleared on next frame
+  MFE_JUSTHITCEILING = 0x0008,  ///< Same but for ceiling hits.
 
   MFE_TOUCHWATER    = 0x0010,  ///< Touches water surface
   MFE_UNDERWATER    = 0x0020,  ///< Waist below water surface (swimming is possible)
@@ -329,6 +330,7 @@ public:
   float GetMoveFactor();
   virtual void XYMovement();
   virtual void ZMovement();
+  virtual float LandOnThing(Actor *a);
 
   virtual void XYFriction(fixed_t oldx, fixed_t oldy);
   virtual void Thrust(angle_t angle, fixed_t move);
@@ -341,26 +343,39 @@ public:
   virtual void Killed(class PlayerPawn *victim, Actor *inflictor);
   virtual bool Morph(mobjtype_t form);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
-  virtual bool FallingDamage();
+  virtual bool FallingDamage(float v);
 
   // in p_telept.cpp
-  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
+  virtual bool Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent = false);
 
   // in p_map.cpp
   void SetPosition();
   void UnsetPosition(bool clear_touching_sectorlist = false);
-  bool TeleportMove(fixed_t nx, fixed_t ny);
+  bool TestLocation(const vec_t<fixed_t> &p);
+  inline bool TestLocation() { return TestLocation(pos); }
+
+  enum poscheck_e
+    {
+      PC_THINGS       = 0x01, ///< check things
+      PC_LINES        = 0x02, ///< check lines
+      PC_TOUCH_THINGS = 0x04, ///< Touch() contacted things
+      PC_TOUCH_LINES  = 0x08, ///< collect special lines, push
+      PC_TELEFRAG     = 0x10, ///< telefrag contacted things
+
+      PC_FIT      = PC_THINGS | PC_LINES,
+      PC_MOVE     = PC_FIT | PC_TOUCH_THINGS | PC_TOUCH_LINES,
+      PC_TELEPORT = PC_FIT | PC_TELEFRAG,
+    };
+
+  bool CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode);
+  bool TeleportMove(const vec_t<fixed_t> &p);
+
   bool TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
-  bool TestLocation();
-  bool TestLocation(fixed_t nx, fixed_t ny);
-  bool CheckPosition(fixed_t nx, fixed_t ny, bool interact);
 protected:
   void CheckLineImpact(); ///< only used with TryMove
   void SlideMove(fixed_t nx, fixed_t ny);
   void BounceWall(fixed_t nx, fixed_t ny);
 public:
-  void FakeZMovement();
-  Actor *CheckOnmobj();
   Actor *AimLineAttack(angle_t ang, float distance, float& sinpitch);
   Actor *LineTrace(angle_t ang, float distance, float sine, bool interact);
   Actor *LineAttack(angle_t ang, float distance, float sine, int damage, int dtype = dt_normal);

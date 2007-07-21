@@ -51,6 +51,14 @@
 
 const fixed_t FLOATRANDZ = fixed_t::FMAX-1;
 
+#define PLAYERSPAWN_HALF_DELAY 10 // 0.5 * min. tics to wait between player spawns
+
+// can handle also -32768 properly
+static inline unsigned short Abs(short x)
+{
+  return (x < 0) ? -x : x;
+}
+
 
 // Map class constructor
 Map::Map(MapInfo *i)
@@ -273,7 +281,8 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai
   DActor *p = new DActor(nx, ny, nz, ai);
   AddThinker(p);
 
-  //p->TestLocation(nx, ny); // TODO sets tmfloorz, tmceilingz. Wrong, since for missiles owner is not yet set => collides
+#warning FIXME redo the ONFLOORZ/mapthing height logic!
+  //p->TestLocation(nx, ny); // TODO Wrong, since for missiles owner is not yet set => collides
   // set subsector and/or block links
   p->SetPosition();
 
@@ -364,7 +373,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
 
   p->spawnpoint = mthing;
   mthing->mobj = p;
-  mthing->tid = short((maptic + 20) & 0xFFFF); // set the timer
+  mthing->tid = static_cast<short>(maptic) + PLAYERSPAWN_HALF_DELAY; // set the timer
 
   // TODO spawn a teleport fog?
   /*
@@ -396,10 +405,8 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
   if (mthing->args[0] != p->entrypoint)
     return false;
 
-  // has the spawn spot been used just recently?
-  // (less stupid telefrag this way!)
-  // damn short int! it's just 16 bits long! and signed too!
-  if ((maptic & 0xFFFF) < static_cast<unsigned short>(mthing->tid))
+  // has the spawn spot been used just recently? (less stupid telefrag this way!)
+  if (Abs(static_cast<short>(maptic - mthing->tid)) <= PLAYERSPAWN_HALF_DELAY)
     return false;
 
   fixed_t x = mthing->x;
@@ -1002,9 +1009,9 @@ Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
   mt->mobj = p;
 
   if (nz == ONFLOORZ)
-    p->pos.z += mt->z;
+    p->pos.z += mt->height;
   else if (nz == ONCEILINGZ)
-    p->pos.z -= mt->z;
+    p->pos.z -= mt->height;
 
   // yaw
   if (p->flags & MF_MONSTER)
@@ -1037,7 +1044,7 @@ Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
   if (p->flags2 & MF2_FLOATBOB)
     {
       p->reactiontime = P_Random();
-      p->special1 = mt->z; // floating height (integer, NOT fixed_t)
+      p->special1 = mt->height; // floating height (integer, NOT fixed_t)
     }
 
   // randomize initial tics

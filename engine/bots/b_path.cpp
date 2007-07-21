@@ -288,20 +288,7 @@ static bool PTR_BotPath(intercept_t *in)
 }
 
 
-// ok if line does not touch the box (or is not blocking)
-static bool PIT_BBoxFit(line_t *ld)
-{
-  if (!tmb.BoxTouchBox(ld->bbox))
-    return true;
-
-  if (tmb.BoxOnLineSide(ld) != -1)
-    return true;
-
-  if (ld->flags & ML_BLOCKING)
-    return false;
-
-  return true;
-}
+bool PIT_BBoxFit(line_t *ld);
 
 
 /// Checks if the given destination is reachable from the given starting location (by mo!).

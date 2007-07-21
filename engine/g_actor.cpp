@@ -404,31 +404,8 @@ void Actor::Remove()
 
 
 
-void PlayerPawn::LandedOnThing(Actor *onmobj)
-{
-  // TODO damage also the thing! kill imps in super mario fashion!
-
-  player->deltaviewheight = vel.z >> 3;
-
-  if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
-    {
-      FallingDamage();
-      return;
-    }
-
-  if (vel.z < -8 && mass > 60)
-    S_StartSound(this, sfx_land);
-
-  if (vel.z < -12)
-    S_StartSound(this, info->gruntsound);
-}
-
-
-
 void Actor::Think()
 {
-  extern const fixed_t MAXSTEP;
-
   // check possible sector water content, set water eflags, cause splashes on ffloors
   CheckWater();
 
@@ -454,7 +431,7 @@ void Actor::Think()
     }
 
   // Z movement
-  eflags &= ~MFE_JUSTHITFLOOR;
+  eflags &= ~(MFE_JUSTHITFLOOR | MFE_JUSTHITCEILING);
 
   if (flags2 & MF2_FLOATBOB)
     {
@@ -464,42 +441,7 @@ void Actor::Think()
   else if (!(eflags & MFE_ONGROUND) || (pos.z != floorz) || vel.z != 0)
     {
       // time to fall...
-
-      if (flags2 & MF2_NOPASSMOBJ)
-	{
-	  // simplified treatment
-	  ZMovement();
-	  return;
-	}
-
-      Actor *onmo = CheckOnmobj();
-      if (!onmo)
-	{
-	  ZMovement();
-	  eflags &= ~MFE_ONMOBJ;
-	}
-      else
-	{
-	  PlayerPawn *p = IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(this) : NULL; 
-	  if (p) // FIXME is this ok? For all Actors?
-	    {
-	      if (vel.z < -8 && !(eflags & MFE_FLY))
-		p->LandedOnThing(onmo);
-
-	      if (onmo->Top() <= pos.z + MAXSTEP)
-		{
-		  p->player->viewheight -= onmo->Top() - pos.z;
-		  p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
-		  pos.z = onmo->Top();
-		  eflags |= MFE_ONMOBJ;
-		  vel.z = 0;
-		}                               
-	      else
-		{ // hit the bottom of the blocking mobj
-		  vel.z = 0;
-		}
-	    }
-	}
+      ZMovement();
     }
 }
 
@@ -777,26 +719,73 @@ void Actor::XYFriction(fixed_t oldx, fixed_t oldy)
 
 
 
+float Actor::LandOnThing(Actor *onmobj)
+{
+  // conservation of momentum
+  float nv = (onmobj->eflags & MFE_ONGROUND) ? 0
+    : (mass*vel.z.Float() + onmobj->mass*onmobj->vel.z.Float()) / (mass + onmobj->mass);
+
+  // FIXME head hurts more than feet... kill imps in super mario fashion!
+
+  if (cv_fallingdamage.value)
+    {
+      float dv = fabs(nv - vel.z.Float());
+      if (dv > 8 &&
+	  dv > cv_fallingdamage.value)
+	FallingDamage(dv);
+
+      dv = fabs(nv - onmobj->vel.z.Float());
+      if (dv > 8 &&
+	  dv > cv_fallingdamage.value)
+	onmobj->FallingDamage(dv);
+    }
+
+  vel.z = onmobj->vel.z = nv;
+
+  return nv;
+}
+
+
+float PlayerPawn::LandOnThing(Actor *onmobj)
+{
+  float nv = Actor::LandOnThing(onmobj);
+  float dv = nv - vel.z.Float();
+
+  if (fabs(dv) <= 8)
+    return nv;
+
+  player->deltaviewheight += dv/8.0;
+
+  if (dv < -8 && mass > 60)
+    S_StartSound(this, sfx_land);
+
+  if (dv < -12)
+    S_StartSound(this, info->gruntsound);
+
+  return nv;
+}
+
+
+
 // vertical movement
 void Actor::ZMovement()
 {
-  // adjust height
+  // adjust z position
   pos.z += vel.z;
 
   if ((flags & MF_FLOAT) && target)
     {
       // float down towards target if too close
-      if (!(eflags & MFE_SKULLFLY) && !(eflags & MFE_INFLOAT))
+      if (!(eflags & (MFE_SKULLFLY | MFE_INFLOAT)))
         {
 	  fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
-	  fixed_t delta = (target->pos.z + (height>>1)) - pos.z; // assumed to be taller than target so this looks good...
+	  fixed_t delta = target->pos.z + (height >> 1) - pos.z; // assumed to be taller than target so this looks good...
 
 	  if (delta < 0 && dist < -(delta*3) )
 	    pos.z -= FLOATSPEED;
 	  else if (delta > 0 && dist < (delta*3) )
 	    pos.z += FLOATSPEED;
         }
-
     }
 
   // was only for PlayerPawns, but why?
@@ -805,37 +794,15 @@ void Actor::ZMovement()
       pos.z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
     }
 
-  // clip this movement
+  // clip z movement with floors and ceilings, add gravity
 
   if (pos.z <= floorz)
     {
       // hit the floor
-      if (flags & MF_MISSILE)
-        {
-	  pos.z = floorz;
-	  eflags |= MFE_JUSTHITFLOOR;
-	  return;
-	}
-        
       // Did we actually fall to the ground?
-      if (pos.z - vel.z > floorz)
+      if ((flags & MF_MISSILE) || pos.z - vel.z > floorz)
 	{
-	  HitFloor();
 	  eflags |= MFE_JUSTHITFLOOR;
-
-	  if (eflags & MFE_SKULLFLY)
-	    {
-	      // the skull slammed into floor
-	      vel.z = -vel.z;
-	    }
-	  else if (flags & MF_SHOOTABLE) // usually blasted mobj falling
-	    {
-	      if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
-		FallingDamage();
-	      vel.z = 0;
-	    }
-	  else
-	    vel.z = 0;
 	}
 
       pos.z = floorz;
@@ -865,45 +832,98 @@ void Actor::ZMovement()
 
   if (Top() > ceilingz)
     {
-      if (flags & MF_MISSILE)
-        {
-	  pos.z = ceilingz - height;
-	  eflags |= MFE_JUSTHITFLOOR; // with missiles works also with ceiling hits
-
-	  // Don't explode on the sky!
-	  if (subsector->sector->SkyCeiling() &&
-	      subsector->sector->ceilingheight == ceilingz &&
-	      !(flags2 & MF2_FULLBOUNCE))
-            {
-	      // if (type == MT_HOLY_FX) return; // TODO some things do explode against sky
-
-	      Remove();
-            }
-
-	  return;
-        }
-
+      // hit the ceiling
       // Did we actually hit the ceiling?
-      if (Top() - vel.z <= ceilingz)
+      if ((flags & MF_MISSILE) || Top() - vel.z <= ceilingz)
 	{
-	  if (eflags & MFE_SKULLFLY)
-	    {
-	      vel.z = -vel.z; // skull slammed into roof
-	    }
-	  else
-	    vel.z = 0;
+	  eflags |= MFE_JUSTHITCEILING;
 	}
 
       pos.z = ceilingz - height;
     }
 
-  // no z friction for missiles and skulls
-  if (flags & MF_MISSILE || eflags & MFE_SKULLFLY)
-    return;
-
   // z friction in water
-  if ((eflags & MFE_TOUCHWATER) || (eflags & MFE_UNDERWATER)) 
+  if (!(flags & MF_MISSILE || eflags & MFE_SKULLFLY) && // no z friction for missiles and skulls
+      (eflags & (MFE_TOUCHWATER | MFE_UNDERWATER)))
     vel.z *= friction_underwater;
+
+
+  // check if new z position makes us hit things
+  if ((flags2 & MF2_NOPASSMOBJ) || (flags & MF_NOCLIPTHING) ||
+      (flags & MF_MISSILE) || // missiles explode at next XYMovement
+      CheckPosition(pos, PC_THINGS))
+    eflags &= ~MFE_ONMOBJ;
+  else
+    {
+      extern const fixed_t MAXSTEP;
+  
+      Actor *onmo = PosCheck.block_thing;
+
+      // did we actually hit the thing from above or below?
+      if (onmo->Top() < Feet() - vel.z)
+	{
+	  // from above
+	  //if (!(eflags & MFE_FLY))
+	  LandOnThing(onmo);
+	  pos.z = onmo->Top();
+
+	  eflags &= ~MFE_ONGROUND;
+	  eflags |= MFE_ONMOBJ;
+	}
+      else if (onmo->Feet() > Top() - vel.z)
+	{
+	  // from below
+	  LandOnThing(onmo);
+	  pos.z = onmo->Feet() - height;
+	}
+      else if ((flags & MF_PLAYER) && // only players climb voluntarily on other things
+	       onmo->Top() <= Feet() + MAXSTEP)
+	{
+	  // stepped on it TODO not correct, we may have large relative z speed too
+#warning TODO step up on things
+	  /*
+	  p->player->viewheight -= onmo->Top() - Feet();
+	  p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
+	  */
+	  pos.z = onmo->Top();
+	  vel.z = onmo->vel.z;
+
+	  eflags &= ~MFE_ONGROUND;
+	  eflags |= MFE_ONMOBJ;
+	}                               
+
+      return; // cannot hit ceilings or floors since we encountered a thing first
+    }
+
+
+  if (eflags & MFE_JUSTHITFLOOR)
+    {
+      HitFloor();
+
+      if (eflags & MFE_SKULLFLY)
+	{
+	  // the skull slammed into floor
+	  vel.z = -vel.z;
+	}
+      else if (flags & MF_SHOOTABLE) // usually player or blasted mobj falling
+	{
+	  if (cv_fallingdamage.value && vel.z < -cv_fallingdamage.value)
+	    FallingDamage(vel.z.Float()); // TODO floor may be moving, use relative v...
+	  vel.z = 0;
+	}
+      else
+	vel.z = 0;
+    }
+
+  if (eflags & MFE_JUSTHITCEILING)
+    {
+      if (eflags & MFE_SKULLFLY)
+	{
+	  vel.z = -vel.z; // skull slammed into roof
+	}
+      else
+	vel.z = 0;
+    }
 }
 
 
@@ -1193,6 +1213,11 @@ void DActor::Think()
       return;
     }
 
+  if (type == MT_TROOPSHOT)
+    {
+      int x = 2;
+    }
+
   /*
     - is it a ppawn
     - checkwater
@@ -1219,8 +1244,18 @@ void DActor::Think()
     ExplodeMissile();
 
   // missiles hitting the floor
-  if ((flags & MF_MISSILE) && (eflags & MFE_JUSTHITFLOOR))
+  if ((flags & MF_MISSILE) && (eflags & (MFE_JUSTHITFLOOR | MFE_JUSTHITCEILING)))
     {
+      // Don't explode on the sky!
+      if (((eflags & MFE_JUSTHITCEILING) && subsector->sector->SkyCeiling()) ||
+	  ((eflags & MFE_JUSTHITFLOOR)   && subsector->sector->SkyFloor()))
+	if (!(flags2 & MF2_FULLBOUNCE))
+	  {
+	    // if (type == MT_HOLY_FX) return; // TODO some things do explode against sky
+	    Remove();
+	    return;
+	  }
+
       if ((flags2 & MF2_CEILINGHUGGER) || (flags2 & MF2_FLOORHUGGER))
 	return;
 
@@ -1386,12 +1421,11 @@ void DActor::NightmareRespawn()
   if (!mthing)
     return; // no spawnpoint, no respawn
 
-  fixed_t  nx, ny, nz;
-  nx = mthing->x;
-  ny = mthing->y;
+#warning FIXME mapthing height in spawn!
+  vec_t<fixed_t> p(mthing->x, mthing->y, 0); // FIXME z???
 
   // somthing is occupying it's position?
-  if (!TestLocation(nx, ny))
+  if (!TestLocation(p))
     return; // no respwan (will try again later!)
 
   // spawn a teleport fog at old spot
@@ -1402,21 +1436,21 @@ void DActor::NightmareRespawn()
   S_StartSound(mo, sfx_teleport);
 
   // spawn a teleport fog at the new spot
-  subsector_t *ss = mp->R_PointInSubsector(nx, ny);
+  subsector_t *ss = mp->R_PointInSubsector(p.x, p.y);
 
-  mo = mp->SpawnDActor(nx, ny, ss->sector->floorheight +
+  mo = mp->SpawnDActor(p.x, p.y, ss->sector->floorheight +
 		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
   S_StartSound(mo, sfx_teleport);
 
   // spawn it
   if (info->flags & MF_SPAWNCEILING)
-    nz = ONCEILINGZ;
+    p.z = ONCEILINGZ;
   else
-    nz = ONFLOORZ;
+    p.z = ONFLOORZ;
 
   // spawn the new monster
   // inherit attributes from deceased one
-  mo = mp->SpawnDActor(nx, ny, nz, type);
+  mo = mp->SpawnDActor(p, type);
   mo->spawnpoint = mthing;
   mo->yaw = ANG45 * (mthing->angle/45);
 

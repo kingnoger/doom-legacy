@@ -590,7 +590,7 @@ struct node_t : public divline_t
 struct mapthing_t
 {
   short tid;      ///< Thing ID (from Hexen)
-  short x, y, z;  ///< coordinates
+  short x, y, height; ///< coordinates, z = floorz + height (because floors may move during game)
   short angle;    ///< orientation
   short flags;    ///< see mapthing_flags_e
   byte special;   ///< thing action

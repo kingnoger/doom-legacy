@@ -761,7 +761,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoDonut(tag, SPEED(args[1]), SPEED(args[2]));
       break;
 
-    case LEGACY_EXT: // Legacy extensions to Hexen linedef namespace (all under this one type)
+    case LINE_LEGACY_EXT: // Legacy extensions to Hexen linedef namespace (all under this one type)
 
       // different tag handling
       if (line && line->tag) 
@@ -771,7 +771,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 
       switch (args[0])
 	{
-	case LEGACY_FS:
+	case LINE_LEGACY_FS:
 	  if (side == 0 || args[1] == 0) // 1-sided?
 	    success = FS_RunScript(tag, mo);
 	  break;

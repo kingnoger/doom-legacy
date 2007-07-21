@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -37,38 +35,30 @@
 #include "sounds.h"
 #include "tables.h"
 
-bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
+bool Actor::Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent)
 {
   // silent means "Boom-style"
-  fixed_t  oldx, oldy, oldz;
-  fixed_t  aboveFloor;
 
-  oldx = pos.x;
-  oldy = pos.y;
-  oldz = pos.z;
-  aboveFloor = pos.z - floorz;
+  vec_t<fixed_t> oldpos = pos;
 
-  if (!TeleportMove(nx, ny))
+  if (!TeleportMove(p))
     return false;
-
-  // CHANGED now all things retain their flying height like this:
-  pos.z = floorz + aboveFloor;
-  if (Top() > ceilingz)
-    pos.z = ceilingz-height;
 
   if (!silent)
     {
-      fixed_t fogDelta = 0;
-      if (game.mode == gm_heretic && !(flags & MF_MISSILE))
-	fogDelta = TELEFOGHEIGHT;
-
       // spawn teleport fog at source and destination
-      DActor *fog = mp->SpawnDActor(oldx, oldy, oldz+fogDelta, MT_TFOG);
+
+      fixed_t fogHeight = (game.mode >= gm_heretic && !(flags & MF_MISSILE)) ? TELEFOGHEIGHT : 0;
+
+      // source
+      oldpos.z += fogHeight;
+      DActor *fog = mp->SpawnDActor(oldpos, MT_TFOG);
       S_StartSound(fog, sfx_teleport);
 
-      unsigned an = nangle >> ANGLETOFINESHIFT;
-      fog = mp->SpawnDActor(nx+20*finecosine[an], ny+20*finesine[an], pos.z + fogDelta, MT_TFOG);
-      S_StartSound (fog, sfx_teleport);
+      // destination
+      vec_t<fixed_t> fogDelta(20*Cos(nangle), 20*Sin(nangle), fogHeight);
+      fog = mp->SpawnDActor(pos + fogDelta, MT_TFOG);
+      S_StartSound(fog, sfx_teleport);
 
       if ((flags2 & MF2_FOOTCLIP) && (subsector->sector->floortype >= FLOOR_LIQUID))
 	floorclip = FOOTCLIPSIZE;
@@ -78,8 +68,8 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
       if (flags & MF_MISSILE)
 	{
 	  fixed_t speed = P_AproxDistance(vel.x, vel.y);
-	  vel.x = speed * finecosine[an];
-	  vel.y = speed * finesine[an];
+	  vel.x = speed * Cos(nangle);
+	  vel.y = speed * Sin(nangle);
 	}
       else
 	vel.Set(0,0,0);
@@ -88,8 +78,8 @@ bool Actor::Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent)
     {
       angle_t ang = nangle - yaw;
       // Sine, cosine of angle adjustment
-      fixed_t s = finesine[ang>>ANGLETOFINESHIFT];
-      fixed_t c = finecosine[ang>>ANGLETOFINESHIFT];
+      fixed_t s = Sin(ang);
+      fixed_t c = Cos(ang);
 
       fixed_t tpx = vel.x;
       fixed_t tpy = vel.y;
@@ -129,6 +119,8 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
   if (noplayer && thing->IsOf(PlayerPawn::_type))
     return false;
 
+  vec_t<fixed_t> delta(0, 0, thing->Feet() - thing->floorz); // preserve the relative altitude
+
   if (type == TP_toTID) // go to thing with correct TID (Hexen system)
     {
       i = TIDmap.count(tag);
@@ -139,7 +131,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 	  if (!m)
 	    I_Error("Can't find teleport mapspot\n");
 
-	  return thing->Teleport(m->pos.x, m->pos.y, m->yaw, silent); // does the angle change work correctly?
+	  return thing->Teleport(m->pos + delta, m->yaw, silent); // does the angle change work correctly?
 	}
     }
   else if (type == TP_toThingInSector) // go to teleport thing in tagged sector
@@ -161,10 +153,10 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 		// teleporter linedef causes thing to exit in the direction
 		// indicated by the exit thing.
 		angle_t ang = m->yaw + thing->yaw - R_PointToAngle2(0, 0, line->dx, line->dy) - ANG90;
-		return thing->Teleport(m->pos.x, m->pos.y, ang, true);
+		return thing->Teleport(m->pos + delta, ang, true);
 	      }
 	    else
-	      return thing->Teleport(m->pos.x, m->pos.y, m->yaw, false);
+	      return thing->Teleport(m->pos + delta, m->yaw, false);
 	  }
     }
   else // if (type == TP_toLine)
@@ -204,9 +196,6 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
           R_PointToAngle2(0, 0, l->dx, l->dy) -
           R_PointToAngle2(0, 0, line->dx, line->dy);
 
-        // Interpolate position across the exit linedef
-        fixed_t x = l->v2->x - (pos * l->dx);
-        fixed_t y = l->v2->y - (pos * l->dy);
 
         // Maximum distance thing can be moved away from interpolated
         // exit, to ensure that it is on the correct side of exit linedef
@@ -217,6 +206,15 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
 
         // Whether walking towards first side of exit linedef steps down
         int stepdown = l->frontsector->floorheight < l->backsector->floorheight;
+
+        // Interpolate position across the exit linedef.
+        // Adjust z position to be same height above ground as before.
+        // Ground level at the exit is measured as the higher of the
+        // two floor heights at the exit linedef.
+
+        vec_t<fixed_t> p(l->v2->x - (pos * l->dx),
+			 l->v2->y - (pos * l->dy),
+			 l->sideptr[stepdown]->sector->floorheight +(thing->Feet() - thing->floorz));
 
         // Side to exit the linedef on positionally.
         //
@@ -245,24 +243,13 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
 	int side = reverse || stepdown;
 
         // Make sure we are on correct side of exit linedef.
-        while (P_PointOnLineSide(x, y, l) != side && --fudge>=0)
+        while (P_PointOnLineSide(p.x, p.y, l) != side && --fudge>=0)
           if (abs(l->dx) > abs(l->dy))
-            y -= l->dx < 0 != side ? -fixed_epsilon : fixed_epsilon;
+            p.y -= l->dx < 0 != side ? -fixed_epsilon : fixed_epsilon;
           else
-            x += l->dy < 0 != side ? -fixed_epsilon : fixed_epsilon;
+            p.x += l->dy < 0 != side ? -fixed_epsilon : fixed_epsilon;
 
-        // Height of thing above ground
-        fixed_t z = thing->Feet() - thing->floorz;
-
-	if (!thing->Teleport(x, y, thing->yaw + angle, true))
-	  return false;
-
-        // Adjust z position to be same height above ground as before.
-        // Ground level at the exit is measured as the higher of the
-        // two floor heights at the exit linedef.
-        thing->pos.z = z + l->sideptr[stepdown]->sector->floorheight;
-
-        return true;
+	return thing->Teleport(p, thing->yaw + angle, true);
       }
   return false;
 }

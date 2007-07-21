@@ -301,11 +301,8 @@ fixed_t sector_t::FindNextHighestCeiling(fixed_t currentheight)
 
 fixed_t Map::FindShortestLowerAround(sector_t *sec)
 {
-  int minsize = MAXINT; // texture height!
+  float minsize = boomsupport ? 32000 : MAXINT; // texture height!
   int secnum = sec - sectors;
-
-  if (boomsupport)
-    minsize = 32000;
 
   for (int i = 0; i < sec->linecount; i++)
     {
@@ -331,11 +328,8 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 
 fixed_t Map::FindShortestUpperAround(sector_t *sec)
 {
-  int minsize = MAXINT; // texture height!
+  float minsize = boomsupport ? 32000 : MAXINT; // texture height!
   int secnum = sec - sectors;
-
-  if (boomsupport)
-    minsize = 32000;
 
   for (int i = 0; i < sec->linecount; i++)
     {
@@ -1034,7 +1028,7 @@ void Map::SpawnLineSpecials()
 
       // Legacy extensions are mapped to Hexen linedef namespace so they are reachable from Hexen as well!
       // only check for clearable stuff here
-      if (special == LEGACY_EXT && (subtype = l->args[0]) < 128)
+      if (special == LINE_LEGACY_EXT && (subtype = l->args[0]) < 128)
 	{
 	  if (!tag)
 	    tag = l->args[3] + 256 * l->args[4]; // Hexen format: get the tag from args[3-4]
@@ -1043,22 +1037,22 @@ void Map::SpawnLineSpecials()
 	  int kind = l->args[1];
 
 
-	  if (subtype == LEGACY_BOOM_SCROLLERS)
+	  if (subtype == LINE_LEGACY_BOOM_SCROLLERS)
 	    {
 	      SpawnScroller(l, tag, kind, l->args[2]);
 	    }
 	  /*
-	  else if (subtype == LEGACY_BOOM_FRICTION)
+	  else if (subtype == LINE_LEGACY_BOOM_FRICTION)
 	    {
 	      SpawnFriction(l, tag);
 	    }
 	  */
 	  /*
-	  else if (subtype == LEGACY_BOOM_PUSHERS)
+	  else if (subtype == LINE_LEGACY_BOOM_PUSHERS)
 	    SpawnPusher(l, tag, kind);
 	  */
 	  /*
-	  else if (subtype == LEGACY_BOOM_RENDERER)
+	  else if (subtype == LINE_LEGACY_BOOM_RENDERER)
 	    {
 	      switch (kind)
 		{
@@ -1080,7 +1074,7 @@ void Map::SpawnLineSpecials()
 	    
 	    }
 	  */
-	  else if (subtype == LEGACY_BOOM_EXOTIC)
+	  else if (subtype == LINE_LEGACY_EXOTIC_TEXTURE)
 	    {
 	      // types which store data in the texture name fields
 	      switch (kind)
@@ -1133,7 +1127,7 @@ void Map::SpawnLineSpecials()
 		  goto error;
 		}
 	    }
-	  else if (subtype == LEGACY_FAKEFLOOR)  // fake floors
+	  else if (subtype == LINE_LEGACY_FAKEFLOOR)  // fake floors
 	    {
 	      int ff_flags = FF_EXISTS;
 
@@ -1190,14 +1184,14 @@ void Map::SpawnLineSpecials()
 		for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 		  AddFakeFloor(&sectors[s], &sectors[sec], lines+i, ff_flags);
 	    }
-	  else if (subtype == LEGACY_RENDERER)
+	  else if (subtype == LINE_LEGACY_RENDERER)
 	    {
 	      if (kind >= 100)
 		l->transmap = kind - 100; // transmap number
 	      else if (kind == 0) // 283 (legacy fog sheet)
 		continue;  // FIXME fog sheet requires keeping (renderer!, r_segs):
 	    }
-	  else if (subtype == LEGACY_MISC)
+	  else if (subtype == LINE_LEGACY_MISC)
 	    {
 	      switch (kind)
 		{

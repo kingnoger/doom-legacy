@@ -973,9 +973,9 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 }
 
 
-bool Actor::FallingDamage()
+bool Actor::FallingDamage(float v)
 {
-  float v = abs(vel.z).Float();
+  v = fabs(v);
 
   if (!cv_fallingdamage.value || v <= cv_fallingdamage.value)
     return false; // no damage
@@ -990,11 +990,11 @@ bool Actor::FallingDamage()
 }
 
 
-bool PlayerPawn::FallingDamage()
+bool PlayerPawn::FallingDamage(float v)
 {
   void P_NoiseAlert(Actor *target, Actor *emitter);
 
-  float v = abs(vel.z).Float();
+  v = fabs(v);
 
   if (!cv_fallingdamage.value || v <= cv_fallingdamage.value)
     return false; // no damage

@@ -1938,7 +1938,7 @@ void A_SpawnFly(DActor *mo)
 
   // telefrag anything in this spot
   newmobj->flags2 |= MF2_TELESTOMP;
-  newmobj->TeleportMove(newmobj->pos.x, newmobj->pos.y);
+  newmobj->TeleportMove(newmobj->pos);
   newmobj->flags2 &= ~MF2_TELESTOMP;
 
   // remove self (i.e., cube).

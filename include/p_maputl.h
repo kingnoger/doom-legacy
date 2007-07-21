@@ -147,9 +147,9 @@ struct position_check_t
 
   Actor  *block_thing; ///< thing that blocked position (or NULL)
   line_t *block_line;  ///< line that blocked position (or NULL)
-  Actor  *floor_thing; ///< thing we are climbing on
 
   vector<line_t*> spechit; ///< line crossings (impacts and pushes are done at once)
+  vector<Actor*>  thingshit; ///< contacted Actors
 
   bool skyimpact; ///< Did the actor collide with a sky wall?
 };
@@ -158,8 +158,6 @@ extern position_check_t PosCheck;
 
 /// variables used by movement functions to communicate
 extern bool floatok;
-
-extern class bbox_t tmb;
 
 
 int  P_PointOnLineSide(const fixed_t x, const fixed_t y, const line_t *line);

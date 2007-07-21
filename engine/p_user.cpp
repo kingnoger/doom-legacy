@@ -367,7 +367,7 @@ static void P_TeleportToPlayerStarts(Actor *v, int n, int ep)
   if (s == t)
     mt = (*m->playerstarts.begin()).second;
 
-  v->Teleport(mt->x, mt->y, ANG45 * (mt->angle / 45));
+  v->Teleport(vec_t<fixed_t>(mt->x, mt->y, 0), ANG45 * (mt->angle / 45));
 }
 
 
@@ -379,7 +379,7 @@ static bool P_TeleportToDeathmatchStarts(Actor *v)
 
   n = P_Random() % n;
   mapthing_t *m = v->mp->dmstarts[n];
-  return v->Teleport(m->x, m->y, ANG45 * (m->angle / 45));
+  return v->Teleport(vec_t<fixed_t>(m->x, m->y, 0), ANG45 * (m->angle / 45));
 }
 
 

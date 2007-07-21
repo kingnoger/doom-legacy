@@ -381,7 +381,7 @@ void Rend::R_RenderMaskedSegRange(drawseg_t *ds, int x1, int x2)
       dc_transmap = transtables[ldef->transmap];
       colfunc = fuzzcolfunc;
     }
-  else if (ldef->special == LEGACY_EXT && ldef->args[0] == LEGACY_RENDERER) // HACK fog sheet
+  else if (ldef->special == LINE_LEGACY_EXT && ldef->args[0] == LINE_LEGACY_RENDERER) // HACK fog sheet
     {
       colfunc = R_DrawFogColumn_8;
       windowtop = frontsector->ceilingheight;

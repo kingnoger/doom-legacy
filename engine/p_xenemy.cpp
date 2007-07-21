@@ -3588,7 +3588,7 @@ void A_KoraxChase(DActor *actor)
       spot = actor->mp->FindFromTIDmap(KORAX_FIRST_TELEPORT_TID, &lastfound);
       if (spot)
 	{
-	  actor->Teleport(spot->pos.x, spot->pos.y, spot->yaw, false);
+	  actor->Teleport(spot->pos, spot->yaw, false);
 	}
 
       actor->mp->StartACS(249, args, actor, NULL, 0);
@@ -3617,7 +3617,7 @@ void A_KoraxChase(DActor *actor)
 	  actor->special1 = lastfound+1;
 	  if (spot)
 	    {
-	      actor->Teleport(spot->pos.x, spot->pos.y, spot->yaw, false);
+	      actor->Teleport(spot->pos, spot->yaw, false);
 	    }
 	}
     }

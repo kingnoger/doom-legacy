@@ -530,15 +530,12 @@ static void ThrustMobj(Actor *mobj, seg_t *seg, polyobj_t *po)
   else
     force = 1;
 
-  int thrustAngle = (seg->angle-ANG90) >> ANGLETOFINESHIFT;
-  fixed_t thrustX = force * finecosine[thrustAngle];
-  fixed_t thrustY = force * finesine[thrustAngle];
-  mobj->vel.x += thrustX;
-  mobj->vel.y += thrustY;
+  angle_t thrustAngle = seg->angle - ANG90;
+  vec_t<fixed_t> thrust(force*Cos(thrustAngle), force*Sin(thrustAngle), 0);
+  mobj->vel += thrust;
 
-  if (po->crush)
-    if (!mobj->TestLocation(mobj->pos.x + thrustX, mobj->pos.y + thrustY)) // was checkposition
-      mobj->Damage(NULL, NULL, 3);
+  if (po->crush && !mobj->TestLocation(mobj->pos + thrust))
+    mobj->Damage(NULL, NULL, 3);
 }
 
 
@@ -1005,9 +1002,9 @@ bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
   for (int i = 0; i < numsegs; i++)
     {
       seg = &segs[i];
-      // find PO_LINE_START(tag)
+      // find LINE_PO_START(tag)
       if (seg->linedef && // not miniseg
-	  seg->linedef->special == PO_LINE_START &&
+	  seg->linedef->special == LINE_PO_START &&
 	  seg->linedef->args[0] == tag)
 	{
 	  // mark as used
@@ -1028,7 +1025,7 @@ bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
     }
 
 
-  // didn't find polyobj(tag) through PO_LINE_START, try PO_LINE_EXPLICIT
+  // didn't find polyobj(tag) through LINE_PO_START, try LINE_PO_EXPLICIT
 
   seg_t *polySegList[PO_MAXPOLYSEGS];
   int psIndex = 0;
@@ -1041,7 +1038,7 @@ bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
 	{
 	  seg = &segs[i];
 	  if (seg->linedef && // not miniseg
-	      seg->linedef->special == PO_LINE_EXPLICIT &&
+	      seg->linedef->special == LINE_PO_EXPLICIT &&
 	      seg->linedef->args[0] == tag)
 	    {
 	      tagfound = true;
@@ -1068,7 +1065,7 @@ bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
 
 	    seg = &segs[i];
 	    if (seg->linedef && // not miniseg
-		seg->linedef->special == PO_LINE_EXPLICIT &&
+		seg->linedef->special == LINE_PO_EXPLICIT &&
 		seg->linedef->args[0] == tag && seg->linedef->args[1] == j)
 	      {
 		seg->linedef->special = 0;
@@ -1185,11 +1182,11 @@ void Map::InitPolyobjs()
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
-      if (mt->z == EN_PO_SPAWN || mt->z == EN_PO_SPAWNCRUSH)
+      if (mt->height == EN_PO_SPAWN || mt->height == EN_PO_SPAWNCRUSH) // HACK
 	{ // Polyobj StartSpot Pt.
 	  polyobjs[index].spawnspot.x = mt->x;
 	  polyobjs[index].spawnspot.y = mt->y;
-	  if (!SpawnPolyobj(&polyobjs[index], mt->angle, mt->z == EN_PO_SPAWNCRUSH))
+	  if (!SpawnPolyobj(&polyobjs[index], mt->angle, mt->height == EN_PO_SPAWNCRUSH))
 	    I_Error("InitPolyobjs:  No lines found for PO %d!\n", mt->angle);
 	  //CONS_Printf("Polyobj %d: tag = %d\n", index, mt->angle);
 	  index++;
@@ -1200,7 +1197,7 @@ void Map::InitPolyobjs()
   for (i=0; i<n; i++)
     {
       mt = polyspawn[i];
-      if (mt->z == EN_PO_ANCHOR)
+      if (mt->height == EN_PO_ANCHOR) // HACK
 	{
 	  int tag = mt->angle;
 	  polyobj_t *po = GetPolyobj(tag);

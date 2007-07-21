@@ -197,8 +197,8 @@ public:
   void Move();
   virtual void ZMovement();
   virtual void XYFriction(fixed_t oldx, fixed_t oldy);
-  virtual bool Teleport(fixed_t nx, fixed_t ny, angle_t nangle, bool silent = false);
-  void LandedOnThing(Actor *a);
+  virtual bool Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent = false);
+  virtual float LandOnThing(Actor *a);
 
   void Reset();
   weapontype_t FindWeapon(int g);
@@ -233,7 +233,7 @@ public:
   virtual void Die(Actor *inflictor, Actor *source, int dtype);
   virtual void Killed(PlayerPawn *victim, Actor *inflictor);
   virtual bool Damage(Actor *inflictor, Actor *source, int damage, int dtype = dt_normal);
-  virtual bool FallingDamage();
+  virtual bool FallingDamage(float v);
   void Poison(Actor *culprit, int poison);
 
   // in p_pspr.cpp
