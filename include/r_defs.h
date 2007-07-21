@@ -142,42 +142,41 @@ enum floortype_t
 struct sector_t
 {
   fixed_t  floorheight, ceilingheight;
+  short    special; ///< sector special
+  short    lightlevel;
+  short    tag;
+  int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
+  short    floortype;   ///< see floortype_t
+
+  class Actor *thinglist;    ///< list of Actors in sector
+  /// list of Actors that are at least partially in the sector (superset of thinglist)
+  struct msecnode_t *touching_thinglist;
+
+  /// Thinkers for continuing actions
+  class Thinker *floordata, *ceilingdata, *lightingdata;
+
+  // TODO these could be replaced with a pointer to a sectorinfo struct
+  // (to save space, since most sectors have default values for these...)
+  int   damage; // TEST given according to damage bits in 'special'
+  float gravity;  // TEST
+  float friction, movefactor;  ///< sector floor friction properties
+  int teamstartsec; ///< if nonzero, spawnpoints in this sector are only for the corresponding team
+
+
+  int       linecount;
+  line_t**  lines;  // [linecount] size
+
+
+  /// floor and ceiling textures
   Material *floorpic, *ceilingpic;
   inline bool SkyFloor() const { return !floorpic; }
   inline bool SkyCeiling() const { return !ceilingpic; }
-
-  short    lightlevel;
-  short    special, tag;
-  int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
-
-  short     soundtraversed; ///< Noise alert: # of MF_SOUNDBLOCK lines noise has crossed
-  class Actor *soundtarget; ///< Noise alert: thing that made a sound
-
-  short      seqType;   ///< sector sound sequence
-  mappoint_t soundorg;  ///< origin for any sounds played by the sector
-
-  short  floortype;     ///< see floortype_t
-
-  int    blockbox[4];   ///< mapblock bounding box for height changes TODO obsolete?
-
-  int     validcount;   ///< if == global validcount, already checked
-  Actor  *thinglist;    ///< list of Actors in sector
-
-  //SoM: 3/6/2000: Start boom extra stuff
-  // Thinker for reversable actions
-  class Thinker *floordata; ///< floor effect
-  Thinker *ceilingdata;     ///< ceiling effect
-  Thinker *lightingdata;    ///< lighting effect
-
-  // lockout machinery for stairbuilding
-  int stairlock;   ///< -2 on first locked -1 after thinker done 0 normally
-  int prevsec;     ///< -1 or number of sector for previous step
-  int nextsec;     ///< -1 or number of next step sector
 
   /// floor and ceiling texture offsets
   fixed_t   floor_xoffs,   floor_yoffs;
   fixed_t ceiling_xoffs, ceiling_yoffs;
 
+  // control sector for Boom-style extra floor/ceiling planes
   int heightsec;      ///< control sector number, or -1 if none
   int heightsec_type; ///< what type of control sector is it?
 
@@ -185,29 +184,31 @@ struct sector_t
   {
     CS_boom = 0,
     CS_water,
-    CS_colormap // FIXME probably unneeded
   };
 
-  int floorlightsec, ceilinglightsec;
-  int teamstartsec;
-
-  // TODO this could be replaced with a pointer to a sectorinfo struct
-  // (to save space, since most sectors have default values for these...)
-  int   damage; // TEST given according to damage bits in 'special'
-  float gravity;  // TEST
-  float friction, movefactor;  ///< sector floor friction properties
-
   class fadetable_t *bottommap, *midmap, *topmap; ///< dynamic colormaps
+  fadetable_t *extra_colormap; ///< SoM: 4/3/2000: per-sector colormaps!
 
-  /// list of Actors that are at least partially in the sector (superset of thinglist)
-  struct msecnode_t *touching_thinglist;
+  int floorlightsec, ceilinglightsec; ///< should we copy our lighting from somewhere else?
 
-  //SoM: 3/6/2000: end stuff...
 
-  int       linecount;
-  line_t**  lines;  // [linecount] size
+  short   soundtraversed; ///< Noise alert: # of MF_SOUNDBLOCK lines noise has crossed
+  Actor  *soundtarget;    ///< Noise alert: thing that made a sound
 
-  //SoM: 2/23/2000: Improved fake floor hack
+  short      seqType;   ///< sector sound sequence
+  mappoint_t soundorg;  ///< origin for any sounds played by the sector
+
+
+  int     validcount;   ///< if == global validcount, already checked
+
+
+  // lockout machinery for stairbuilding
+  int stairlock;   ///< -2 on first locked -1 after thinker done 0 normally
+  int prevsec;     ///< -1 or number of sector for previous step
+  int nextsec;     ///< -1 or number of next step sector
+
+
+  /// 3D floors in the sector
   ffloor_t                  *ffloors;
   int                       *attached;
   int                        numattached;
@@ -218,8 +219,6 @@ struct sector_t
   int                        validsort; //if == validsort allready been sorted
   bool                       added;
 
-  // SoM: 4/3/2000: per-sector colormaps!
-  fadetable_t *extra_colormap;
 
   // ----- for special tricks with HW renderer -----
   bool                       pseudoSector;
@@ -425,7 +424,7 @@ struct line_t
   struct wallsplat_t *splats;
 
   int transmap;   ///< translucency filter, -1 == none
-  int ecolormap;  ///< SoM: Used for 282 linedefs
+  //int ecolormap;  ///< SoM: Used for 282 linedefs
 
 
   /// Adds a splat decal on the line.

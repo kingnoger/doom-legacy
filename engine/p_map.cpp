@@ -1988,9 +1988,9 @@ static bool PIT_ChangeSector(Actor *thing)
   return true;
 }
 
-/*!
-  changes sector height, crushes things
-*/
+
+/*
+// changes sector height, crushes things
 bool Map::ChangeSector(sector_t *sector, int crunch)
 {
   nofit = false;
@@ -2003,6 +2003,7 @@ bool Map::ChangeSector(sector_t *sector, int crunch)
 
   return nofit;
 }
+*/
 
 /// \brief Handles sector_t height changes.
 /// \ingroup g_iterators
@@ -2017,8 +2018,10 @@ bool Map::ChangeSector(sector_t *sector, int crunch)
 bool Map::CheckSector(sector_t *sector, int crunch)
 {
   //SoM: 3/15/2000: New function. Much faster.
+  /*
   if (!boomsupport) // use the old routine for old demos though
     return ChangeSector(sector,crunch);
+  */
 
   nofit = false;
   crushdamage = crunch;

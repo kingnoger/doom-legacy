@@ -1132,6 +1132,7 @@ void Map::GroupLines()
       sector->soundorg.y = (bb[BOXTOP]+bb[BOXBOTTOM])/2;
       sector->soundorg.z = sector->floorheight-10;
 
+      /*
       // adjust bounding box to map blocks
       int block = bmap.BlockY(bb[BOXTOP] + MAXRADIUS);
       block = block >= bmap.height ? bmap.height-1 : block;
@@ -1148,6 +1149,7 @@ void Map::GroupLines()
       block = bmap.BlockX(bb[BOXLEFT] - MAXRADIUS);
       block = block < 0 ? 0 : block;
       sector->blockbox[BOXLEFT]=block;
+      */
     }
 
 }

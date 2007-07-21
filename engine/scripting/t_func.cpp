@@ -1783,18 +1783,7 @@ void SF_SectorColormap()
       while ((i = current_map->FindSectorFromTag(tagnum, i)) >= 0)
         {
           sector_t *p = &current_map->sectors[i];
-          if (!cmap) // FIXME does not work
-            {
-              p->midmap = 0;
-              p->heightsec_type = sector_t::CS_boom;
-              //p->heightsec = 0;
-            }
-          else
-            {
-              p->midmap = cmap;
-              p->heightsec_type = sector_t::CS_colormap;
-              //p->heightsec = 0;
-            }
+	  p->midmap = cmap;
         }
     }
 

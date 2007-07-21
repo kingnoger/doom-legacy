@@ -1119,7 +1119,6 @@ void Map::SpawnLineSpecials()
 		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
 		    {
 		      sectors[s].midmap = l->frontsector->midmap;
-		      sectors[s].heightsec_type = sector_t::CS_colormap;
 		    }
 		  break;
 

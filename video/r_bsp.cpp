@@ -288,7 +288,6 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
                      int *floorlightlevel, int *ceilinglightlevel,
                      bool back)
 {
-  fadetable_t *f = NULL;
   //Actor *viewmobj = camera.chase ? camera.cam : viewplayer;
 
   if (floorlightlevel)
@@ -300,8 +299,7 @@ sector_t *Rend::R_FakeFlat(sector_t *sec, sector_t *tempsec,
       sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
 
   //SoM: 4/4/2000: If the sector has a midmap, it's probably from 280 type
-  if(sec->midmap && sec->heightsec_type == sector_t::CS_colormap)
-    f = sec->midmap;
+  fadetable_t *f = sec->midmap;
 
   if (sec->heightsec != -1 && sec->heightsec_type == sector_t::CS_boom)
     {
