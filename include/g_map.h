@@ -346,7 +346,7 @@ public:
 
   // in p_telept.cpp
   bool EV_Teleport(unsigned tag, line_t *line, Actor *thing, int type, int flags);
-  bool EV_SilentLineTeleport(unsigned tag, line_t *line, Actor *thing, bool reverse);
+  bool EV_SilentLineTeleport(unsigned lineid, line_t *line, Actor *thing, bool reverse);
 
   // in p_spec.cpp
   void InitTagLists();

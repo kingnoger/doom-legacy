@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2006 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -731,7 +731,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
     case 215: // ZDoom Teleport_Line
       if (!side) // Only teleport when crossing the front side of a line
-	success = EV_Teleport(tag, line, mo, TP_toLine, (args[2] & 0x1) ? TP_flip : 0);
+	success = EV_SilentLineTeleport(args[1], line, mo, (args[2] & 0x1) ? TP_flip : 0)
       break;
     case 232: // ZDoom Light_StrobeDoom
       success = EV_StartLightStrobing(tag, args[1], args[2]);
