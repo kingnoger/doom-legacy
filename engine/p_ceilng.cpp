@@ -96,9 +96,9 @@ ceiling_t::ceiling_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t
     case DownSUT:
       destheight = sector->ceilingheight + height;
       if ((type & TMASK) == UpSUT)
-	destheight += mp->FindShortestUpperAround(sec);
+	destheight += sec->FindShortestUpperAround();
       else
-	destheight -= mp->FindShortestUpperAround(sec);
+	destheight -= sec->FindShortestUpperAround();
 
       if (destheight < -32000)
 	destheight = -32000;
@@ -151,7 +151,7 @@ void ceiling_t::Think()
 //
 // Move a ceiling up/down and all around!
 //
-int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
+int Map::EV_DoCeiling(unsigned tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
 {
   sector_t   *sec;
 
@@ -200,7 +200,7 @@ int Map::EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush,
 	      ceiling->modelsec = sec - sectors;
 	      //jff 5/23/98 use model subroutine to unify fixes and handling
 	      // BP: heretic have change something here
-	      sec = FindModelCeilingSector(ceiling->destheight, sec);
+	      sec = sec->FindModelCeilingSector(ceiling->destheight);
 	      if (sec)
 		{
 		  ceiling->texture = sec->ceilingpic;
@@ -294,7 +294,7 @@ void crusher_t::Think()
 
 
 
-int Map::EV_DoCrusher(int tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
+int Map::EV_DoCrusher(unsigned tag, int type, fixed_t uspeed, fixed_t dspeed, int crush, fixed_t height)
 {
   sector_t   *sec;
 
@@ -353,7 +353,7 @@ void Map::RemoveActiveCeiling(ceiling_t *ceiling)
 //
 // Restart a ceiling that's in-stasis
 //
-int Map::ActivateInStasisCeiling(int tag)
+int Map::ActivateInStasisCeiling(unsigned tag)
 {
   int rtn = 0;
   list<ceiling_t *>::iterator i;
@@ -373,7 +373,7 @@ int Map::ActivateInStasisCeiling(int tag)
 
 
 // Stop a ceiling from crushing!
-int Map::EV_StopCeiling(int tag)
+int Map::EV_StopCeiling(unsigned tag)
 {
   int rtn = 0;
   list<ceiling_t *>::iterator i;

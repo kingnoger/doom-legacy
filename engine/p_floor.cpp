@@ -265,9 +265,9 @@ floor_t::floor_t(Map *m, int ty, sector_t *sec, fixed_t sp, int cru, fixed_t hei
     case DownSLT:
       destheight = sector->floorheight + height;
       if ((type & TMASK) == UpSLT)
-	destheight += mp->FindShortestLowerAround(sec);
+	destheight += sec->FindShortestLowerAround();
       else
-	destheight -= mp->FindShortestLowerAround(sec);
+	destheight -= sec->FindShortestLowerAround();
 
       if (destheight < -32000)
 	destheight = -32000;
@@ -340,7 +340,7 @@ void floor_t::Think()
 // Basic moving floors
 //==========================================================================
 
-int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
+int Map::EV_DoFloor(unsigned tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height)
 {
   int secnum = -1;
   sector_t *sec;
@@ -383,7 +383,7 @@ int Map::EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, f
 	      floor->modelsec = sec - sectors;
 	      //jff 5/23/98 use model subroutine to unify fixes and handling
 	      // BP: heretic have change something here
-	      sec = FindModelFloorSector(floor->destheight, sec);
+	      sec = sec->FindModelFloorSector(floor->destheight);
 	      if (sec)
 		{
 		  floor->texture = sec->floorpic;
@@ -426,7 +426,7 @@ int Map::EV_DoChange(line_t *line, int changetype)
   int rtn = 0;
 
   // change all sectors with the same tag as the linedef
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
       sector_t *secm;
@@ -440,7 +440,7 @@ int Map::EV_DoChange(line_t *line, int changetype)
 	  sec->special = line->frontsector->special;
 	  break;
 	case numChangeOnly:
-	  secm = FindModelFloorSector(sec->floorheight, sec);
+	  secm = sec->FindModelFloorSector(sec->floorheight);
 	  if (secm) // if no model, no change
 	    {
 	      sec->floorpic = secm->floorpic;
@@ -458,7 +458,7 @@ int Map::EV_DoChange(line_t *line, int changetype)
 // Stairbuilders, Doom and Hexen styles
 //==========================================================================
 
-int Map::EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush)
+int Map::EV_BuildStairs(unsigned tag, int type, fixed_t speed, fixed_t stepsize, int crush)
 {
   int secnum = -1;
   int rtn = 0;
@@ -640,7 +640,7 @@ struct step_t
   fixed_t   height;
 };
 
-int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay)
+int Map::EV_BuildHexenStairs(unsigned tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay)
 {
   deque<step_t> stairqueue;
   step_t s;
@@ -733,7 +733,7 @@ int Map::EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta
 //
 // Returns number of Thinkers created
 
-int Map::EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed)
+int Map::EV_DoDonut(unsigned tag, fixed_t pspeed, fixed_t sspeed)
 {
   int       i;
   int secnum = -1;
@@ -929,7 +929,7 @@ void elevator_t::Think()
 }
 
 
-int Map::EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush)
+int Map::EV_DoElevator(unsigned tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c, int crush)
 {
   int secnum = -1;
   int rtn = 0;
@@ -1023,7 +1023,7 @@ void floorwaggle_t::Think()
 }
 
   
-int Map::EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, int wait)
+int Map::EV_DoFloorWaggle(unsigned tag, fixed_t amp, angle_t freq, angle_t offset, int wait)
 {
   int ret = 0;
   int secnum = -1;

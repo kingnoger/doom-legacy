@@ -995,7 +995,7 @@ int Map::FindPolySegs(seg_t *seg)
 
 
 
-bool Map::SpawnPolyobj(polyobj_t *po, int tag, bool crush)
+bool Map::SpawnPolyobj(polyobj_t *po, unsigned tag, bool crush)
 {
   seg_t *seg;
 

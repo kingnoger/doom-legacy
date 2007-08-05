@@ -532,7 +532,7 @@ bool Map::SuspendACS(int number)
 
 
 // Unpauses scripts that are waiting for a particular sector tag to finish
-void Map::TagFinished(int tag)
+void Map::TagFinished(unsigned tag)
 {
   if (TagBusy(tag) == true)
     return;
@@ -561,21 +561,6 @@ void Map::ScriptFinished(int number)
   for (int i = 0; i < ACScriptCount; i++)
     if (ACSInfo[i].state == ACS_waitforscript && ACSInfo[i].waitValue == number)
       ACSInfo[i].state = ACS_running;
-}
-
-
-// Checks if the sector(s) with a given tag are still active
-bool Map::TagBusy(int tag)
-{
-  int sectorIndex = -1;
-  while ((sectorIndex = FindSectorFromTag(tag, sectorIndex)) >= 0)
-    {
-      if (sectors[sectorIndex].floordata ||
-	  sectors[sectorIndex].ceilingdata ||
-	  sectors[sectorIndex].lightingdata)
-	return true;
-    }
-  return false;
 }
 
 
@@ -745,133 +730,130 @@ static int CmdPushNumber()
   return SCRIPT_CONTINUE;
 }
 
+static void ForceArg0Tag(int special)
+{
+  // HACK to force ExecuteLineSpecial to use args[0] as the tag
+  if (ACScript->line)
+    {
+      int temp = ACScript->line->tag;
+      ACScript->line->tag = SpecArgs[0];
+      ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line, ACScript->side, ACScript->activator);
+
+
+      ACScript->line->tag = temp;
+    }
+  else
+    ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line, ACScript->side, ACScript->activator);
+}
+
+
 static int CmdLSpec1()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = Pop();
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-			    ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec2()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[1] = Pop();
   SpecArgs[0] = Pop();
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-			    ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec3()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[2] = Pop();
   SpecArgs[1] = Pop();
   SpecArgs[0] = Pop();
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-			    ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec4()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[3] = Pop();
   SpecArgs[2] = Pop();
   SpecArgs[1] = Pop();
   SpecArgs[0] = Pop();
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-			    ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec5()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[4] = Pop();
   SpecArgs[3] = Pop();
   SpecArgs[2] = Pop();
   SpecArgs[1] = Pop();
   SpecArgs[0] = Pop();
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-			    ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec1Direct()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = *PCodePtr++;
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-		       ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec2Direct()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = *PCodePtr++;
   SpecArgs[1] = *PCodePtr++;
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-		       ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec3Direct()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = *PCodePtr++;
   SpecArgs[1] = *PCodePtr++;
   SpecArgs[2] = *PCodePtr++;
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-		       ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec4Direct()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = *PCodePtr++;
   SpecArgs[1] = *PCodePtr++;
   SpecArgs[2] = *PCodePtr++;
   SpecArgs[3] = *PCodePtr++;
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-		       ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
 static int CmdLSpec5Direct()
 {
-  int special;
-
-  special = *PCodePtr++;
+  int special = *PCodePtr++;
   SpecArgs[0] = *PCodePtr++;
   SpecArgs[1] = *PCodePtr++;
   SpecArgs[2] = *PCodePtr++;
   SpecArgs[3] = *PCodePtr++;
   SpecArgs[4] = *PCodePtr++;
-  ACMap->ExecuteLineSpecial(special, SpecArgs, ACScript->line,
-		       ACScript->side, ACScript->activator);
+
+  ForceArg0Tag(special);
   return SCRIPT_CONTINUE;
 }
 
@@ -1621,9 +1603,9 @@ static int CmdSetLineTexture()
   Material *texture = materials.Get(ACMap->ACStrings[Pop()], TEX_wall);
   int position = Pop();
   int side = Pop();
-  int lineTag = Pop();
+  int lineid = Pop();
 
-  for (int s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
+  for (int s = -1; (line = ACMap->FindLineFromID(lineid, &s)) != NULL; )
     {
       if (position == TEXTURE_MIDDLE)
 	{
@@ -1645,14 +1627,11 @@ static int CmdSetLineTexture()
 static int CmdSetLineBlocking()
 {
   line_t *line;
-  int lineTag;
-  int blocking;
-  int s;
 
-  blocking = Pop() ? ML_BLOCKING : 0;
-  lineTag = Pop();
+  int blocking = Pop() ? ML_BLOCKING : 0;
+  int lineid = Pop();
 
-  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
+  for (int s = -1; (line = ACMap->FindLineFromID(lineid, &s)) != NULL; )
     {
       line->flags = (line->flags&~ML_BLOCKING) | blocking;
     }
@@ -1663,19 +1642,17 @@ static int CmdSetLineBlocking()
 static int CmdSetLineSpecial()
 {
   line_t *line;
-  int lineTag;
-  int special, arg1, arg2, arg3, arg4, arg5;
-  int s;
+  int arg1, arg2, arg3, arg4, arg5;
 
   arg5 = Pop();
   arg4 = Pop();
   arg3 = Pop();
   arg2 = Pop();
   arg1 = Pop();
-  special = Pop();
-  lineTag = Pop();
+  int special = Pop();
+  int lineid = Pop();
 
-  for (s = -1; (line = ACMap->FindLineFromTag(lineTag, &s)) != NULL; )
+  for (int s = -1; (line = ACMap->FindLineFromID(lineid, &s)) != NULL; )
     {
       line->special = special;
       line->args[0] = arg1;

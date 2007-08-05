@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -187,7 +185,7 @@ void Map::SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool
 //
 // Start strobing lights (usually from a trigger)
 //
-int Map::EV_StartLightStrobing(int tag, short brighttime, short darktime)
+int Map::EV_StartLightStrobing(unsigned tag, short brighttime, short darktime)
 {
   int rtn = 0;
 
@@ -209,7 +207,7 @@ int Map::EV_StartLightStrobing(int tag, short brighttime, short darktime)
 //
 // TURN LINE'S TAG LIGHTS OFF
 //
-int Map::EV_TurnTagLightsOff(int tag)
+int Map::EV_TurnTagLightsOff(unsigned tag)
 {
   int                 i;
   int                 j;
@@ -244,7 +242,7 @@ int Map::EV_TurnTagLightsOff(int tag)
 //
 // TURN LINE'S TAG LIGHTS ON
 //
-int Map::EV_LightTurnOn(int tag, int bright)
+int Map::EV_LightTurnOn(unsigned tag, int bright)
 {
   int         i;
   int         j;
@@ -287,7 +285,7 @@ int Map::EV_LightTurnOn(int tag, int bright)
 //
 // Fade all the lights in sectors with a particular tag to a new value
 //
-int Map::EV_FadeLight(int tag, int destvalue, int speed)
+int Map::EV_FadeLight(unsigned tag, int destvalue, int speed)
 {
   int rtn = 0;
   // search all sectors for ones with tag
@@ -306,7 +304,7 @@ int Map::EV_FadeLight(int tag, int destvalue, int speed)
 //
 // Start a light effect in all sectors with a particular tag
 //
-int Map::EV_SpawnLight(int tag, int type, short maxl, short minl, short maxt, short mint)
+int Map::EV_SpawnLight(unsigned tag, int type, short maxl, short minl, short maxt, short mint)
 {
   lightfx_t *lfx;
   int rtn = 0;

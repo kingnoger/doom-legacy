@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2005 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -124,7 +124,7 @@ int Map::EV_DoGenFloor(line_t *line)
 
   secnum = -1;
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -153,8 +153,8 @@ int Map::EV_DoGenFloor(line_t *line)
 	  if (ChgM) // if a numeric model change
 	    {
 	      sector_t *sec2 = (Targ==FtoLnC || Targ==FtoC) ?
-		FindModelCeilingSector(floor->destheight,sec) :
-		FindModelFloorSector(floor->destheight,sec);
+		sec->FindModelCeilingSector(floor->destheight) :
+		sec->FindModelFloorSector(floor->destheight);
 
 	      if (sec2)
 		{
@@ -293,7 +293,7 @@ int Map::EV_DoGenCeiling(line_t *line)
 
   secnum = -1;
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -324,8 +324,8 @@ int Map::EV_DoGenCeiling(line_t *line)
 	      sector_t *sec2;
 
 	      sec2 = (Targ==CtoHnF || Targ==CtoF) ?         
-		FindModelFloorSector(ceiling->destheight, sec) :
-		FindModelCeilingSector(ceiling->destheight, sec);
+		sec->FindModelFloorSector(ceiling->destheight) :
+		sec->FindModelCeilingSector(ceiling->destheight);
 	      if (sec2)
 		{
 		  ceiling->texture = sec2->ceilingpic;
@@ -414,7 +414,7 @@ int Map::EV_DoGenLift(line_t *line)
     }
 
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -533,7 +533,7 @@ int Map::EV_DoGenStairs(line_t *line)
 
   secnum = -1;
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -709,7 +709,7 @@ int Map::EV_DoGenCrusher(line_t *line)
 
   secnum = -1;
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
 
@@ -771,7 +771,7 @@ int Map::EV_DoGenLockedDoor(line_t *line)
   rtn = 0;
   
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
     manual_locked:
@@ -857,7 +857,7 @@ int Map::EV_DoGenDoor(line_t *line)
   rtn = 0;
   
   // if not manual do all sectors tagged the same as the line
-  while ((secnum = FindSectorFromLineTag(line,secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(line->tag,secnum)) >= 0)
     {
       sec = &sectors[secnum];
     manual_door:

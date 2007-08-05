@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -22,7 +22,7 @@
 /// \brief Utilities, LineDef and Sector specials
 ///
 /// Map geometry utility functions
-/// Line tag hashing
+/// Tag and lineid hashing
 /// Linedef specials
 /// Sector specials
 /// Scrollers, friction, pushers
@@ -70,30 +70,12 @@ sectoreffect_t::sectoreffect_t(Map *m, sector_t *s)
 // UTILITIES
 //========================================================
 
-///  Returns a side_t* given the number of the current sector,
-///  the line number, and the side (0/1) that you want.
-side_t *Map::getSide(int sec, int line, int side)
-{
-  return (sectors[sec].lines[line])->sideptr[side];
-}
 
-
-/// Returns a sector_t* given the number of the current sector,
-/// the line number and the side (0/1) that you want.
-sector_t *Map::getSector(int sec, int line, int side)
-{
-  return (sectors[sec].lines[line])->sideptr[side]->sector;
-}
-
-
-/// Given the sector number and the line number,
+/// Given a line number within a sector,
 /// it will tell you whether the line is two-sided or not.
-bool Map::twoSided(int sec, int line)
+bool sector_t::twoSided(int line)
 {
-  return boomsupport ?
-    ((sectors[sec].lines[line])->sideptr[1] != NULL)
-    :
-    ((sectors[sec].lines[line])->flags & ML_TWOSIDED);
+  return boomsupport ? (lines[line]->sideptr[1] != NULL) : (lines[line]->flags & ML_TWOSIDED);
 }
 
 
@@ -299,20 +281,19 @@ fixed_t sector_t::FindNextHighestCeiling(fixed_t currentheight)
 //
 // TODO in this and FindShortestUpperAround: replace all indices with pointers
 
-fixed_t Map::FindShortestLowerAround(sector_t *sec)
+fixed_t sector_t::FindShortestLowerAround()
 {
   float minsize = boomsupport ? 32000 : MAXINT; // texture height!
-  int secnum = sec - sectors;
 
-  for (int i = 0; i < sec->linecount; i++)
+  for (int i = 0; i < linecount; i++)
     {
-      if (twoSided(secnum, i))
+      if (twoSided(i))
 	{
-	  side_t *side = getSide(secnum,i,0);
+	  side_t *side = getSide(i, 0);
 	  if (side->bottomtexture)
 	    if (side->bottomtexture->worldheight < minsize)
 	      minsize = side->bottomtexture->worldheight;
-	  side = getSide(secnum,i,1);
+	  side = getSide(i, 1);
 	  if (side->bottomtexture)
 	    if (side->bottomtexture->worldheight < minsize)
 	      minsize = side->bottomtexture->worldheight;
@@ -326,20 +307,19 @@ fixed_t Map::FindShortestLowerAround(sector_t *sec)
 // Passed a sector number, returns the shortest upper texture on a
 // linedef bounding the sector.
 
-fixed_t Map::FindShortestUpperAround(sector_t *sec)
+fixed_t sector_t::FindShortestUpperAround()
 {
   float minsize = boomsupport ? 32000 : MAXINT; // texture height!
-  int secnum = sec - sectors;
 
-  for (int i = 0; i < sec->linecount; i++)
+  for (int i = 0; i < linecount; i++)
     {
-      if (twoSided(secnum, i))
+      if (twoSided(i))
 	{
-	  side_t *side = getSide(secnum,i,0);
+	  side_t *side = getSide(i, 0);
 	  if (side->toptexture > 0)
 	    if (side->toptexture->worldheight < minsize)
 	      minsize = side->toptexture->worldheight;
-	  side = getSide(secnum,i,1);
+	  side = getSide(i, 1);
 	  if (side->toptexture > 0)
 	    if (side->toptexture->worldheight < minsize)
 	      minsize = side->toptexture->worldheight;
@@ -350,28 +330,22 @@ fixed_t Map::FindShortestUpperAround(sector_t *sec)
 
 
 
-
 // Passed a floor height and a sector number, return a pointer to a
 // a sector with that floor height across the lowest numbered two sided
 // line surrounding the sector.
 //
 // Note: If no sector at that height bounds the sector passed, return NULL
 
-sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
+sector_t *sector_t::FindModelFloorSector(fixed_t floordestheight)
 {
-  int i, secnum;
-
-  secnum = sec-sectors;
-  int linecount = sec->linecount;
-  for (i = 0; i < (!boomsupport && sec->linecount<linecount?
-                   sec->linecount : linecount); i++)
+  sector_t *sec = this; // Boom demo compatibility with a Doom bug?
+  for (int i = 0; i < (!boomsupport && sec->linecount<linecount ? sec->linecount : linecount); i++)
     {
-      if ( twoSided(secnum, i) )
+      if (twoSided(i))
 	{
-	  if (getSide(secnum,i,0)->sector-sectors == secnum)
-	    sec = getSector(secnum,i,1);
-	  else
-	    sec = getSector(secnum,i,0);
+	  sec = getSector(i, 0);
+	  if (sec == this)
+	    sec = getSector(i, 1);
 
 	  if (sec->floorheight == floordestheight)
 	    return sec;
@@ -388,21 +362,16 @@ sector_t *Map::FindModelFloorSector(fixed_t floordestheight, sector_t *sec)
 //
 // Note: If no sector at that height bounds the sector passed, return NULL
 
-sector_t *Map::FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec)
+sector_t *sector_t::FindModelCeilingSector(fixed_t ceildestheight)
 {
-  int i, secnum;
-
-  secnum = sec-sectors;
-  int linecount = sec->linecount;
-  for (i = 0; i < (!boomsupport && sec->linecount<linecount?
-                   sec->linecount : linecount); i++)
+  sector_t *sec = this; // Boom demo compatibility with a Doom bug?
+  for (int i = 0; i < (!boomsupport && sec->linecount<linecount ? sec->linecount : linecount); i++)
     {
-      if ( twoSided(secnum, i) )
+      if (twoSided(i))
 	{
-	  if (getSide(secnum,i,0)->sector-sectors == secnum)
-	    sec = getSector(secnum,i,1);
-	  else
-	    sec = getSector(secnum,i,0);
+	  sec = getSector(i, 0);
+	  if (sec == this)
+	    sec = getSector(i, 1);
 
 	  if (sec->ceilingheight == ceildestheight)
 	    return sec;
@@ -410,89 +379,6 @@ sector_t *Map::FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec)
     }
   return NULL;
 }
-
-
-
-// RETURN NEXT SECTOR # THAT LINE TAG REFERS TO
-//SoM: 3/7/2000: Killough wrote this to improve the process.
-int Map::FindSectorFromLineTag(line_t *line, int start)
-{
-  start = (start >= 0) ? sectors[start].nexttag :
-    sectors[(unsigned) line->tag % (unsigned) numsectors].firsttag;
-  while (start >= 0 && sectors[start].tag != line->tag)
-    start = sectors[start].nexttag;
-  return start;
-}
-
-
-
-// Used by FraggleScript
-int Map::FindSectorFromTag(int tag, int start)
-{
-  start = start >= 0 ? sectors[start].nexttag :
-    sectors[(unsigned) tag % (unsigned) numsectors].firsttag;
-  while (start >= 0 && sectors[start].tag != tag)
-    start = sectors[start].nexttag;
-  return start;
-}
-
-
-//SoM: 3/7/2000: More boom specific stuff...
-// killough 4/16/98: Same thing, only for linedefs
-/*
-int Map::FindLineFromLineTag(const line_t *line, int start)
-{
-  start = start >= 0 ? lines[start].nexttag :
-    lines[(unsigned) line->tag % (unsigned) numlines].firsttag;
-  while (start >= 0 && lines[start].tag != line->tag)
-    start = lines[start].nexttag;
-  return start;
-}
-*/
-line_t *Map::FindLineFromTag(int tag, int *start)
-{
-  int index = (*start >= 0) ? lines[*start].nexttag :
-    lines[(unsigned) tag % (unsigned) numlines].firsttag;
-
-  for ( ; index >= 0; index = lines[index].nexttag)
-    if (lines[index].tag == tag)
-      {
-	*start = index;
-	return &lines[index];
-      }
-
-  // not found
-  *start = index;
-  return NULL;
-}
-
-
-//SoM: 3/7/2000: Oh joy!
-// Hash the sector tags across the sectors and linedefs.
-void Map::InitTagLists()
-{
-  register int i;
-
-  for (i=numsectors; --i>=0; )
-    sectors[i].firsttag = -1;
-  for (i=numsectors; --i>=0; )
-    {
-      int j = (unsigned) sectors[i].tag % (unsigned) numsectors;
-      sectors[i].nexttag = sectors[j].firsttag;
-      sectors[j].firsttag = i;
-    }
-
-  for (i=numlines; --i>=0; )
-    lines[i].firsttag = -1;
-  for (i=numlines; --i>=0; )
-    {
-      int j = (unsigned) lines[i].tag % (unsigned) numlines;
-      lines[i].nexttag = lines[j].firsttag;
-      lines[j].firsttag = i;
-    }
-}
-
-
 
 
 /// Find minimum light from an adjacent sector
@@ -536,6 +422,90 @@ bool sector_t::Active(special_e t)
 
   return true;
 }
+
+
+
+//====================================================================
+//                 Sector tags and line id's
+//====================================================================
+
+
+// RETURN NEXT SECTOR # THAT LINE TAG REFERS TO
+//SoM: 3/7/2000: Killough wrote this to improve the process.
+int Map::FindSectorFromTag(unsigned tag, int start)
+{
+  start = (start >= 0) ? sectors[start].nexttag :
+    sectors[(unsigned) tag % (unsigned) numsectors].firsttag;
+  while (start >= 0 && sectors[start].tag != tag)
+    start = sectors[start].nexttag;
+  return start;
+}
+
+
+//SoM: 3/7/2000: More boom specific stuff...
+// killough 4/16/98: Same thing, only for linedefs
+// called from ACS, line teleport code/bot code, wall scrollers, 260 transparency
+#warning TODO lineid: 260 transparency, line teleport 70, scrollers
+line_t *Map::FindLineFromID(unsigned lineid, int *start)
+{
+  int index = (*start >= 0) ? lines[*start].nextid :
+    lines[lineid % (unsigned) numlines].firstid;
+
+  for ( ; index >= 0; index = lines[index].nextid)
+    if (lines[index].lineid == lineid)
+      {
+	*start = index;
+	return &lines[index];
+      }
+
+  // not found
+  *start = index;
+  return NULL;
+}
+
+
+//SoM: 3/7/2000: Oh joy!
+// Hash the sector tags across the sectors and line ids across the linedefs.
+void Map::InitTagLists()
+{
+  register int i;
+
+  for (i=numsectors; --i>=0; )
+    sectors[i].firsttag = -1;
+  for (i=numsectors; --i>=0; )
+    {
+      int j = sectors[i].tag % (unsigned) numsectors;
+      sectors[i].nexttag = sectors[j].firsttag;
+      sectors[j].firsttag = i;
+    }
+
+  for (i=numlines; --i>=0; )
+    lines[i].firstid = -1;
+  for (i=numlines; --i>=0; )
+    {
+      int j = lines[i].lineid % (unsigned) numlines;
+      lines[i].nextid = lines[j].firstid;
+      lines[j].firstid = i;
+    }
+}
+
+
+
+// Checks if the sector(s) with a given tag are still active
+bool Map::TagBusy(unsigned tag)
+{
+  int i = -1;
+  while ((i = FindSectorFromTag(tag, i)) >= 0)
+    {
+      if (sectors[i].floordata ||
+	  sectors[i].ceilingdata ||
+	  sectors[i].lightingdata)
+	return true;
+    }
+  return false;
+}
+
+
 
 
 
@@ -990,32 +960,12 @@ void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
 /// that spawn thinkers or confer properties
 void Map::SpawnLineSpecials()
 {
-  int i;
-
   RemoveAllActiveCeilings();
   RemoveAllActivePlats();
-
-  // First set the Hexen "line tags".
-  for (i = 0; i < numlines; i++)
-    switch (lines[i].special)
-      {
-      case 121: // Line_SetIdentification
-	lines[i].tag = lines[i].args[0];
-	lines[i].special = 0;
-	break;
-
-      case 215: // ZDoom: Teleport_Line
-	lines[i].tag = lines[i].args[0];
-	break;
-
-      default:
-	break;
-      }
-
-  InitTagLists(); // Create xref tables for tags
+  InitTagLists(); // Create hash tables for tags
 
   //  Init line EFFECTs
-  for (i = 0; i < numlines; i++)
+  for (int i = 0; i < numlines; i++)
     {
       line_t *l = &lines[i];
       line_t *l2;
@@ -1030,9 +980,6 @@ void Map::SpawnLineSpecials()
       // only check for clearable stuff here
       if (special == LINE_LEGACY_EXT && (subtype = l->args[0]) < 128)
 	{
-	  if (!tag)
-	    tag = l->args[3] + 256 * l->args[4]; // Hexen format: get the tag from args[3-4]
-
 	  int sec = l->sideptr[0]->sector - sectors;
 	  int kind = l->args[1];
 
@@ -1094,10 +1041,10 @@ void Map::SpawnLineSpecials()
 		    if (temp == -1)
 		      temp = 0; // default, TRANMAP
 
-		    if (tag)
+		    if (l->lineid)
 		      {
 			l->transmap = -1;
-			for (s = -1; (l2 = FindLineFromTag(tag, &s)); )
+			for (s = -1; (l2 = FindLineFromID(l->lineid, &s)); )
 			  l2->transmap = temp; // make tagged lines translucent too
 		      }
 		    else
@@ -1218,9 +1165,6 @@ void Map::SpawnLineSpecials()
 
 
       // finally check ungrouped specials 
-      if (!tag)
-	tag = l->args[0]; // Hexen format: get the tag from args[0]
-
       switch (special)
         {
 	  // Hexen
@@ -1452,7 +1396,7 @@ scroll_t::scroll_t(short t, fixed_t dx, fixed_t dy, sector_t *csec, int aff, boo
 
 
 /// spawns Boom wall, floor and ceiling scrollers
-void Map::SpawnScroller(line_t *l, int tag, int type, int control)
+void Map::SpawnScroller(line_t *l, unsigned tag, int type, int control)
 {
   int s = l->sideptr[0] - sides;
   line_t *l2;
@@ -1471,7 +1415,7 @@ void Map::SpawnScroller(line_t *l, int tag, int type, int control)
 				  sides[s].rowoffset, NULL, s, accel));
 	}
       else
-	for (s = -1; (l2 = FindLineFromTag(tag, &s)) != NULL; )
+	for (s = -1; (l2 = FindLineFromID(tag, &s)) != NULL; ) // NOTE: "tag" actually a line id, only done with ZDoom type 222
 	  if (l2 != l)
 	    {
 	      // Adds wall scroller. Scroll amount is rotated with respect to wall's
@@ -1587,7 +1531,7 @@ void friction_t::Think()
 */
 
 //Spawn all friction.
-void Map::SpawnFriction(line_t *l, int tag)
+void Map::SpawnFriction(line_t *l, unsigned tag)
 {
   extern float normal_friction;
 
@@ -1828,7 +1772,7 @@ static DActor *GetPushThing(sector_t *sec)
 }
 
 // Spawn pushers.
-void Map::SpawnPusher(line_t *l, int tag, int type)
+void Map::SpawnPusher(line_t *l, unsigned tag, int type)
 {
   int s;
 

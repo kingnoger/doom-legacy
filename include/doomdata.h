@@ -44,7 +44,7 @@ const Uint32 NULL_INDEX_32 = 0xFFFFFFFF; // or -1. Used for GLsegs
 #define CHILD_IS_SUBSECTOR_OLD (1 << 15) // old leaf node flag for BSP
 
 
-// TODO tags to unsigned? lightlevels too?
+// TODO lightlevels to unsigned?
 
 
 /// Lump order in a map WAD: each map needs a couple of lumps
@@ -104,7 +104,7 @@ struct doom_maplinedef_t
   Uint16 v1, v2;     ///< numbers of start and end vertices
   Uint16 flags;
   Uint16 special;    ///< line action
-  Sint16 tag;
+  Uint16 tag;
   Uint16 sidenum[2]; ///< numbers of sidedefs. sidenum[1] will be 0xFFFF if one-sided.
 } __attribute__((packed));
 
@@ -131,7 +131,7 @@ struct mapsector_t
   char          ceilingpic[8]; ///< ceiling texture name
   Sint16        lightlevel;
   Uint16        special;       ///< sector action
-  Sint16        tag;
+  Uint16        tag;
 } __attribute__((packed));
 
 

@@ -66,6 +66,9 @@
 
 #include "i_video.h"            //rendermode
 
+
+void ConvertLineDef(line_t *ld);
+
 static Material *skyflat_mat;
 
 extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
@@ -537,8 +540,6 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
 
 void Map::LoadLineDefs(int lump)
 {
-  int i, j;
-
   vertex_t *v1, *v2;
 
   if (hexen_format)
@@ -548,26 +549,51 @@ void Map::LoadLineDefs(int lump)
 
   //CONS_Printf("lines: %d\n", numlines);
 
-  lines = (line_t *)Z_Malloc(numlines*sizeof(line_t), PU_LEVEL, 0);
-  memset(lines, 0, numlines*sizeof(line_t));
-  byte *data = (byte *)fc.CacheLumpNum(lump, PU_STATIC);
+  lines = static_cast<line_t*>(Z_Malloc(numlines*sizeof(line_t), PU_LEVEL, 0));
+  memset(lines, 0, numlines*sizeof(line_t)); // NOTE: important, initialize fields to zero
+  byte *data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
 
-  doom_maplinedef_t *mld = (doom_maplinedef_t *)data;
-  hex_maplinedef_t *hld = (hex_maplinedef_t *)data;
+  doom_maplinedef_t *mld = reinterpret_cast<doom_maplinedef_t*>(data);
+  hex_maplinedef_t *hld = reinterpret_cast<hex_maplinedef_t*>(data);
 
   line_t *ld = lines;
 
-  for (i=0 ; i<numlines ; i++, ld++)
+  for (int i=0 ; i<numlines ; i++, ld++)
     {
       int temp[2];
       if (hexen_format)
         {
           ld->flags = SHORT(hld->flags);
           ld->special = hld->special;
-          //ld->tag = hld->args[0]; // 16-bit tags
 
-          for (j=0; j<5; j++)
+          for (int j=0; j<5; j++)
             ld->args[j] = hld->args[j];
+
+	  // use 16-bit tags
+	  if (ld->special == LINE_LEGACY_EXT)
+	    {
+	      // NOTE: this Legacy-specific linedef type uses 16-bit tags
+	      ld->tag = ld->args[3] + (ld->args[4] << 8); // Hexen style
+	    }
+	  else
+	    ld->tag = ld->args[0];
+
+	  // Set the Hexen line id's (corresponding to Boom line-line pairing tags)
+	  switch (ld->special)
+	    {
+	    case 121: // Line_SetIdentification
+	      ld->lineid = ld->args[0] + (ld->args[4] << 8); // high byte is a ZDoom extension
+	      ld->special = 0;
+	      break;
+
+	    case 215: // ZDoom: Teleport_Line
+	    case 222: // ZDoom: Scroll_Texture_Model
+	      ld->lineid = ld->args[0];
+	      break;
+
+	    default:
+	      break;
+	    }
 
           v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
           v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
@@ -588,7 +614,10 @@ void Map::LoadLineDefs(int lump)
           ld->flags = SHORT(mld->flags);
           ld->special = SHORT(mld->special);
           ld->tag = SHORT(mld->tag);
-          //for (j=0; j<5; j++) ld->args[j] = 0;
+	  ld->lineid = ld->tag; // NOTE: in Doom format, lineid's are equivalent to tags, in Hexen they are different.
+
+	  // Doom => Hexen conversion using the conversion table.
+	  ConvertLineDef(ld);
 
           v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
           v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
@@ -1601,10 +1630,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadSideDefs(lumpnum+LUMP_SIDEDEFS); // allocates sidedefs
   LoadLineDefs(lumpnum+LUMP_LINEDEFS); // points to v, si(and back)
   LoadBlockMap(lumpnum+LUMP_BLOCKMAP); // loads (or builds) the blockmap, uses vertexes and lines
-
-  if (!hexen_format)
-    ConvertLineDefs(); // just type conversion to mod. Hexen system
-
   LoadSideDefs2(lumpnum+LUMP_SIDEDEFS); // points to se, uses l, processes some linedef specials
   LoadLineDefs2(); // uses si, points to se
 
@@ -1732,12 +1757,6 @@ void ConvertLineDef(line_t *ld)
 }
 
 
-/// Converts all linedefs in the map using the conversion table.
-void Map::ConvertLineDefs()
-{
-  for (int i=0; i<numlines; i++)
-    ConvertLineDef(&lines[i]); // Doom => Hexen conversion
-}
 
 
 
@@ -1850,7 +1869,7 @@ bool ConvertMapToHexen(int lumpnum)
 	hld[i].args[j] = temp.args[j];
 
       // tag
-      int tag = SHORT(ld->tag);
+      unsigned tag = SHORT(ld->tag);
 
       if (hld[i].special == LINE_LEGACY_EXT) // different tag handling (full 16-bit tag stored)
 	{

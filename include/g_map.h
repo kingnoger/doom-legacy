@@ -312,7 +312,6 @@ public:
   void LoadThings(int lump, bool heed_spawnflags);
   void LoadLineDefs(int lump);
   void LoadLineDefs2();
-  void ConvertLineDefs();
   void LoadSideDefs(int lump);
   void LoadSideDefs2(int lump);
   void LoadBlockMap(int lump);
@@ -346,22 +345,14 @@ public:
   void RepositionMace(DActor *mo);
 
   // in p_telept.cpp
-  bool EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags);
-  bool EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool reverse);
+  bool EV_Teleport(unsigned tag, line_t *line, Actor *thing, int type, int flags);
+  bool EV_SilentLineTeleport(unsigned tag, line_t *line, Actor *thing, bool reverse);
 
   // in p_spec.cpp
-  side_t   *getSide(int sec, int line, int side);
-  sector_t *getSector(int sec, int line, int side);
-  bool      twoSided(int sec, int line);
-  fixed_t   FindShortestUpperAround(sector_t *sec);
-  fixed_t   FindShortestLowerAround(sector_t *sec);
-
-  sector_t *FindModelFloorSector(fixed_t floordestheight, sector_t *sec);
-  sector_t *FindModelCeilingSector(fixed_t ceildestheight, sector_t *sec);
-  int  FindSectorFromLineTag(line_t *line, int start);
-  int  FindSectorFromTag(int tag, int start);
-  line_t *FindLineFromTag(int tag, int *start);
   void InitTagLists();
+  int  FindSectorFromTag(unsigned tag, int start);
+  line_t *FindLineFromID(unsigned lineid, int *start);
+  bool TagBusy(unsigned tag);
 
   void AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags);
 
@@ -372,12 +363,12 @@ public:
 
   int  SpawnSectorSpecial(int sp, sector_t *sec);
   void SpawnLineSpecials();
-  void SpawnScroller(line_t *l, int tag, int type, int control);
-  void SpawnFriction(line_t *l, int tag);
-  void SpawnPusher(line_t *l, int tag, int type);
+  void SpawnScroller(line_t *l, unsigned tag, int type, int control);
+  void SpawnFriction(line_t *l, unsigned tag);
+  void SpawnPusher(line_t *l, unsigned tag, int type);
 
   // some event functions that fit nowhere else
-  int  EV_SectorSoundChange(int tag, int seq);
+  int  EV_SectorSoundChange(unsigned tag, int seq);
   bool EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *mo);
 
   // in a_action.cpp
@@ -398,44 +389,44 @@ public:
   // in p_lights.cpp
   void SpawnPhasedLightSequence(sector_t *sec, int indexStep);
   void SpawnStrobeLight(sector_t *sec, short brighttime, short darktime, bool inSync);
-  int  EV_StartLightStrobing(int tag, short brighttime, short darktime);
-  int  EV_FadeLight(int tag, int destvalue, int speed);
-  int  EV_SpawnLight(int tag, int type, short maxl, short minl = 0, short maxt = 0, short mint = 0);
-  int  EV_TurnTagLightsOff(int tag);
-  int  EV_LightTurnOn(int tag, int bright);
+  int  EV_StartLightStrobing(unsigned tag, short brighttime, short darktime);
+  int  EV_FadeLight(unsigned tag, int destvalue, int speed);
+  int  EV_SpawnLight(unsigned tag, int type, short maxl, short minl = 0, short maxt = 0, short mint = 0);
+  int  EV_TurnTagLightsOff(unsigned tag);
+  int  EV_LightTurnOn(unsigned tag, int bright);
 
   // in p_plats.cpp
   void AddActivePlat(plat_t* plat);
-  int  ActivateInStasisPlat(int tag);
+  int  ActivateInStasisPlat(unsigned tag);
   void RemoveActivePlat(plat_t* plat);
   void RemoveAllActivePlats();
-  int  EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height);
-  int  EV_StopPlat(int tag);
+  int  EV_DoPlat(unsigned tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height);
+  int  EV_StopPlat(unsigned tag);
 
   // in p_ceiling.cpp
   void AddActiveCeiling(ceiling_t* ceiling);
-  int  ActivateInStasisCeiling(int tag);
+  int  ActivateInStasisCeiling(unsigned tag);
   void RemoveActiveCeiling(ceiling_t* ceiling);
   void RemoveAllActiveCeilings();
-  int  EV_DoCeiling(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
-  int  EV_DoCrusher(int tag, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
-  int  EV_StopCeiling(int tag);
+  int  EV_DoCeiling(unsigned tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
+  int  EV_DoCrusher(unsigned tag, int type, fixed_t upspeed, fixed_t downspeed, int crush, fixed_t height);
+  int  EV_StopCeiling(unsigned tag);
 
   // in p_doors.cpp
-  void EV_OpenDoor(int sectag, int speed, int wait_time);
-  void EV_CloseDoor(int sectag, int speed);
-  int  EV_DoDoor(int tag, line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
+  void EV_OpenDoor(unsigned tag, int speed, int wait_time);
+  void EV_CloseDoor(unsigned tag, int speed);
+  int  EV_DoDoor(unsigned tag, line_t* line, Actor *mo, byte type, fixed_t speed, int delay);
   void SpawnDoorCloseIn30(sector_t* sec);
   void SpawnDoorRaiseIn5Mins(sector_t* sec);
 
   // in p_floor.cpp
-  int EV_DoFloor(int tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
+  int EV_DoFloor(unsigned tag, line_t *line, int type, fixed_t speed, int crush, fixed_t height);
   int EV_DoChange(line_t *line, int changetype);
-  int EV_BuildStairs(int tag, int type, fixed_t speed, fixed_t stepsize, int crush);
-  int EV_BuildHexenStairs(int tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay = 0);
-  int EV_DoDonut(int tag, fixed_t pspeed, fixed_t sspeed);
-  int EV_DoElevator(int tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c = 0, int crush = 0);
-  int EV_DoFloorWaggle(int tag, fixed_t amp, angle_t freq, angle_t offset, int wait);
+  int EV_BuildStairs(unsigned tag, int type, fixed_t speed, fixed_t stepsize, int crush);
+  int EV_BuildHexenStairs(unsigned tag, int type, fixed_t speed, fixed_t stepdelta, int resetdelay, int stepdelay = 0);
+  int EV_DoDonut(unsigned tag, fixed_t pspeed, fixed_t sspeed);
+  int EV_DoElevator(unsigned tag, int type, fixed_t speed, fixed_t height_f, fixed_t height_c = 0, int crush = 0);
+  int EV_DoFloorWaggle(unsigned tag, fixed_t amp, angle_t freq, angle_t offset, int wait);
   int T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, int crush, int floorOrCeiling);
 
   // in s_sndseq.cpp
@@ -453,7 +444,7 @@ public:
   // in p_poly.cpp
   void InitPolyobjs();
   int  FindPolySegs(seg_t *startseg);
-  bool SpawnPolyobj(polyobj_t *po, int tag, bool crush);
+  bool SpawnPolyobj(polyobj_t *po, unsigned tag, bool crush);
   void TranslateToStartSpot(polyobj_t *po, fixed_t originX, fixed_t originY);
   void InitPolyBlockMap();
 
@@ -494,8 +485,7 @@ public:
 
   int GetACSIndex(int number);
 
-  void TagFinished(int tag);
-  bool TagBusy(int tag);
+  void TagFinished(unsigned tag);
   void PolyobjFinished(int po);
   void ScriptFinished(int number);
 

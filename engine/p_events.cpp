@@ -385,16 +385,13 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 
   // callers: ACS, thing death, thing pickup, line activation
 
-  // line->tag == line->args[0] and args[0] are not always same (scripts!)  FIXME which one should we use?
-  // we always have args, but line may be NULL
+  // NOTE: Hexen specials which use a sector tag store it in args[0].
+  // Since 8 bits is not enough for tags in general, we copy both
+  // doom_maplinedef_t::tag and hex_maplinedef_t::args[0] to line_t::tag,
+  // and use it instead of args[0] when a tag is needed.
+  // If line == NULL (thing actions, ACS), we must use args[0].
+  int tag = line ? line->tag : args[0];
 
-  int tag = args[0];
-  if (line && tag == 255)
-    {
-      // special case to handle converted Doom/Heretic linedefs
-      tag = line->tag;
-    }
-  
   CONS_Printf("ExeSpecial (%d), tag %d (%d,%d,%d,%d,%d)\n", special, tag,
 	      args[0], args[1], args[2], args[3], args[4]);
   switch (special)
@@ -762,13 +759,6 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
 
     case LINE_LEGACY_EXT: // Legacy extensions to Hexen linedef namespace (all under this one type)
-
-      // different tag handling
-      if (line && line->tag) 
-	tag = line->tag; // Doom style
-      else
-	tag = args[3] + (args[4] << 8); // Hexen style
-
       switch (args[0])
 	{
 	case LINE_LEGACY_FS:
@@ -794,7 +784,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 
 
 
-int Map::EV_SectorSoundChange(int tag, int seq)
+int Map::EV_SectorSoundChange(unsigned tag, int seq)
 {
   if (!tag)
     return false;

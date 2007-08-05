@@ -234,7 +234,7 @@ void plat_t::Think()
 
 
 // moving platforms (lifts)
-int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height)
+int Map::EV_DoPlat(unsigned tag, line_t *line, int type, fixed_t speed, int wait, fixed_t height)
 {
   int  secnum = -1;
   int  rtn = 0;
@@ -289,7 +289,7 @@ int Map::EV_DoPlat(int tag, line_t *line, int type, fixed_t speed, int wait, fix
 
 
 
-int Map::ActivateInStasisPlat(int tag)
+int Map::ActivateInStasisPlat(unsigned tag)
 {
   int rtn = 0;
   list<plat_t *>::iterator i;
@@ -307,7 +307,7 @@ int Map::ActivateInStasisPlat(int tag)
 }
 
 
-int Map::EV_StopPlat(int tag)
+int Map::EV_StopPlat(unsigned tag)
 {
   int rtn = 0;
   list<plat_t *>::iterator i;

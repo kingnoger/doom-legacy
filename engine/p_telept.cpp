@@ -99,7 +99,7 @@ bool Actor::Teleport(const vec_t<fixed_t> &p, angle_t nangle, bool silent)
 //                            TELEPORTATION
 //=========================================================================
 
-bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
+bool Map::EV_Teleport(unsigned tag, line_t *line, Actor *thing, int type, int flags)
 {
   if (!line)
     return false;
@@ -116,7 +116,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
   bool reldir   = flags & TP_reldir;
   bool reverse  = flags & TP_flip;
 
-  if (noplayer && thing->IsOf(PlayerPawn::_type))
+  if (noplayer && thing->flags & MF_PLAYER)
     return false;
 
   vec_t<fixed_t> delta(0, 0, thing->Feet() - thing->floorz); // preserve the relative altitude
@@ -141,7 +141,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 	  {
 	    if (!m->IsOf(DActor::_type))
 	      continue;
-	    DActor *dm = (DActor *)m;
+	    DActor *dm = reinterpret_cast<DActor*>(m);
 	    // not a teleportman
 	    if (dm->type != MT_TELEPORTMAN)
 	      continue;
@@ -172,7 +172,7 @@ bool Map::EV_Teleport(int tag, line_t *line, Actor *thing, int type, int flags)
 // This is the complete player-preserving kind of teleporter.
 // It has advantages over the teleporter with thing exits.
 
-bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool reverse)
+bool Map::EV_SilentLineTeleport(unsigned lineid, line_t *line, Actor *thing, bool reverse)
 {
   if (!line)
     return false;
@@ -181,7 +181,7 @@ bool Map::EV_SilentLineTeleport(int tag, line_t *line, Actor *thing, bool revers
     return false;
 
   line_t *l;
-  for (int i = -1; (l = FindLineFromTag(tag, &i)) != NULL;)
+  for (int i = -1; (l = FindLineFromID(lineid, &i)) != NULL;)
     if (l != line && l->backsector)
       {
         // Get the thing's position along the source linedef

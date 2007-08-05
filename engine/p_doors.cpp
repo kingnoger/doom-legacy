@@ -240,7 +240,7 @@ void vdoor_t::MakeSound(bool open) const
 
 
 // operate a door
-int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
+int Map::EV_DoDoor(unsigned tag, line_t *line, Actor *mo, byte type, fixed_t speed, int delay)
 {
   sector_t*  sec;
   int secnum = -1;
@@ -314,7 +314,7 @@ int Map::EV_DoDoor(int tag, line_t *line, Actor *mo, byte type, fixed_t speed, i
 
 
 // Generic function to open a door (used by FraggleScript)
-void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
+void Map::EV_OpenDoor(unsigned tag, int speed, int wait_time)
 {
   int type;
   int secnum = -1;
@@ -333,7 +333,7 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 
   // open door in all the sectors with the specified tag
 
-  while ((secnum = FindSectorFromTag(sectag, secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
       // if the ceiling already moving, don't start the door action
@@ -347,7 +347,7 @@ void Map::EV_OpenDoor(int sectag, int speed, int wait_time)
 
 
 // Used by FraggleScript
-void Map::EV_CloseDoor(int sectag, int speed)
+void Map::EV_CloseDoor(unsigned tag, int speed)
 {
   int secnum = -1;
 
@@ -360,7 +360,7 @@ void Map::EV_CloseDoor(int sectag, int speed)
   
   // open door in all the sectors with the specified tag
 
-  while ((secnum = FindSectorFromTag(sectag, secnum)) >= 0)
+  while ((secnum = FindSectorFromTag(tag, secnum)) >= 0)
     {
       sector_t *sec = &sectors[secnum];
       // if the ceiling already moving, don't start the door action

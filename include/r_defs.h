@@ -61,220 +61,6 @@ struct mappoint_t
 };
 
 
-/// "Fake floor" types
-/// \ingroup g_mapgeometry
-enum ffloortype_e
-{
-  FF_EXISTS            = 0x0001,  ///< MAKE SURE IT'S VALID
-  FF_SOLID             = 0x0002,  ///< Does it clip things?
-  FF_RENDERSIDES       = 0x0004,  ///< Render the sides?
-  FF_RENDERPLANES      = 0x0008,  ///< Render the floor/ceiling?
-  FF_RENDERALL = FF_RENDERSIDES | FF_RENDERPLANES,  ///< Render everything?
-  FF_SWIMMABLE         = 0x0010,  ///< Can we swim?
-  FF_NOSHADE           = 0x0020,  ///< Does it mess with the lighting?
-  FF_CUTSOLIDS         = 0x0040,  ///< Does it cut out hidden solid pixles?
-  FF_CUTEXTRA          = 0x0080,  ///< Does it cut out hidden translucent pixles?
-  FF_CUTLEVEL = FF_CUTSOLIDS | FF_CUTEXTRA,  ///< Does it cut out all hidden pixles?
-  FF_CUTSPRITES        = 0x0100,  ///< Final Step in 3D water
-  FF_BOTHPLANES        = 0x0200,  ///< Render both planes all the time?
-  FF_EXTRA             = 0x0400,  ///< Does it get cut by FF_CUTEXTRAS?
-  FF_TRANSLUCENT       = 0x0800,  ///< See through!
-  FF_FOG               = 0x1000,  ///< Fog "brush"?
-  FF_INVERTPLANES      = 0x2000,  ///< Reverse the plane visibility rules?
-  FF_ALLSIDES          = 0x4000,  ///< Render inside and outside sides?
-  FF_INVERTSIDES       = 0x8000,  ///< Only render inside sides?
-  FF_DOUBLESHADOW     = 0x10000,  ///< Make two lightlist entries to reset light?
-};
-
-
-/// \brief Fake floor, better known as 3D floor:)
-///
-/// \ingroup g_mapgeometry
-/// Store fake planes in a resizable array instead of just by
-/// heightsec. Allows for multiple fake planes.
-struct ffloor_t
-{
-  fixed_t          *topheight;
-  Material        **toppic;
-  short            *toplightlevel;
-  fixed_t          *topxoffs;
-  fixed_t          *topyoffs;
-
-  fixed_t          *bottomheight;
-  Material        **bottompic;
-  short            *bottomlightlevel;
-  fixed_t          *bottomxoffs;
-  fixed_t          *bottomyoffs;
-
-  fixed_t          delta;
-
-  int              secnum;
-  ffloortype_e     flags;
-  struct line_t*   master;
-
-  struct sector_t* target;
-
-  ffloor_t* next;
-  ffloor_t* prev;
-
-  int              lastlight;
-  int              alpha;
-};
-
-
-
-
-/// Sector floor properties
-/// \ingroup g_mapgeometry
-enum floortype_t
-{
-  FLOOR_SOLID,
-  FLOOR_ICE,
-  FLOOR_LIQUID,
-  FLOOR_WATER,
-  FLOOR_LAVA,
-  FLOOR_SLUDGE
-};
-
-
-/// \brief Runtime map sector
-/// \ingroup g_mapgeometry
-struct sector_t
-{
-  fixed_t  floorheight, ceilingheight;
-  short    special; ///< sector special
-  short    lightlevel;
-  short    tag;
-  int      nexttag, firsttag; //SoM: 3/6/2000: by killough: improves searches for tags.
-  short    floortype;   ///< see floortype_t
-
-  class Actor *thinglist;    ///< list of Actors in sector
-  /// list of Actors that are at least partially in the sector (superset of thinglist)
-  struct msecnode_t *touching_thinglist;
-
-  /// Thinkers for continuing actions
-  class Thinker *floordata, *ceilingdata, *lightingdata;
-
-  // TODO these could be replaced with a pointer to a sectorinfo struct
-  // (to save space, since most sectors have default values for these...)
-  int   damage; // TEST given according to damage bits in 'special'
-  float gravity;  // TEST
-  float friction, movefactor;  ///< sector floor friction properties
-  int teamstartsec; ///< if nonzero, spawnpoints in this sector are only for the corresponding team
-
-
-  int       linecount;
-  line_t**  lines;  // [linecount] size
-
-
-  /// floor and ceiling textures
-  Material *floorpic, *ceilingpic;
-  inline bool SkyFloor() const { return !floorpic; }
-  inline bool SkyCeiling() const { return !ceilingpic; }
-
-  /// floor and ceiling texture offsets
-  fixed_t   floor_xoffs,   floor_yoffs;
-  fixed_t ceiling_xoffs, ceiling_yoffs;
-
-  // control sector for Boom-style extra floor/ceiling planes
-  int heightsec;      ///< control sector number, or -1 if none
-  int heightsec_type; ///< what type of control sector is it?
-
-  enum controlsector_t
-  {
-    CS_boom = 0,
-    CS_water,
-  };
-
-  class fadetable_t *bottommap, *midmap, *topmap; ///< dynamic colormaps
-  fadetable_t *extra_colormap; ///< SoM: 4/3/2000: per-sector colormaps!
-
-  int floorlightsec, ceilinglightsec; ///< should we copy our lighting from somewhere else?
-
-
-  short   soundtraversed; ///< Noise alert: # of MF_SOUNDBLOCK lines noise has crossed
-  Actor  *soundtarget;    ///< Noise alert: thing that made a sound
-
-  short      seqType;   ///< sector sound sequence
-  mappoint_t soundorg;  ///< origin for any sounds played by the sector
-
-
-  int     validcount;   ///< if == global validcount, already checked
-
-
-  // lockout machinery for stairbuilding
-  int stairlock;   ///< -2 on first locked -1 after thinker done 0 normally
-  int prevsec;     ///< -1 or number of sector for previous step
-  int nextsec;     ///< -1 or number of next step sector
-
-
-  /// 3D floors in the sector
-  ffloor_t                  *ffloors;
-  int                       *attached;
-  int                        numattached;
-  struct lightlist_t        *lightlist;
-  int                        numlights;
-  bool                       moved;
-
-  int                        validsort; //if == validsort allready been sorted
-  bool                       added;
-
-
-  // ----- for special tricks with HW renderer -----
-  bool                       pseudoSector;
-  bool                       virtualFloor;
-  fixed_t                    virtualFloorheight;
-  bool                       virtualCeiling;
-  fixed_t                    virtualCeilingheight;
-  struct linechain_t        *sectorLines;
-  sector_t                 **stackList;
-  double                     lineoutLength;
-  // ----- end special tricks -----
-
-public:
-  /// Returns the free vertical range containing z-coordinate z.
-  struct range_t FindZRange(fixed_t z);
-
-  /// Returns the free vertical range for Actor a.
-  range_t FindZRange(const Actor *a);
-
-  enum zcheck_t
-  {
-    z_Open,   ///< unobstructed, free space
-    z_Wall,   ///< above a ceiling or under a floor
-    z_Sky,    ///< above a ceiling or under a floor which is a sky
-    z_FFloor, ///< inside a solid ffloor_t
-  };
-  /// Returns the contents of the sector at height z.
-  zcheck_t CheckZ(fixed_t z);
-
-  /// Shrinks and chops up the range in by Z-planes in sector, returns low-to-high sorted list of ranges.
-  std::list<range_t> *FindLineOpeningsInRange(const range_t& in);
-
-  fixed_t FindLowestFloorSurrounding();
-  fixed_t FindHighestFloorSurrounding();
-  fixed_t FindLowestCeilingSurrounding();
-  fixed_t FindHighestCeilingSurrounding();
-
-  fixed_t FindNextLowestFloor(fixed_t currentheight);
-  fixed_t FindNextHighestFloor(fixed_t currentheight);
-  fixed_t FindNextLowestCeiling(fixed_t currentheight);
-  fixed_t FindNextHighestCeiling(fixed_t currentheight);
-
-  int FindMinSurroundingLight(int max);
-  enum special_e
-  {
-    floor_special,
-    ceiling_special,
-    lighting_special,
-  };
-  bool Active(special_e t);
-
-  void SetFloorType(const char *floorpic);
-};
-
-
-
 /// \brief SideDef
 /// \ingroup g_mapgeometry
 struct side_t
@@ -291,10 +77,10 @@ struct side_t
   Material *midtexture;
 
   /// Sector the SideDef is facing.
-  sector_t *sector;
+  struct sector_t *sector;
 
   /// LineDef the SideDef belongs to.
-  line_t   *line;
+  struct line_t   *line;
 };
 
 
@@ -394,8 +180,9 @@ struct line_t
 
   short flags;   ///< bit flags
   short special; ///< linedef type or special action
-  short tag;
-  int firsttag, nexttag;  ///< hash system, improves searches for tags.
+  unsigned short tag;    ///< sector tag reference
+  unsigned short lineid; ///< line id and grouping
+  int firstid, nextid;   ///< hash system for lineid's
 
   /// hexen args
   byte args[5];
@@ -418,7 +205,7 @@ struct line_t
   int validcount;
 
   /// Thinker for complex actions
-  Thinker *thinker;
+  class Thinker *thinker;
 
   /// wallsplat_t list
   struct wallsplat_t *splats;
@@ -429,6 +216,244 @@ struct line_t
 
   /// Adds a splat decal on the line.
   void AddWallSplat(const char *name, int side, fixed_t top, fixed_t wallfrac, int flags);
+};
+
+
+
+
+/// "Fake floor" types
+/// \ingroup g_mapgeometry
+enum ffloortype_e
+{
+  FF_EXISTS            = 0x0001,  ///< MAKE SURE IT'S VALID
+  FF_SOLID             = 0x0002,  ///< Does it clip things?
+  FF_RENDERSIDES       = 0x0004,  ///< Render the sides?
+  FF_RENDERPLANES      = 0x0008,  ///< Render the floor/ceiling?
+  FF_RENDERALL = FF_RENDERSIDES | FF_RENDERPLANES,  ///< Render everything?
+  FF_SWIMMABLE         = 0x0010,  ///< Can we swim?
+  FF_NOSHADE           = 0x0020,  ///< Does it mess with the lighting?
+  FF_CUTSOLIDS         = 0x0040,  ///< Does it cut out hidden solid pixles?
+  FF_CUTEXTRA          = 0x0080,  ///< Does it cut out hidden translucent pixles?
+  FF_CUTLEVEL = FF_CUTSOLIDS | FF_CUTEXTRA,  ///< Does it cut out all hidden pixles?
+  FF_CUTSPRITES        = 0x0100,  ///< Final Step in 3D water
+  FF_BOTHPLANES        = 0x0200,  ///< Render both planes all the time?
+  FF_EXTRA             = 0x0400,  ///< Does it get cut by FF_CUTEXTRAS?
+  FF_TRANSLUCENT       = 0x0800,  ///< See through!
+  FF_FOG               = 0x1000,  ///< Fog "brush"?
+  FF_INVERTPLANES      = 0x2000,  ///< Reverse the plane visibility rules?
+  FF_ALLSIDES          = 0x4000,  ///< Render inside and outside sides?
+  FF_INVERTSIDES       = 0x8000,  ///< Only render inside sides?
+  FF_DOUBLESHADOW     = 0x10000,  ///< Make two lightlist entries to reset light?
+};
+
+
+/// \brief Fake floor, better known as 3D floor:)
+///
+/// \ingroup g_mapgeometry
+/// Store fake planes in a resizable array instead of just by
+/// heightsec. Allows for multiple fake planes.
+struct ffloor_t
+{
+  fixed_t          *topheight;
+  Material        **toppic;
+  short            *toplightlevel;
+  fixed_t          *topxoffs;
+  fixed_t          *topyoffs;
+
+  fixed_t          *bottomheight;
+  Material        **bottompic;
+  short            *bottomlightlevel;
+  fixed_t          *bottomxoffs;
+  fixed_t          *bottomyoffs;
+
+  fixed_t          delta;
+
+  int              secnum;
+  ffloortype_e     flags;
+  struct line_t*   master;
+
+  struct sector_t* target;
+
+  ffloor_t* next;
+  ffloor_t* prev;
+
+  int              lastlight;
+  int              alpha;
+};
+
+
+
+
+/// Sector floor properties
+/// \ingroup g_mapgeometry
+enum floortype_t
+{
+  FLOOR_SOLID,
+  FLOOR_ICE,
+  FLOOR_LIQUID,
+  FLOOR_WATER,
+  FLOOR_LAVA,
+  FLOOR_SLUDGE
+};
+
+
+/// \brief Runtime map sector
+/// \ingroup g_mapgeometry
+struct sector_t
+{
+  fixed_t  floorheight, ceilingheight;
+  short    special; ///< sector special
+  short    lightlevel;
+  short    floortype; ///< see floortype_t
+
+  unsigned short tag;    ///< sector id and grouping
+  int nexttag, firsttag; //SoM: 3/6/2000: by killough: hash system for tags
+
+  class Actor *thinglist;    ///< list of Actors in sector
+  /// list of Actors that are at least partially in the sector (superset of thinglist)
+  struct msecnode_t *touching_thinglist;
+
+  /// Thinkers for continuing actions
+  Thinker *floordata, *ceilingdata, *lightingdata;
+
+  // TODO these could be replaced with a pointer to a sectorinfo struct
+  // (to save space, since most sectors have default values for these...)
+  int   damage; // TEST given according to damage bits in 'special'
+  float gravity;  // TEST
+  float friction, movefactor;  ///< sector floor friction properties
+  int teamstartsec; ///< if nonzero, spawnpoints in this sector are only for the corresponding team
+
+
+  int       linecount; ///< number of bordering linedefs
+  line_t**  lines;     ///< array of bordering linedefs
+
+
+  /// floor and ceiling textures
+  Material *floorpic, *ceilingpic;
+  inline bool SkyFloor() const { return !floorpic; }
+  inline bool SkyCeiling() const { return !ceilingpic; }
+
+  /// floor and ceiling texture offsets
+  fixed_t   floor_xoffs,   floor_yoffs;
+  fixed_t ceiling_xoffs, ceiling_yoffs;
+
+  // control sector for Boom-style extra floor/ceiling planes
+  int heightsec;      ///< control sector number, or -1 if none
+  int heightsec_type; ///< what type of control sector is it?
+
+  enum controlsector_t
+  {
+    CS_boom = 0,
+    CS_water,
+  };
+
+  class fadetable_t *bottommap, *midmap, *topmap; ///< dynamic colormaps
+  fadetable_t *extra_colormap; ///< SoM: 4/3/2000: per-sector colormaps!
+
+  int floorlightsec, ceilinglightsec; ///< should we copy our lighting from somewhere else?
+
+
+  short   soundtraversed; ///< Noise alert: # of MF_SOUNDBLOCK lines noise has crossed
+  Actor  *soundtarget;    ///< Noise alert: thing that made a sound
+
+  short      seqType;   ///< sector sound sequence
+  mappoint_t soundorg;  ///< origin for any sounds played by the sector
+
+
+  int     validcount;   ///< if == global validcount, already checked
+
+
+  // lockout machinery for stairbuilding
+  int stairlock;   ///< -2 on first locked -1 after thinker done 0 normally
+  int prevsec;     ///< -1 or number of sector for previous step
+  int nextsec;     ///< -1 or number of next step sector
+
+
+  /// 3D floors in the sector
+  ffloor_t                  *ffloors;
+  int                       *attached;
+  int                        numattached;
+  struct lightlist_t        *lightlist;
+  int                        numlights;
+  bool                       moved;
+
+  int                        validsort; //if == validsort allready been sorted
+  bool                       added;
+
+
+  // ----- for special tricks with HW renderer -----
+  bool                       pseudoSector;
+  bool                       virtualFloor;
+  fixed_t                    virtualFloorheight;
+  bool                       virtualCeiling;
+  fixed_t                    virtualCeilingheight;
+  struct linechain_t        *sectorLines;
+  sector_t                 **stackList;
+  double                     lineoutLength;
+  // ----- end special tricks -----
+
+public:
+  /// Returns the free vertical range containing z-coordinate z.
+  struct range_t FindZRange(fixed_t z);
+
+  /// Returns the free vertical range for Actor a.
+  range_t FindZRange(const Actor *a);
+
+  enum zcheck_t
+  {
+    z_Open,   ///< unobstructed, free space
+    z_Wall,   ///< above a ceiling or under a floor
+    z_Sky,    ///< above a ceiling or under a floor which is a sky
+    z_FFloor, ///< inside a solid ffloor_t
+  };
+  /// Returns the contents of the sector at height z.
+  zcheck_t CheckZ(fixed_t z);
+
+  /// Shrinks and chops up the range in by Z-planes in sector, returns low-to-high sorted list of ranges.
+  std::list<range_t> *FindLineOpeningsInRange(const range_t& in);
+
+
+  ///  Returns a side_t* given a line number, and the side (0/1) that you want.
+  inline side_t *getSide(int line, int side)
+  {
+    return lines[line]->sideptr[side];
+  }
+
+  /// Returns a sector_t* given a line number and the side (0/1) that you want.
+  inline sector_t *getSector(int line, int side)
+  {
+    return lines[line]->sideptr[side]->sector;
+  }
+
+  /// Given a line number, tells you whether the line is two-sided or not.
+  bool twoSided(int line);
+
+
+  fixed_t FindShortestLowerAround();
+  fixed_t FindShortestUpperAround();
+  sector_t *FindModelFloorSector(fixed_t floordestheight);
+  sector_t *FindModelCeilingSector(fixed_t ceildestheight);
+
+  fixed_t FindLowestFloorSurrounding();
+  fixed_t FindHighestFloorSurrounding();
+  fixed_t FindLowestCeilingSurrounding();
+  fixed_t FindHighestCeilingSurrounding();
+
+  fixed_t FindNextLowestFloor(fixed_t currentheight);
+  fixed_t FindNextHighestFloor(fixed_t currentheight);
+  fixed_t FindNextLowestCeiling(fixed_t currentheight);
+  fixed_t FindNextHighestCeiling(fixed_t currentheight);
+
+  int FindMinSurroundingLight(int max);
+  enum special_e
+  {
+    floor_special,
+    ceiling_special,
+    lighting_special,
+  };
+  bool Active(special_e t);
+
+  void SetFloorType(const char *floorpic);
 };
 
 
