@@ -34,6 +34,7 @@
 #include "wad.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_misc.h"
 
 
 //====================================================================
@@ -77,8 +78,7 @@ const char *FileCache::Access(const char *f)
   if (!access(f, F_OK))
     return f; // first try the current dir
 
-  static string n;
-
+  static string n; // needs to be static so that our return value stays valid
   n.assign(datapath);
   n.push_back('/');
   n.append(f);
@@ -105,18 +105,22 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
       if (AddFile(curfile) == -1)
 	result = false;
 
+      // try finding corresponding GWA file (GL-nodes data)
       string gwafile(curfile);
-      // Try both upper and lower case.
+      // Try lower case.
       gwafile.replace(gwafile.length()-3, 3, "gwa");
-      if (AddFile(gwafile.c_str(), true) != -1)
-	CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
-      else
+      if (AddFile(gwafile.c_str(), true) == -1)
 	{
+	  // not found, try upper case
 	  gwafile.replace(gwafile.length()-3, 3, "GWA");
-	  if (AddFile(gwafile.c_str(), true) != -1)
-	    CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
-	  //else CONS_Printf("No GL information for file %s.\n", curfile);
+	  if (AddFile(gwafile.c_str(), true) == -1)
+	    {
+	      // CONS_Printf("No GL information for file %s.\n", curfile);
+	      continue; // not found
+	    }
 	}
+
+      CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
     }
 
   if (vfiles.size() == 0)
@@ -164,9 +168,10 @@ int FileCache::AddFile(const char *fname, bool silent)
   else if (!strcasecmp(&fname[l - 4], ".lmp"))
     {
       // a single lump file
+      const char *lname = FIL_StripPath(fname);
       char lumpname[9];
-      strncpy(lumpname, fname, 8);
-      lumpname[min(l-4, 8)] = '\0';
+      strncpy(lumpname, lname, 8);
+      lumpname[min(strlen(lname)-4, 8)] = '\0';
       vf = new Wad();
       ok = vf->Create(name, lumpname);
     }
