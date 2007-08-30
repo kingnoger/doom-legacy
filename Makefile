@@ -338,6 +338,23 @@ versionstring:
 
 
 
+# TNL
+ifdef TNL
+tnl	:
+	@echo "Building TNL using source tree at $(TNL)..."
+	ln -s $(TNL)/tnl include/tnl
+	patch -d $(TNL) < libtnl_patch.diff
+	make -C $(TNL)/libtomcrypt
+	make -C $(TNL)/tnl
+	mv $(TNL)/tnl/libtnl.a .
+	mv $(TNL)/libtomcrypt/libtomcrypt.a .
+	@echo "Finished building TNL."
+else
+tnl	:
+	@echo "Usage: make tnl TNL=path_to_tnl_source"
+endif
+
+
 ifdef DYNAMIC
 # main program
 $(exename) : engine util audio video net sdl grammars versionstring
