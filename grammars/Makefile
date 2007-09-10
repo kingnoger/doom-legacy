@@ -21,7 +21,7 @@ lemon	: lemon.c
 # lexer rules
 
 $(objdir)/%.lexer.o: %.lexer.c parser_driver.h %.parser.h
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CXX) -c $(CFLAGS) $< -o $@
 
 ntexture.lexer.c: ntexture.lexer.flex
 	flex -PNTEXTURE_ $<
@@ -33,7 +33,7 @@ decorate.lexer.c: decorate.lexer.flex
 # rule for parsers and token definition headers
 
 $(objdir)/%.parser.o: %.parser.c parser_driver.h %.parser.h
-	$(CC) -c $(CFLAGS) $< -o $@
+	$(CXX) -c $(CFLAGS) $< -o $@
 
 %.parser.c %.parser.h: %.parser.y lemon
 	./lemon $<

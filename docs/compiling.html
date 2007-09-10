@@ -67,20 +67,12 @@ From now on, your local copy of this directory will be referred to as <b>TRUNK</
 
 <h3>Compiling OpenTNL</h3>
 
-<p>
-Unfortunately, this step is more complicated than it should be.
-</p>
 <ol>
-<li>Download latest OpenTNL source from the CVS:
+<li>Download the latest OpenTNL source from the CVS:
 <div class="code">cvs -z3 -d:pserver:anonymous@opentnl.cvs.sourceforge.net:/cvsroot/opentnl co -P tnl</div>
 </li>
-<li>Apply the <b>TRUNK/libtnl_patch.diff</b> patch to the OpenTNL source.</li>
-<li>Follow the OpenTNL compilation instructions.</li>
-<li>Move the libraries <b>libtnl.a</b> and <b>libtomcrypt.a</b> you
-just built somewhere the linker can find them, e.g. the
-TRUNK.</li>
-<li>Create a symbolic link named <b>tnl</b> in the <b>TRUNK/include</b> directory,
-pointing to the directory containing the OpenTNL headers.</li>
+<li>Go to the TRUNK, say '<b>make tnl TNL=/absolute/path/to/tnl_source</b>' to build
+libtomcrypt.a and libtnl.a.</li>
 </ol>
 
 <h3>Compilation and linking</h3>

@@ -80,7 +80,8 @@ export RM
 export LDFLAGS
 
 # C++ compiler (usually g++)
-export CC = g++
+export CC = gcc
+export CXX = g++
 
 # Defines.
 #
@@ -271,13 +272,13 @@ objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 
 
 # explicit rules
+.PHONY	: all mkdirobjs clean depend dep docs wad tools engine util audio video net sdl grammars versionstring tnl
+
 
 all	: mkdirobjs $(exename)
 
 mkdirobjs:
 	mkdir -p objs
-
-.PHONY	: clean depend engine util audio video net sdl tools grammars
 
 clean	:
 	$(RM) $(objects)
@@ -308,6 +309,9 @@ docs	: Doxyfile
 wad	: tools
 	$(MAKE) -C wad
 
+tools	:
+	$(MAKE) -C tools
+
 engine	:
 	$(MAKE) -C engine
 
@@ -326,12 +330,8 @@ net	:
 sdl	:
 	$(MAKE) -C interface/sdl
 
-tools	:
-	$(MAKE) -C tools
-
 grammars	:
 	$(MAKE) -C grammars
-
 
 versionstring:
 	$(CC) -c $(CFLAGS) -DSVN_REV=\"`svn info | grep Revision | sed -e 's/Revision: //'`\" engine/d_main.cpp -o objs/d_main.o
@@ -343,7 +343,7 @@ ifdef TNL
 tnl	:
 	@echo "Building TNL using source tree at $(TNL)..."
 	ln -s $(TNL)/tnl include/tnl
-	patch -d $(TNL) < libtnl_patch.diff
+	patch -d $(TNL) -p0 < libtnl_patch.diff
 	make -C $(TNL)/libtomcrypt
 	make -C $(TNL)/tnl
 	mv $(TNL)/tnl/libtnl.a .
