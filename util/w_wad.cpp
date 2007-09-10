@@ -156,26 +156,32 @@ int FileCache::AddFile(const char *fname, bool silent)
     }
 
   VFile *vf = NULL;
-  int l = strlen(fname);
+  int len = strlen(fname);
   bool ok = false;
 
-  if (!strcasecmp(&fname[l - 4], ".deh"))
+  if (len >= 4)
     {
-      // detect dehacked file with the "deh" extension
-      vf = new Wad();
-      ok = vf->Create(name, "DEHACKED");
+      if (!strcasecmp(&fname[len - 4], ".deh"))
+	{
+	  // detect dehacked file with the "deh" extension
+	  vf = new Wad();
+	  ok = vf->Create(name, "DEHACKED");
+	  goto done;
+	}
+      else if (!strcasecmp(&fname[len - 4], ".lmp"))
+	{
+	  // a single lump file
+	  const char *lname = FIL_StripPath(fname);
+	  char lumpname[9];
+	  strncpy(lumpname, lname, 8);
+	  lumpname[min(int(strlen(lname))-4, 8)] = '\0';
+	  vf = new Wad();
+	  ok = vf->Create(name, lumpname);
+	  goto done;
+	}
     }
-  else if (!strcasecmp(&fname[l - 4], ".lmp"))
-    {
-      // a single lump file
-      const char *lname = FIL_StripPath(fname);
-      char lumpname[9];
-      strncpy(lumpname, lname, 8);
-      lumpname[min(strlen(lname)-4, 8)] = '\0';
-      vf = new Wad();
-      ok = vf->Create(name, lumpname);
-    }
-  else if (fname[l-1] == '/')
+
+  if (fname[len-1] == '/')
     {
       // directory
       vf = new VDir();
@@ -224,6 +230,8 @@ int FileCache::AddFile(const char *fname, bool silent)
       fclose(str);
       ok = vf->Open(name);
     }
+
+ done:
 
   if (ok)
     {
