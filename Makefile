@@ -1,5 +1,5 @@
 # Gnu Make makefile for Doom Legacy
-# Copyright (C) 2002-2006 by DooM Legacy Team.
+# Copyright (C) 2002-2007 by DooM Legacy Team.
 #
 # $Id$
 #
@@ -41,9 +41,6 @@ ifdef LINUX
 
 # file removal utility
  RM = rm
-# assembler
- NASM = nasm
- nasmformat = elf
 # compiler
  platform  = -DLINUX
  interface = -DSDL #-DNO_MIXER
@@ -59,9 +56,6 @@ else # assume WIN32 is defined
 
 # file removal utility
  RM = rm
-# assembler
- NASM 	= nasmw.exe
- nasmformat = win32
 # compiler
  platform  = -D__WIN32__
  interface = -DSDL -DNO_MIXER
@@ -342,7 +336,7 @@ versionstring:
 ifdef TNL
 tnl	:
 	@echo "Building TNL using source tree at $(TNL)..."
-	ln -s $(TNL)/tnl include/tnl
+	ln -sf $(TNL)/tnl include
 	patch -d $(TNL) -p0 < libtnl_patch.diff
 	make -C $(TNL)/libtomcrypt
 	make -C $(TNL)/tnl
