@@ -104,7 +104,7 @@ INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)
 
 # linker
-export LD = $(CC)
+export LD = $(CXX)
 
 export objdir = objs
 
