@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 2000-2006 by Doom Legacy team
+// Copyright (C) 2000-2007 by Doom Legacy team
 //
 // This source is available for distribution and/or modification
 // only under the terms of the DOOM Source Code License as
@@ -27,10 +27,14 @@
 
 #if defined(FREEBSD) || defined(__APPLE_CC__) || defined(__MACOS__)
 # include <SDL.h>
-# include <SDL_mixer.h>
+# ifndef NO_MIXER
+#  include <SDL_mixer.h>
+# endif
 #else
 # include <SDL/SDL.h>
-# include <SDL/SDL_mixer.h>
+# ifndef NO_MIXER
+#  include <SDL/SDL_mixer.h>
+# endif
 #endif
 
 #include "doomdef.h"
@@ -82,6 +86,16 @@ static bool soundStarted = false;
 
 static SDL_AudioSpec audio;
 
+#ifndef NO_MIXER
+/// the "registered" piece of music
+static struct music_channel_t
+{
+  Mix_Music *mus;
+  SDL_RWops *rwop; ///< must not be freed before music is halted
+
+  music_channel_t() { mus = NULL; rwop = NULL; }
+} music;
+#endif
 
 
 
@@ -399,11 +413,7 @@ void I_StartupSound()
 
   // audio device parameters
   audio.freq = SAMPLERATE;
-#if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
-  audio.format = AUDIO_S16MSB;
-#else
-  audio.format = AUDIO_S16LSB;
-#endif
+  audio.format = AUDIO_S16SYS;
   audio.channels = 2;
   audio.samples = SAMPLECOUNT;
   audio.callback = I_UpdateSound_sdl;
@@ -493,15 +503,6 @@ void I_ShutdownSound()
   musicStarted = false;  
 }
 
-
-/// the "registered" piece of music
-static struct music_channel_t
-{
-  Mix_Music *mus;
-  SDL_RWops *rwop; ///< must not be freed before music is halted
-
-  music_channel_t() { mus = NULL; rwop = NULL; }
-} music;
 
 
 /// starts playing the "registered" music
