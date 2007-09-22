@@ -91,12 +91,11 @@ export CXX = g++
 #
 # Multimedia interface: use ONLY _one_ of the following:
 # SDL : compile the SDL version of Legacy (use SDL for multimedia interface, SDL_mixer for music)
-# WIN32_DIRECTX : compile the Win32 native version of Legacy. Use DirectX for multimedia interface
 #
 # Miscellaneous options: use as many as you like
-# NO_OPENGL : do not include OpenGL renderer in the build
-# NO_MIXER : do not include SDL_mixer in the build
-# USEASM : use assembler routines where possible
+# NO_SHADERS : do not include support for GLSL shaders in the build
+# NO_MIXER   : do not include SDL_mixer in the build
+
 
 export CF += -Wall $(platform) $(interface) $(linkage)
 
@@ -248,9 +247,8 @@ export sdl_objects = \
 	$(objdir)/i_net.o \
 	$(objdir)/i_sound.o \
 	$(objdir)/i_system.o \
-	$(objdir)/i_video.o \
-	$(objdir)/ogl_sdl.o \
-	$(objdir)/searchp.o
+	$(objdir)/i_video.o
+
 
 export grammar_objects = \
 	$(objdir)/ntexture.parser.o \

@@ -65,7 +65,8 @@ div.example
 div.code
 {
   white-space: pre;
-  background: #203000;
+  color: #CCCCCC;
+  background: #305090;
   margin: 0 5em 0 2em;
   padding: 0.2em 0.5em;
 }

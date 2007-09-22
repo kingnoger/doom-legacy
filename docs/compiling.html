@@ -21,6 +21,10 @@ libraries installed on your system.<br />
 Make sure you install the "developer" packages of the
 libraries, which include both the runtime libraries (DLLs) and
 the stuff required during compilation (header files and import libraries).</p>
+<p>
+NOTE: Most Linux distributions offer these libraries in the form of
+precompiled packages, with the exception of OpenTNL.
+</p>
 
 <table>
 <tr><th>Library</th><th>Version</th><th>Description</th></tr>
@@ -28,6 +32,9 @@ the stuff required during compilation (header files and import libraries).</p>
  <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td></tr>
 <tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td> <td>1.2.7+</td>
  <td>A multichannel mixer library based on SDL.</td></tr>
+<tr><td><a href="http://opengl.org/">OpenGL</a></td> <td>1.3+</td>
+ <td>The standard cross-platform graphics library. GLSL shaders
+ require OpenGL 2.0+.</td></tr>
 <tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td>
  <td>A free compression library.</td></tr>
 <tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td> <td>1.2.5+</td>
@@ -45,19 +52,21 @@ You might also find the following programs useful:
 
 <ul>
 <li>GCC 4, the Gnu Compiler Collection which, among other things, is
-a C/C++ compiler.<br />
+a free C/C++ compiler.<br />
 Linux systems most likely already have it installed.<br />
 Windows users should install <a href="http://www.mingw.org/">MinGW</a>, a
 GCC port, and <a href="http://www.mingw.org/msys.shtml">MSYS</a>, a
 collection of POSIX utilities for Win32.</li>
+
+<li><a href="http://flex.sourceforge.net/">GNU flex</a>, a scanner generator.</li>
 
 <li><a href="http://www.doxygen.org/">Doxygen</a>, an automatic
 source documentation system.</li>
 </ul>
 
 <p>
-Finally, download the Doom Legacy
-<a href="http://sourceforge.net/projects/doomlegacy/">source</a>.
+Finally, download the
+<a href="http://sourceforge.net/projects/doomlegacy/">Doom Legacy source</a>.
 You can either get the source package or, for the latest code
 snapshot, checkout the <b>legacy/trunk/</b> directory from the Subversion
 repository:
