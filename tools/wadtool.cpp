@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2006 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -475,26 +475,27 @@ int main(int argc, char *argv[])
     }
 
 
+  int ret = -1;
   switch (argv[1][1])
     {
     case 'l':
-      ListWad(argv[2]);
+      ret = ListWad(argv[2]);
       break;
     case 'c':
       if (argc == 4)
-	CreateWad(argv[2], argv[3]);
+	ret = CreateWad(argv[2], argv[3]);
       else
 	printf("Usage: wadtool -c wadfile.wad <inventoryfile>\n");
       break;
     case 'x':
       if (argc >= 4)
-	ExtractWad(argv[2], argc-3, &argv[3]);
+	ret = ExtractWad(argv[2], argc-3, &argv[3]);
       else
-	ExtractWad(argv[2], 0, NULL);
+	ret = ExtractWad(argv[2], 0, NULL);
       break;
     default:
       printf("Unknown option '%s'", argv[1]);
     }
 
-  return 0;
+  return ret;
 }

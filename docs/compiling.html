@@ -4,10 +4,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
-<meta name="description" content="New, even better Doom Legacy" />
-<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
-<link rel="stylesheet" href="legacy.css" type="text/css" />
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1"/>
+<meta name="description" content="New, even better Doom Legacy"/>
+<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen"/>
+<link rel="stylesheet" href="legacy.css" type="text/css"/>
 <title>Compiling Doom Legacy</title>
 </head>
 
@@ -17,7 +17,7 @@
 <h1>How to compile Doom Legacy 2.0 (SDL version)</h1>
 
 <p>In order to compile Doom Legacy 2.0 SDL you'll need to have several
-libraries installed on your system.<br />
+libraries installed on your system.<br/>
 Make sure you install the "developer" packages of the
 libraries, which include both the runtime libraries (DLLs) and
 the stuff required during compilation (header files and import libraries).</p>
@@ -27,40 +27,41 @@ precompiled packages, with the exception of OpenTNL.
 </p>
 
 <table>
-<tr><th>Library</th><th>Version</th><th>Description</th></tr>
-<tr><td><a href="http://www.libsdl.org/">SDL</a></td> <td>1.2.10+</td>
+<tr><th>Library</th><th>Version</th><th>Ubuntu/Debian package</th><th>Description</th></tr>
+<tr><td><a href="http://www.libsdl.org/">SDL</a></td> <td>1.2.10+</td> <td>libsdl1.2-dev</td>
  <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td></tr>
-<tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td> <td>1.2.7+</td>
+<tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td>
+<td>1.2.7+</td> <td>libsdl-mixer1.2-dev</td>
  <td>A multichannel mixer library based on SDL.</td></tr>
-<tr><td><a href="http://opengl.org/">OpenGL</a></td> <td>1.3+</td>
- <td>The standard cross-platform graphics library. GLSL shaders
- require OpenGL 2.0+.</td></tr>
-<tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td>
+<tr><td><a href="http://opengl.org/">OpenGL</a></td> <td>1.3+</td> <td>(several)</td>
+ <td>The standard cross-platform graphics library. GLSL shaders require OpenGL 2.0+.</td></tr>
+<tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td> <td>zlib1g-dev</td>
  <td>A free compression library.</td></tr>
-<tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td> <td>1.2.5+</td>
+<tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td>
+<td>1.2.5+</td> <td>libpng12-dev</td>
  <td>The official PNG reference library.</td></tr>
-<tr><td><a href="http://www.ijg.org/">libjpeg</a></td> <td>6b</td>
+<tr><td><a href="http://www.ijg.org/">libjpeg</a></td> <td>6b</td> <td>libjpeg62-dev</td>
  <td>The unofficial JPEG reference library.</td></tr>
-<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>HEAD revision</td>
- <td>A free game networking library based on the Torque Network Library.<br />
+<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>HEAD revision</td> <td>-</td>
+ <td>A free game networking library based on the Torque Network Library.<br/>
  The OpenTNL distribution contains <b>libtomcrypt</b>, which provides strong encryption.</td></tr>
 </table>
 
 <p>
-You might also find the following programs useful:
+You will require the following programs during the build process:
 </p>
 
 <ul>
 <li>GCC 4, the Gnu Compiler Collection which, among other things, is
-a free C/C++ compiler.<br />
-Linux systems most likely already have it installed.<br />
+a free C/C++ compiler.<br/>
+Linux systems most likely already have it installed.<br/>
 Windows users should install <a href="http://www.mingw.org/">MinGW</a>, a
 GCC port, and <a href="http://www.mingw.org/msys.shtml">MSYS</a>, a
 collection of POSIX utilities for Win32.</li>
 
 <li><a href="http://flex.sourceforge.net/">GNU flex</a>, a scanner generator.</li>
 
-<li><a href="http://www.doxygen.org/">Doxygen</a>, an automatic
+<li>(optional) <a href="http://www.doxygen.org/">Doxygen</a>, an automatic
 source documentation system.</li>
 </ul>
 
@@ -84,19 +85,17 @@ From now on, your local copy of this directory will be referred to as <b>TRUNK</
 libtomcrypt.a and libtnl.a.</li>
 </ol>
 
-<h3>Compilation and linking</h3>
+<h3>Compiling Legacy</h3>
 
 <ol>
 <li>Open a shell window. Go to the TRUNK.</li>
 <li>Say '<b>make depend</b>' to create the dependency files.</li>
-<li>Say '<b>make OPT=1</b>' or just 'make' to build the executable.<br />
+<li>Say '<b>make OPT=1</b>' or just '<b>make</b>' to build the executable.<br/>
  Omitting the 'OPT=1' parameter adds debugging symbols to the
  executable.</li>
-<li>Copy the file <b>legacy.wad</b> (or <b>legacy.dat</b>, after
-renaming it legacy.wad) from Doom Legacy version 1.40 (or later) to TRUNK.<br/>
-Say '<b>make wad</b>' to generate an updated legacy.wad, which can be found
-in the directory <b>TRUNK/wad/</b>. Copy it to the same directory as
-the Legacy executable.<br/>
+<li>Get the file <b>legacy.wad</b> (or <b>legacy.dat</b>) from Doom Legacy version 1.40 (or later).<br/>
+Say '<b>make wad WAD=/absolute/path/to/old/legacy.wad</b>' to generate an
+updated legacy.wad.<br/>
 </li>
 <li>Say '<b>make docs</b>' to generate the Doxygen documentation.</li>
 </ol>
