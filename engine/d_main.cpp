@@ -615,7 +615,7 @@ void D_DoomMain()
   if (!game.dedicated)
     {
       // set user default mode or mode set at cmdline
-      SCR_CheckDefaultMode();
+      vid.CheckDefaultMode();
     }
 
   // ------------- starting the game ----------------

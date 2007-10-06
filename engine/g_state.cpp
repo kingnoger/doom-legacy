@@ -374,14 +374,14 @@ void GameInfo::Ticker()
 // called as a result of the rpc
 void GameInfo::StartIntermission()
 {
-  state = GS_INTERMISSION;
+  SetState(GS_INTERMISSION);
 }
 
 
 //
 void GameInfo::EndIntermission()
 {
-  state = GS_LEVEL;
+  SetState(GS_LEVEL);
 
   for (int i = 0; i < NUM_LOCALPLAYERS; i++)
     {
@@ -403,7 +403,7 @@ void GameInfo::StartFinale(MapCluster *next)
       // check winning
       if (!next)
 	{
-	  state = GS_FINALE;
+	  SetState(GS_FINALE);
 	  F_StartFinale(currentcluster, false, true); // final piece of story is exittext
 	  return;
 	}
@@ -415,13 +415,13 @@ void GameInfo::StartFinale(MapCluster *next)
 	{
 	  if (!next->entertext.empty())
 	    {
-	      state = GS_FINALE;
+	      SetState(GS_FINALE);
 	      F_StartFinale(next, true, false);
 	      return;
 	    }
 	  else if (!(currentcluster->exittext.empty()))
 	    {
-	      state = GS_FINALE;
+	      SetState(GS_FINALE);
 	      F_StartFinale(currentcluster, false, false);
 	      return;
 	    }
@@ -439,5 +439,5 @@ void GameInfo::StartFinale(MapCluster *next)
 
 void GameInfo::EndFinale()
 {
-  state = GS_LEVEL;
+  SetState(GS_LEVEL);
 }

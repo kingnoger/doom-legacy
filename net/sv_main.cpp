@@ -365,7 +365,7 @@ void GameInfo::SV_Reset(bool clear_mapinfo)
   SV_ResetScripting();
 
   // reset gamestate?
-  state = GS_NULL;
+  SetState(GS_NULL);
   server = true;
   netgame = false;
   multiplayer = cv_splitscreen.value;
@@ -493,7 +493,7 @@ bool GameInfo::SV_StartGame(skill_t sk, int mapnumber, int ep)
     CL_StartGame();
 
   paused = false;
-  state = GS_LEVEL;
+  SetState(GS_LEVEL);
 
   return true;
 }

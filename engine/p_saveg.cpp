@@ -2125,7 +2125,7 @@ void GameInfo::LoadGame(int slot)
       return;
     }
 
-  state = GS_LEVEL;
+  SetState(GS_LEVEL);
 
   if (netgame)
     net->SV_Open(true); // let the remote players in

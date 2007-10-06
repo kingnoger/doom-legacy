@@ -359,6 +359,7 @@ void AutoMap::Close()
   mpawn = NULL;
   active = false;
   hud.RefreshStatusbar();
+  R_DrawViewBorder();
 }
 
 

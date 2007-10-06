@@ -167,7 +167,6 @@ export engine_objects = \
 	$(objdir)/am_map.o \
 	$(objdir)/menu.o \
 	$(objdir)/f_finale.o \
-	$(objdir)/f_wipe.o \
 	$(objdir)/wi_stuff.o \
 	$(objdir)/st_lib.o \
 	$(objdir)/st_stuff.o \

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -45,6 +45,8 @@ extern byte*            ylookup1[MAXVIDHEIGHT];
 extern byte*            ylookup2[MAXVIDHEIGHT];
 extern int              columnofs[MAXVIDWIDTH];
 
+void    R_InitViewBuffer(int width, int height);
+
 // -------------------------
 // COLUMN DRAWING CODE STUFF
 // -------------------------
@@ -75,7 +77,7 @@ extern byte*            ds_transmap;
 
 
 // -----------------------
-// Translucency stuff here
+//   Translucency stuff
 // -----------------------
 
 #define  MAXTRANSTABLES  20  // how many translucency tables may be used
@@ -97,8 +99,18 @@ enum transnum_t
   tr_size     = 0x10000,  // one transtable is 256*256 bytes in size
 };
 
+// Initialize translucency tables
+void    R_InitTranslucencyTables();
+
+// Initialize color translation tables, for player rendering etc.
+void    R_InitTranslationTables();
 
 
+
+
+//-----------------------
+//   Window borders
+//-----------------------
 
 /// windowborder textures
 enum windowborder_e
@@ -117,29 +129,41 @@ enum windowborder_e
 extern class Material *window_border[8];
 extern Material *window_background;
 
-// ------------------------------------------------
-// r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp
-// ------------------------------------------------
+/// Load view window border textures.
+void    R_InitViewBorder();
+
+/// Fills screen 1 with background texture and view window borders.
+void    R_FillBackScreen();
+
+/// If the view size is not fullscreen, blits the border around it from screen 1.
+void    R_DrawViewBorder();
+
 
 //added:26-01-98: called by SCR_Recalc() when video mode changes
 void    R_RecalcFuzzOffsets();
 
-// Initialize color translation tables, for player rendering etc.
-void    R_InitTranslationTables();
-
-void    R_InitTranslucencyTables();
-
-void    R_InitViewBuffer(int width, int height);
-
-void    R_InitViewBorder();
-
+/// Blits a linear range from screen 1 to screen 0.
 void    R_VideoErase(unsigned ofs, int count);
 
-// Rendering function.
-void    R_FillBackScreen();
+/// Screen wipe/melt special effects.
+bool wipe_StartScreen();
+bool wipe_EndScreen();
+bool wipe_ScreenWipe(int ticks);
 
-// If the view size is not full screen, draws a border around it.
-void    R_DrawViewBorder();
+
+// ---------------------------------------------
+// color mode dependent drawer function pointers
+// ---------------------------------------------
+
+extern void     (*skycolfunc)();
+extern void     (*colfunc)();
+extern void     (*basecolfunc)();
+extern void     (*fuzzcolfunc)();
+extern void     (*transcolfunc)();
+extern void     (*shadecolfunc)();
+extern void     (*spanfunc)();
+extern void     (*basespanfunc)();
+
 
 
 // -----------------

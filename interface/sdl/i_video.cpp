@@ -145,14 +145,6 @@ void I_OsPolling()
 
 
 //
-// I_UpdateNoBlit
-//
-void I_UpdateNoBlit()
-{
-  /* this function intentionally left empty */
-}
-
-//
 // I_FinishUpdate
 //
 void I_FinishUpdate()
@@ -173,19 +165,6 @@ void I_FinishUpdate()
 
   I_GetEvent();
 }
-
-
-//
-// I_ReadScreen
-//
-void I_ReadScreen(byte* scr)
-{
-  if (rendermode != render_soft)
-    I_Error ("I_ReadScreen: called while in non-software mode");
-
-  memcpy (scr, vid.screens[0], vid.height*vid.rowbytes);
-}
-
 
 
 //

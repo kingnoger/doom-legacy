@@ -91,6 +91,7 @@ static void M_DrawTextBox(int x, int y, int columns, int lines);
 static short (*setup_gc)[2] = commoncontrols; // pointer to the gamecontrols of the player being edited
 static int controltochange;
 
+static Material *paused_tex = NULL;
 
 //===========================================================================
 //  Menu item class
@@ -2263,7 +2264,7 @@ void M_HandleVideoMode(int key)
     case 'd':
       // current active mode becomes the default mode.
       S_StartLocalAmbSound(sfx_menu_close);
-      SCR_SetDefaultMode();
+      vid.SetDefaultMode();
       return;
 
     default:
@@ -3045,6 +3046,15 @@ void Menu::Drawer()
       //added:18-02-98: it should always be 0 for non-menu scaled graphics.
       vid.scaledofs = 0;
     }
+  else
+    {
+      con.Drawer(); // menu beats console      
+
+      // draw pause pic
+      if (game.paused)
+	paused_tex->Draw(game.mode < gm_heretic ? (BASEVIDWIDTH - paused_tex->worldwidth)/2 : BASEVIDWIDTH/2,
+			 (BASEVIDHEIGHT-hud.stbarheight)/2, V_SCALE);
+    }
 
   if (mbox.Active())
     mbox.Draw();
@@ -3105,6 +3115,7 @@ void Menu::Close(bool callexitmenufunc)
     game.paused = false;
 
   hud.RefreshStatusbar();
+  game.refresh_viewborder = true;
 }
 
 
@@ -3257,6 +3268,8 @@ void Menu::Init()
       // TODO
       break;
     }
+
+  paused_tex = materials.Get(game.mode < gm_heretic ? "M_PAUSE" : "PAUSED");
 }
 
 

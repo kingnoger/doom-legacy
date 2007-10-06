@@ -367,9 +367,6 @@ bool GameInfo::CL_StartGame()
       S.ResumeMusic();
     }
 
-  extern bool force_wipe;
-  force_wipe = true;
-
   G_ReleaseKeys();
 
   // clear hud messages remains (usually from game startup)
@@ -378,6 +375,6 @@ bool GameInfo::CL_StartGame()
 
   //currentcluster = clustermap.begin()->second; // FIXME get cluster from server
 
-  state = GS_LEVEL;
+  SetState(GS_LEVEL);
   return true;
 }

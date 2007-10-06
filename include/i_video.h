@@ -39,21 +39,14 @@ extern rendermode_t rendermode;
 bool I_StartupGraphics();
 void I_ShutdownGraphics();
 
-
 void I_SetPalette(RGB_t* palette); // Takes full 8 bit values.
 void I_SetGamma(float r, float g, float b); // Set display gamma exponents.
 
-#ifdef __MACOS__
-/* void macConfigureInput(); */
-void VID_Pause(int pause);
-#endif
-
-int   I_NumVideoModes();
+int  I_SetVideoMode(int modenum);
+int  I_NumVideoModes();
 const char *I_GetVideoModeName(unsigned modenum);
+int  I_GetVideoModeForSize(int w, int h);
 
-void I_UpdateNoBlit();
 void I_FinishUpdate();
-
-void I_ReadScreen(byte* scr);
 
 #endif

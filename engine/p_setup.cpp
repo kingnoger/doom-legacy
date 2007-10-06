@@ -431,6 +431,9 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
             ednum += 5 - EN_START5;
 
           playerstarts.insert(pair<int, mapthing_t *>(ednum, t));
+
+#warning FIXME TEST
+	  t->tid = -100; // respawn timer
           continue;
         }
 

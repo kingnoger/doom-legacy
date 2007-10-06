@@ -44,9 +44,6 @@
 #include "z_zone.h"
 
 
-
-extern bool force_wipe;
-
 void  F_TextInit(int dummy);
 void  F_TextTicker();
 void  F_TextWrite(int x, int y);
@@ -202,7 +199,7 @@ void F_Ticker()
           else if (finalestage->init)
             (finalestage->init)(finalestage->stage);
 
-          force_wipe = true;
+          game.screenwipe = 1;
         }
       else
         { // return to game
@@ -323,7 +320,7 @@ void F_StartCast(int dummy)
   for(i=0;i<17;i++)
     castorder[i].name = text[TXT_CC_ZOMBIE + i];
 
-  force_wipe = true;
+  game.screenwipe = 1;
   castnum = 0;
   caststate = mobjinfo[castorder[castnum].type].seestate;
   casttics = caststate->tics;

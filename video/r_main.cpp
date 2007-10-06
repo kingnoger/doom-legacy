@@ -391,9 +391,9 @@ void R_ExecuteSetViewSize()
   else
     viewwindowy = (vid.height -hud.stbarheight -viewheight) >> 1;
 
+  R_FillBackScreen(); // redraw the view window border to backbuffer
 
   R_InitViewBuffer(viewwidth, viewheight);
-
   R_InitTextureMapping();
 
   // psprite scales

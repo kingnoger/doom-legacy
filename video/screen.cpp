@@ -48,18 +48,6 @@
 Video vid;
 
 
-// --------------------------------------------
-// assembly or c drawer routines for software mode 8bpp/16bpp
-// --------------------------------------------
-void (*skycolfunc) ();       //new sky column drawer draw posts >128 high
-void (*colfunc) ();          // standard column upto 128 high posts
-void (*basecolfunc) ();
-void (*fuzzcolfunc) ();      // standard fuzzy effect column drawer
-void (*transcolfunc) ();     // translucent column drawer
-void (*shadecolfunc) ();     // smokie test..
-void (*spanfunc) ();         // span drawer, use a 64x64 tile
-void (*basespanfunc) ();     // default span func for color mode
-
 
 // =========================================================================
 // console variables
@@ -170,6 +158,7 @@ byte gammatable[5][256] =
      251,252,252,253,254,254,255,255}
 };
 
+
 // reload palette when gamma is changed
 void CV_Usegamma_OnChange()
 {
@@ -177,6 +166,7 @@ void CV_Usegamma_OnChange()
   vid.LoadPalette("PLAYPAL");
   vid.SetPalette(0);
 }
+
 
 // change drawer function when fuzzymode is changed
 void CV_Fuzzymode_OnChange()
@@ -187,7 +177,6 @@ void CV_Fuzzymode_OnChange()
     fuzzcolfunc = (cv_fuzzymode.value) ? R_DrawFuzzColumn_16 : R_DrawTranslucentColumn_16;
 }
 
-int I_GetVideoModeForSize(int w, int h);
 
 // Change fullscreen on/off when cv_fullscreen is changed
 void CV_Fullscreen_OnChange()
@@ -204,15 +193,8 @@ Video::Video()
   currentpalette = 0;
 }
 
-
-//added:27-01-98: tell asm code the new rowbytes value.
-void ASMCALL ASM_PatchRowBytes(int rowbytes);
-
 //  The video mode change is delayed until the start of the next refresh
 //  by setting the setmodeneeded to a value >0
-int  I_SetVideoMode(int modenum);
-
-
 void Video::SetMode()
 {
   if (game.dedicated)
@@ -267,6 +249,7 @@ void Video::Startup()
 
   modenum = 0; // not exactly true, but doesn't matter here.
   setmodeneeded = 8; // 320x200, windowed
+  resetpaletteneeded = false;
 
   LoadPalette("PLAYPAL");
   SetPalette(0);
@@ -287,6 +270,10 @@ void Video::Startup()
   SetMode();
 }
 
+
+
+//added:27-01-98: tell asm code the new rowbytes value.
+void ASMCALL ASM_PatchRowBytes(int rowbytes);
 
 
 // Called after the video mode has changed
@@ -366,11 +353,9 @@ void Video::Recalc()
 
 
 // Check for screen cmd-line parms : to force a resolution.
-//
 // Set the video mode to set at the 1st display loop (setmodeneeded)
-//
 
-void SCR_CheckDefaultMode()
+void Video::CheckDefaultMode()
 {
   // 0 means not set at the cmd-line
   int scr_forcex = 0;
@@ -388,34 +373,30 @@ void SCR_CheckDefaultMode()
     {
       CONS_Printf("Using resolution: %d x %d\n", scr_forcex, scr_forcey);
       // returns -1 if not found, thus will be 0 (no mode change) if not found
-      vid.setmodeneeded = I_GetVideoModeForSize(scr_forcex, scr_forcey) + 1;
+      setmodeneeded = I_GetVideoModeForSize(scr_forcex, scr_forcey) + 1;
     }
   else
     {
       CONS_Printf("Default resolution: %d x %d (%d bpp)\n", cv_scr_width.value,
                   cv_scr_height.value, cv_scr_depth.value);
       // see note above
-      vid.setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
+      setmodeneeded = I_GetVideoModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
     }
 }
 
 
-//added:03-02-98: sets the modenum as the new default video mode to be saved
-//                in the config file
-void SCR_SetDefaultMode()
+// Make the current video mode the new default to be saved in the config file.
+void Video::SetDefaultMode()
 {
   // remember the default screen size
-  cv_scr_width.Set(vid.width);
-  cv_scr_height.Set(vid.height);
-  cv_scr_depth.Set(vid.BytesPerPixel * 8);
-  // CV_SetValue (&cv_fullscreen, !vid.u.windowed); metzgermeister: unnecessary?
+  cv_scr_width.Set(width);
+  cv_scr_height.Set(height);
+  cv_scr_depth.Set(BitsPerPixel);
+  // CV_SetValue (&cv_fullscreen, !windowed); metzgermeister: unnecessary?
 }
 
 
-//-------------------------------------------------
 
-// Retrieve the ARGB value from a palette color index
-//#define V_GetColor(color)  (vid.palette[color&0xFF])
 
 // keep a copy of the palette so that we can get the RGB
 // value for a color index at any time.
@@ -454,10 +435,11 @@ void Video::SetPalette(int palettenum)
   currentpalette = palettenum;
 
   // PLAYPAL lump contains 14 different 256 color RGB palettes (28 for Hexen)
-  // VB: is software gamma correction used also with OpenGL palette?
 
   if (rendermode == render_soft)
     I_SetPalette(&palette[palettenum*256]);
+
+  resetpaletteneeded = false;
 }
 
 

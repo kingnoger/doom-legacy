@@ -113,8 +113,11 @@ public:
   int   demosequence;
   char *pagename;
 
+  int  screenwipe; ///< screen wipe progress: 0: inactive, 1: needed, 2: ongoing
+  bool refresh_viewborder;
+
   unsigned time;  ///< how long (in ms) has the game been running?
-  unsigned tic;   ///< how many times has the game been ticked?   
+  unsigned tic;   ///< how many times has the game been ticked?
 
 public:
   int maxplayers; ///< max # of players allowed
@@ -149,6 +152,7 @@ public:
   GameInfo();
   ~GameInfo();
 
+  void SetState(gamestate_t s);
   void StartIntro();
   void AdvanceIntro();
 

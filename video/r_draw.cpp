@@ -33,6 +33,8 @@
 
 #include "hud.h"
 
+#include "m_random.h"
+
 #include "r_data.h"
 #include "r_draw.h"
 #include "v_video.h"
@@ -133,6 +135,23 @@ lighttable_t *ds_colormap; ///< lighttable to use
 byte         *ds_transmap; ///< translucency table to use
 //@}
 
+
+
+//==========================================================================
+//  drawer routines for software mode 8bpp/16bpp
+//==========================================================================
+
+void  (*basecolfunc)();  // default column func
+void      (*colfunc)();  // standard column up to 128 high posts
+void  (*fuzzcolfunc)();  // standard fuzzy effect column drawer
+void (*transcolfunc)();  // translucent column drawer
+void (*shadecolfunc)();  // smokie test..
+void   (*skycolfunc)();  // new sky column drawer draw posts >128 high
+
+void (*basespanfunc)();  // default span func
+void     (*spanfunc)();  // span drawer, use a 64x64 tile
+
+
 //==========================================================================
 //                        OLD DOOM FUZZY EFFECT
 //==========================================================================
@@ -161,11 +180,8 @@ int fuzzpos = 0;     // move through the fuzz table
 //
 void R_RecalcFuzzOffsets()
 {
-    int i;
-    for (i=0;i<FUZZTABLE;i++)
-    {
-        fuzzoffset[i] = (fuzzoffset[i] < 0) ? -vid.width : vid.width;
-    }
+  for (int i=0; i<FUZZTABLE; i++)
+    fuzzoffset[i] = (fuzzoffset[i] < 0) ? -vid.width : vid.width;
 }
 
 
@@ -269,10 +285,8 @@ void R_InitTranslationTables()
 // put here
 
 
-// R_InitViewBuffer
 // Creates lookup tables for getting the framebuffer address
 //  of a pixel to draw.
-//
 void R_InitViewBuffer(int width, int height)
 {
   int i;
@@ -343,12 +357,12 @@ void R_InitViewBorder()
 //
 void R_FillBackScreen()
 {
-  int  x, y;
-  int  step, boff;
-
   // HW draws everything directly
   if (rendermode != render_soft)
     return;
+
+  int  x, y;
+  int  step, boff;
 
   //added:08-01-98:draw pattern around the status bar too (when hires),
   //                so return only when in full-screen without status bar.
@@ -444,4 +458,293 @@ void R_DrawViewBorder()
   VID_BlitLinearScreen(vid.screens[1]+ofs, vid.screens[0]+ofs,
 		       side, viewheight-1, vid.width, vid.width);
   */
+}
+
+
+
+
+
+//--------------------------------------------------------------------------
+//                        SCREEN WIPE EFFECTS
+//--------------------------------------------------------------------------
+
+
+CV_PossibleValue_t screenslink_cons_t[] = {{0,"none"},{1,"color"},{2,"melt"},{0,NULL}};
+consvar_t cv_screenslink = {"screenlink","2", CV_SAVE,screenslink_cons_t};
+
+struct wipe_t
+{
+  void (*init)(int width, int height);
+  bool (*perform)(int width, int height, int ticks);
+  void (*exit)();
+};
+
+
+static byte *wipe_scr_start = NULL;
+static byte *wipe_scr_end = NULL;
+static byte *wipe_scr = NULL;
+
+
+
+static void wipe_initColorXForm(int width, int height)
+{
+  memcpy(wipe_scr, wipe_scr_start, width*height*vid.BytesPerPixel);
+}
+
+
+// BP:the original one, work only in hicolor
+/*
+int wipe_doColorXForm(int width, int height, int ticks)
+{
+  int newval;
+  
+  bool changed = false;
+  byte *w = wipe_scr;
+  byte *e = wipe_scr_end;
+
+  while (w != wipe_scr + width*height)
+    {
+      if (*w != *e)
+	{
+	  if (*w > *e)
+	    {
+	      newval = *w - ticks;
+	      if (newval < *e)
+		*w = *e;
+	      else
+		*w = newval;
+	      changed = true;
+	    }
+	  else if (*w < *e)
+	    {
+	      newval = *w + ticks;
+	      if (newval > *e)
+		*w = *e;
+	      else
+		*w = newval;
+	      changed = true;
+	    }
+	}
+      w++;
+      e++;
+    }
+
+  return !changed;
+}
+*/
+
+
+
+static bool wipe_doColorXForm(int width, int height, int ticks)
+{
+  static int slowdown = 0;
+
+  byte newval;
+  bool changed = false;
+
+  while (ticks--)
+    {
+      // slowdown
+      if (slowdown++)
+	{
+	  slowdown = 0;
+	  return false;
+	}
+ 
+      byte *w = wipe_scr;
+      byte *e = wipe_scr_end;
+ 
+ 
+      while (w != wipe_scr + width*height)
+	{
+	  if (*w != *e)
+	    {
+	      if ((newval = transtables[tr_transmor-1][(*e << 8) + *w]) == *w)
+		if ((newval = transtables[tr_transmed-1][(*e << 8) + *w]) == *w)
+		  if ((newval = transtables[tr_transmor-1][(*w << 8) + *e]) == *w)
+		    newval = *e;
+	      *w = newval;
+	      changed = true;
+	    }
+	  w++;
+	  e++;
+	}
+    }
+
+  return !changed;
+}
+
+
+static void wipe_exitColorXForm() {}
+
+
+
+// transposes an array
+static void wipe_shittyColMajorXform(short *array, int width, int height)
+{
+  short *dest = static_cast<short*>(Z_Malloc(width*height*sizeof(short), PU_STATIC, 0));
+
+  for (int y=0;y<height;y++)
+    for (int x=0;x<width;x++)
+      dest[x*height+y] = array[y*width+x];
+
+  memcpy(array, dest, width*height*sizeof(short));
+
+  Z_Free(dest);
+}
+
+
+static int *column_y = NULL; // the y coordinate of the melt for each column
+
+
+static void wipe_initMelt(int width, int height)
+{
+  // copy start screen to main screen
+  memcpy(wipe_scr, wipe_scr_start, width*height*vid.BytesPerPixel);
+
+  // makes this wipe faster (in theory)
+  // to have stuff in column-major format
+  wipe_shittyColMajorXform((short*)wipe_scr_start, width*vid.BytesPerPixel/sizeof(short), height);
+  wipe_shittyColMajorXform((short*)wipe_scr_end, width*vid.BytesPerPixel/sizeof(short), height);
+
+  // setup initial column positions
+  // (y<0 => not ready to scroll yet)
+  column_y = static_cast<int*>(Z_Malloc(width*sizeof(int), PU_STATIC, 0));
+  column_y[0] = -(M_Random()%16);
+  for (int i=1; i<width; i++)
+    {
+      int r = (M_Random()%3) - 1; 
+      column_y[i] = column_y[i-1] + r;
+      if (column_y[i] > 0)
+	column_y[i] = 0;
+      else if (column_y[i] == -16)
+	column_y[i] = -15;
+    }
+  // dup for normal speed in high res
+  for (int i=0;i<width;i++)
+    column_y[i] *= vid.dupy;
+}
+
+
+
+static bool wipe_doMelt(int width, int height, int ticks)
+{
+  bool done = true;
+
+  width = (width * vid.BytesPerPixel) / sizeof(short);
+
+  while (ticks--)
+    {
+      for (int i=0;i<width;i++)
+	{
+	  if (column_y[i] < 0)
+	    {
+	      column_y[i]++;
+	      done = false;
+	    }
+	  else if (column_y[i] < height)
+	    {
+	      int dy = (column_y[i] < 16) ? column_y[i]+1 : 8;
+	      dy *= vid.dupy;
+	      if (column_y[i] + dy >= height)
+		dy = height - column_y[i];
+
+	      short *s = reinterpret_cast<short *>(wipe_scr_end) + i*height+column_y[i];
+	      short *d = reinterpret_cast<short *>(wipe_scr) + column_y[i]*width+i;
+
+	      int idx = 0;
+	      for (int j=dy;j;j--)
+		{
+		  d[idx] = *(s++);
+		  idx += width;
+		}
+	      column_y[i] += dy;
+	      s = reinterpret_cast<short *>(wipe_scr_start) + i*height;
+	      d = reinterpret_cast<short *>(wipe_scr) + column_y[i]*width+i;
+	      idx = 0;
+	      for (int j=height-column_y[i];j;j--)
+		{
+		  d[idx] = *(s++);
+		  idx += width;
+		}
+	      done = false;
+	    }
+	}
+    }
+
+  return done;
+}
+
+
+static void wipe_exitMelt()
+{
+  Z_Free(column_y);
+  column_y = NULL;
+}
+
+
+
+static wipe_t wipes[] =
+{
+  {wipe_initColorXForm, wipe_doColorXForm, wipe_exitColorXForm},
+  {wipe_initMelt, wipe_doMelt, wipe_exitMelt}
+};
+
+
+
+static byte *ReadScreen()
+{
+  byte *temp = static_cast<byte*>(calloc(vid.height * vid.rowbytes, 1));
+  if (temp)
+    memcpy(temp, vid.screens[0], vid.height*vid.rowbytes);
+
+  return temp; // no memory
+}
+
+
+// save the 'before' screen of the wipe (the one that melts down)
+bool wipe_StartScreen()
+{
+  if (cv_screenslink.value == 0 || rendermode != render_soft)
+    return false; // no wipes required
+
+  return (wipe_scr_start = ReadScreen());
+}
+
+
+// save the 'after' screen of the wipe (the one that show behind the melt)
+bool wipe_EndScreen()
+{
+  wipe_scr_end = ReadScreen();
+  if (wipe_scr_end)
+    {
+      // initialize the wipe algorithm
+      wipe_scr = vid.screens[0];
+      wipes[cv_screenslink.value - 1].init(vid.width, vid.height);
+      return true;
+    }
+
+  free(wipe_scr_start); // no memory, no wipe
+  wipe_scr_start = NULL;
+  return false;
+}
+
+
+// perform the wipe
+bool wipe_ScreenWipe(int ticks)
+{
+  int i = cv_screenslink.value - 1;
+
+  // do a piece of wipe-in
+  if (ticks < 0 || wipes[i].perform(vid.width, vid.height, ticks))
+    {
+      // finish the wipe
+      wipes[i].exit();
+      free(wipe_scr_start);
+      free(wipe_scr_end);
+      wipe_scr_start = wipe_scr_end = wipe_scr = NULL;
+      return true;
+    }
+
+  return false;
 }

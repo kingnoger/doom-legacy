@@ -60,7 +60,6 @@
 #include "hud.h"
 #include "wi_stuff.h"
 #include "f_finale.h"
-#include "f_wipe.h"
 
 #include "keys.h"
 #include "w_wad.h"
@@ -102,6 +101,8 @@ GameInfo::GameInfo()
   modified = paused = inventory = false;
   net = NULL;
 
+  screenwipe = 0;
+  refresh_viewborder = false;
   time = tic = 0;
 
   gtype = new GameType(); // TEST
@@ -123,7 +124,7 @@ GameInfo::~GameInfo()
 /// starts the intro sequence
 void GameInfo::StartIntro()
 {
-  state = GS_INTRO;
+  SetState(GS_INTRO);
 
   demosequence = -1;
   pagetic = 0;
@@ -246,23 +247,23 @@ void GameInfo::AdvanceIntro()
 
 
 
+void GameInfo::SetState(gamestate_t s)
+{
+  // see if a screenwipe + border redraw is needed
+  if (s == GS_LEVEL)
+    screenwipe = 1;
 
-
+  vid.resetpaletteneeded = true;
+  state = s;
+}
 
 //======================================================================
 // D_Display
 //  draw current display, possibly wiping it from the previous
 //======================================================================
 
-bool force_wipe = false; // TODO into renderer module...
-
-
 void GameInfo::Display()
 {
-  static gamestate_t oldgamestate = GS_NULL;
-  static int borderdrawcount;
-  static int screenwipe = 0; // screen wipe progress
-
   if (nodrawers)
     return;
 
@@ -270,8 +271,7 @@ void GameInfo::Display()
   // in SDL locks screen if necessary
   I_StartFrame();
 
-
-  if (!screenwipe)
+  if (screenwipe <= 1)
     {
       // check for change of screen size (video mode)
       if (vid.setmodeneeded)
@@ -281,38 +281,21 @@ void GameInfo::Display()
       if (setsizeneeded)
 	{
 	  R_ExecuteSetViewSize();
-	  force_wipe = true;
-	  borderdrawcount = 3;
+	  refresh_viewborder = true;
 	}
 
-      // save the current screen if about to wipe
-      if (force_wipe && rendermode == render_soft)
+      if (vid.resetpaletteneeded)
+	vid.SetPalette(0);
+
+      if (screenwipe == 1)
 	{
-	  force_wipe = false;
-	  if (wipe_StartScreen()) // save "before" view
-	    screenwipe = 1;
 	}
     }
-
-  // draw buffered stuff to screen
-  // BP: Used only by linux GGI version
-  I_UpdateNoBlit();
 
   // do buffered drawing
   switch (state)
     {
     case GS_LEVEL:
-      if (game.tic)
-	hud.HU_Erase();
-
-      // see if the border needs to be initially drawn
-      if (oldgamestate != GS_LEVEL)
-        R_FillBackScreen();    // draw the pattern into the back screen  ->s1
-
-      // if wiping, refresh entire HUD
-      if (screenwipe)
-	hud.RefreshStatusbar();
-
       // draw either automap or game
       if (automap.active)
 	{
@@ -325,21 +308,24 @@ void GameInfo::Display()
 	}
       else
         {
+	  if (Menu::active)
+	    hud.RefreshStatusbar();
+
           // see if the border needs to be updated to the screen
           if (viewwidth != vid.width)
             {
               // the menu may draw over parts out of the view window,
               // which are refreshed only when needed
-              if (Menu::active)
-                borderdrawcount = 3;
-
-              if (borderdrawcount)
-                {
-                  R_DrawViewBorder(); // erase old menu stuff
-                  borderdrawcount--;
-                }
+	      if (refresh_viewborder || Menu::active)
+		{
+		  R_DrawViewBorder();
+		  refresh_viewborder = false;
+		}
+	      else
+		hud.HU_Erase();
             }
-          Drawer();
+
+          Drawer(); // render 3D view
         }
       hud.DrawCommon();
       break;
@@ -360,57 +346,22 @@ void GameInfo::Display()
       break;
     }
 
-  // change gamma if needed
-  if (state != oldgamestate && state != GS_LEVEL)
-    vid.SetPalette(0);
+  Menu::Drawer(); // menu (or console) is drawn on top of everything else
 
-  oldgamestate = state;
-
-
-  // draw pause pic
-  if (paused && !Menu::active)
+  switch (screenwipe)
     {
-      int x, y = (BASEVIDHEIGHT-hud.stbarheight)/2;
-      Material *tex;
-
-      if (game.mode < gm_heretic)
-	{
-	  tex = materials.Get("M_PAUSE");
-	  x = (BASEVIDWIDTH - tex->worldwidth)/2;
-	}
-      else
-	{
-	  tex = materials.Get("PAUSED");
-	  x = BASEVIDWIDTH/2;
-	}
-
-      tex->Draw(x, y, V_SCALE);
-    }
-
-  //FIXME: draw either console or menu, not the two. Menu wins.
-  con.Drawer();
-  Menu::Drawer(); // menu is drawn on top of everything else
-
-  //NetUpdate();         // send out any new accumulation
-
-  // normal update
-  if (!screenwipe)
-    {
-      if (cv_netstat.value)
-        {
-          /*
-          char s[50];
-          sprintf(s,"get %d b/s",getbps);
-          V_DrawString(BASEVIDWIDTH-V_StringWidth(s),165-40, V_WHITEMAP, s);
-          */
-        }
-
-      //I_BeginProfile();
+    case 0: // normal update
       I_FinishUpdate();              // page flip or blit buffer
-      //CONS_Printf("last frame update took %d\n", I_EndProfile());
-    }
-  else if (screenwipe++ == 2) // we must wait until the "after" screen is rendered
-    {
+      break;
+
+    case 1: // start a wipe
+      R_FillBackScreen(); // draw the view borders to screen 1 anyway (wipes only accompany game state changes)
+      refresh_viewborder = true;
+      hud.RefreshStatusbar();
+      screenwipe = wipe_StartScreen() ? 2 : 0; // save "before" view, if not succesful, cancel wipe
+      break;
+
+    default: // the "after" screen was just rendered
       if (!wipe_EndScreen()) // save "after" view
 	{
 	  screenwipe = 0;
@@ -440,12 +391,12 @@ void GameInfo::Display()
 	    done = wipe_ScreenWipe(-1); // note the wipe algorithm that time's out.
 
           I_OsPolling();
-          I_UpdateNoBlit();
           Menu::Drawer();            // menu is drawn even on top of wipes
           I_FinishUpdate();      // page flip or blit buffer
         }
       while (!done);
       screenwipe = 0;
+      break;
     }
 }
 

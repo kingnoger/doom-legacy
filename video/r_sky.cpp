@@ -40,9 +40,6 @@ int          skytexturemid;
 //
 //  Call at loadlevel after skytexture is set
 //
-//  NOTE: skycolfunc should be set at R_ExecuteSetViewSize ()
-//        I dont bother because we don't use low detail no more
-//
 void R_SetupSkyDraw(Material *skytex)
 {
   // parse the patches composing sky texture for the tallest one

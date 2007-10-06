@@ -70,6 +70,7 @@ public:
   int   scaledofs;  ///< centering offset for the scaled graphics,
 
   int   setmodeneeded; ///< video mode change needed if > 0 // (the mode number to set + 1)
+  bool  resetpaletteneeded; ///< palette needs to be reset to 0
 
   RGB_t *palette;        ///< local copy of the current palette
   int    currentpalette; ///< number of the currently active palette
@@ -99,35 +100,17 @@ public:
   /// Equivalent to LoadPalette(pal); SetPalette(0);
   void SetPaletteLump(const char *pal);
 
-  /// Returns the currently active palette
+  /// Returns the currently active palette.
   RGB_t *GetCurrentPalette();
+
+  /// Change to default video mode (called once at startup).
+  void CheckDefaultMode();
+
+  /// Set the mode number which is saved in the config.
+  void SetDefaultMode();
 };
 
+
 extern Video vid;
-
-
-
-// Check parms once at startup
-void SCR_CheckDefaultMode();
-// Set the mode number which is saved in the config
-void SCR_SetDefaultMode();
-
-
-
-// ---------------------------------------------
-// color mode dependent drawer function pointers
-// ---------------------------------------------
-
-extern void     (*skycolfunc)();
-extern void     (*colfunc)();
-extern void     (*basecolfunc)();
-extern void     (*fuzzcolfunc)();
-extern void     (*transcolfunc)();
-extern void     (*shadecolfunc)();
-extern void     (*spanfunc)();
-extern void     (*basespanfunc)();
-
-// quick fix for tall/short skies, depending on bytesperpixel
-extern void (*skydrawerfunc[2])();
 
 #endif
