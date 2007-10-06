@@ -143,6 +143,9 @@ void OGLRenderer::InitGLState()
   glPointParameterf(GL_POINT_SIZE_MAX, 8.0);
   GLfloat point_att[3] = {1, 0, 1e-4};
   glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, point_att);
+
+  // other debugging stuff
+  glLineWidth(3.0);
 }
 
 
@@ -840,7 +843,6 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material 
   }
 
   glNormal3f(0.0, 0.0, -loopinc);
-
   mat->GLUse();
   glBegin(GL_POLYGON);
   for (int curseg = loopstart; curseg != loopend; curseg += loopinc) {
@@ -865,6 +867,25 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material 
   }
   glEnd();
 
+#if 0
+  {
+    // draw subsector boundaries (for debugging)
+    glDisable(GL_TEXTURE_2D);
+
+    float c = 0.2+fabs(cos(mp->maptic / 35.0f));
+    glColor4f(0.7, 0.7, 1.0, c);
+    glBegin(GL_LINE_LOOP);
+    for (int curseg = loopstart; curseg != loopend; curseg += loopinc)
+      {
+	vertex_t *v = mp->segs[curseg].v1;
+	glVertex3f(v->x.Float(), v->y.Float(), height);
+      }
+    glEnd();
+
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1.0, 1.0, 1.0, 1.0);
+  }
+#endif
 }
 
 // Draw the floor and ceiling of a single GL subsector. The rendering
