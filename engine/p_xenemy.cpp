@@ -24,6 +24,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_game.h"
 #include "g_player.h"
 #include "g_decorate.h"
@@ -383,25 +384,23 @@ void A_MinotaurRoam(DActor *actor)
 //----------------------------------------------------------------------------
 #define MINOTAUR_LOOK_DIST		(16*54)
 
-static Actor *mino_master, *mino;
+static Actor *mino;
+extern Actor *blocksearch_self;
 
-static bool IT_XMinotaur(Thinker *t)
+static bool IT_XMinotaur(Actor *mo)
 {
-  if (!t->IsOf(DActor::_type))
-    return true; // continue iteration
-
-  DActor *mo = (DActor *)t;
   // must be monster, alive and shootable
   if (!(mo->flags & MF_MONSTER)
       || mo->health <= 0
       || !(mo->flags & MF_SHOOTABLE))
     return true;
+
   fixed_t dist = P_XYdist(mino->pos, mo->pos);
   // must be near, not master or the minotaur itself, or another of master's pets
   // (formely respected only minotaur pets, mo->type == MT_XMINOTAUR)
   if (dist > MINOTAUR_LOOK_DIST
-      || mo == mino_master || mo == mino
-      || mo->owner == mino_master)
+      || mo == mino->owner || mo == mino
+      || mo->owner == mino->owner)
     return true;
 
   mino->target = mo; // Found mobj to attack
@@ -409,21 +408,41 @@ static bool IT_XMinotaur(Thinker *t)
 }
 
 
+/// \brief Minotaur servant looking for a target
+/// \ingroup g_iterators
+bool PIT_XMinotaurServantLook(Actor *mo)
+{
+  if ((mo->flags & MF_VALIDTARGET) // meaning "monster or player"
+      && (mo->flags & MF_SHOOTABLE)
+      && !(mo->flags2 & MF2_DORMANT)
+      && (mo != mino->owner) // don't target master
+      && (mo->owner != mino->owner) // or his little helpers TODO teammates
+      )
+    {
+      if (blocksearch_self->mp->CheckSight(blocksearch_self, mo))
+	{
+	  mino->target = mo;
+	  return false; // stop iteration
+	}
+    }
+
+  return true;
+}
+
+
+
 void A_MinotaurLook(DActor *actor)
 {
-  int i;
-  mino_master = actor->owner;
-  mino = actor;
-  Actor *mo = NULL;
+  Actor *master = actor->owner;
 
   actor->target = NULL;
   if (cv_deathmatch.value)  // Quick search for players
     {
       int n = actor->mp->players.size();
-      for (i=0; i<n; i++)
+      for (int i=0; i<n; i++)
 	{
-	  mo = actor->mp->players[i]->pawn;
-	  if (!mo || mo == mino_master)
+	  Actor *mo = actor->mp->players[i]->pawn;
+	  if (!mo || mo == master)
 	    continue;
 	  if (mo->health <= 0)
 	    continue;
@@ -437,16 +456,16 @@ void A_MinotaurLook(DActor *actor)
 
   if (!actor->target) // Near player monster search
     {
-      if (mino_master && (mino_master->health > 0))
-	mo = actor->mp->RoughBlockSearch(mino_master, mino_master, 20, 1);
+      mino = actor; // special case for minotaur blocksearch since the search may be centered on master
+      if (master && master->health > 0)
+	actor->mp->blockmap->RoughBlockSearch(master, 20, PIT_XMinotaurServantLook);
       else
-	mo = actor->mp->RoughBlockSearch(actor, mino_master, 20, 1);
-      actor->target = mo;
+	actor->mp->blockmap->RoughBlockSearch(actor, 20, PIT_XMinotaurServantLook);
     }
 
 
   if (!actor->target) // Normal monster search
-    actor->mp->IterateThinkers(IT_XMinotaur);
+    actor->mp->IterateActors(IT_XMinotaur);
 
   if (actor->target)
     actor->SetState(S_XMNTR_WALK1, false);

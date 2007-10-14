@@ -49,7 +49,6 @@
 
 #include "i_video.h"            //rendermode
 
-extern bool devparm;			//in d_main.cpp
 
 #define MINZ                  (4)
 #define BASEYCENTER           (BASEVIDHEIGHT/2)

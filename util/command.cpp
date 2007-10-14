@@ -44,7 +44,6 @@
 #include "g_game.h"
 #include "g_player.h"
 
-extern bool devparm;			//in d_main.cpp
 
 // =========================================================================
 //                      VARIABLE SIZE BUFFERS
@@ -713,7 +712,6 @@ static void COM_Wait_f()
 
 static void COM_Help_f()
 {
-  xcommand_t  *cmd;
   consvar_t  *cvar;
 
   if (COM_Argc() > 1)
@@ -755,7 +753,7 @@ static void COM_Help_f()
 
       // commands
       CONS_Printf("\2Commands\n");
-      for (cmd=com_commands ; cmd ; cmd=cmd->next)
+      for (xcommand_t *cmd = com_commands; cmd; cmd=cmd->next)
         {
           CONS_Printf("%s ",cmd->name);
           i++;
@@ -771,7 +769,7 @@ static void COM_Help_f()
 
       CONS_Printf("\2\nread docs/console.html for more or type help <command or variable>\n");
 
-      if( devparm )
+      if (devparm)
         CONS_Printf("\2Total : %d\n",i);
     }
 }

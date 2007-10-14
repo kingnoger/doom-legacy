@@ -112,7 +112,7 @@ struct trace_t
 
 public:
   /// Initializes the trace.
-  void Init(Map *m, const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2);
+  void Init(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2);
 
   /// Traverses the accumulated intercepts in order of closeness up to maxfrac.
   bool TraverseIntercepts(traverser_t func, float maxfrac);

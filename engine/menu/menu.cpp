@@ -552,7 +552,6 @@ void TextBox::Input(unsigned char ch)
 
 void BeginGame(int episode, int skill, bool public_server);
 
-extern bool devparm;
 static vector<int> allowed_pawntypes;
 
 // shhh... what am I doing... nooooo!

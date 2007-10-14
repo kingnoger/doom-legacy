@@ -32,6 +32,7 @@
 
 #include "g_game.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_player.h"
@@ -1297,7 +1298,7 @@ void A_VileChase(DActor *actor)
       // Call PIT_VileCheck to check
       // whether object is a corpse
       // that can be raised.
-      if (!m->BlockIterateThingsRadius(viletryx, viletryy, MAXRADIUS*2, PIT_VileCheck))
+      if (!m->blockmap->IterateThingsRadius(viletryx, viletryy, MAXRADIUS*2, PIT_VileCheck))
 	{
 	  // got one!
 	  temp = actor->target;

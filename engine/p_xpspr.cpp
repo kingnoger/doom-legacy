@@ -26,6 +26,7 @@
 #include "g_pawn.h"
 #include "g_player.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_decorate.h"
 
 #include "command.h"
@@ -493,11 +494,40 @@ void A_LightningRemove(DActor *actor)
 // MStaffSpawn
 //
 //============================================================================
+
+Actor *blocksearch_self;
+
+static bool PIT_BloodscourgeLook(Actor *mo)
+{
+  if ((mo->flags & MF_VALIDTARGET) // meaning "monster or player"
+      && (mo->flags & MF_SHOOTABLE)
+      && !(mo->flags2 & MF2_DORMANT)
+      && (mo != blocksearch_self->owner) // don't target owner
+      // TODO ignore owner's teammates
+      )
+    {
+      if (blocksearch_self->mp->CheckSight(blocksearch_self, mo))
+	{
+	  Actor *master = blocksearch_self->owner;
+	  angle_t angle = R_PointToAngle2(master->pos.x, master->pos.y, mo->pos.x, mo->pos.y) - master->yaw;
+	  angle >>= 24;
+	  if (angle>226 || angle<30)
+	    {
+	      blocksearch_self->target = mo; // acquire target
+	      return false; // stop iteration
+	    }
+	}
+    }
+
+  return true;
+}
+
+
 void MStaffSpawn(PlayerPawn *pmo, angle_t angle)
 {
-  Actor *mo = pmo->SPMAngle(MT_MSTAFF_FX2, angle);
-  if (mo)
-    mo->target = pmo->mp->RoughBlockSearch(mo, pmo, 10, 2);
+  Actor *missile = pmo->SPMAngle(MT_MSTAFF_FX2, angle);
+  if (missile)
+    missile->mp->blockmap->RoughBlockSearch(missile, 10, PIT_BloodscourgeLook);
 }
 
 //============================================================================
@@ -575,10 +605,9 @@ void A_MStaffWeave(DActor *actor)
 
 void A_MStaffTrack(DActor *actor)
 {
-  if ((actor->target == NULL) && (P_Random()<50))
-    {
-      actor->target = actor->mp->RoughBlockSearch(actor, actor->owner, 10, 2);
-    }
+  if (!actor->target && P_Random() < 50)
+    actor->mp->blockmap->RoughBlockSearch(actor, 10, PIT_BloodscourgeLook);
+
   actor->SeekerMissile(ANGLE_1*2, ANGLE_1*10);
 }
 
@@ -591,12 +620,9 @@ void A_MStaffTrack(DActor *actor)
 
 void MStaffSpawn2(DActor *actor, angle_t angle)
 {
-  Actor *mo = actor->SpawnMissileAngle(MT_MSTAFF_FX2, angle, 40);
-  if (mo)
-    {
-      mo->owner = actor;
-      mo->target = actor->mp->RoughBlockSearch(mo, actor, 10, 2);
-    }
+  Actor *missile = actor->SpawnMissileAngle(MT_MSTAFF_FX2, angle, 40);
+  if (missile)
+    missile->mp->blockmap->RoughBlockSearch(missile, 10, PIT_BloodscourgeLook);
 }
 
 //============================================================================
@@ -1164,13 +1190,31 @@ void A_CHolyPalette(PlayerPawn *p, pspdef_t *psp)
 //
 //============================================================================
 
+static bool PIT_WraithvergeLook(Actor *mo)
+{
+  if ((mo->flags & MF_VALIDTARGET) // meaning "monster or player"
+      && (mo->flags & MF_SHOOTABLE)
+      && !(mo->flags2 & MF2_DORMANT)
+      && (mo != blocksearch_self->owner) // don't target owner
+      // TODO avoid owner's teammates
+      )
+    {
+      if (blocksearch_self->mp->CheckSight(blocksearch_self, mo))
+	{
+	  blocksearch_self->target = mo; // acquire target
+	  return false; // stop iteration
+	}
+    }
+
+  return true;
+}
+
+
 static void CHolyFindTarget(DActor *actor)
 {
-  Actor *target = actor->mp->RoughBlockSearch(actor, actor->owner, 6, 0);
-
-  if (target)
+  if (actor->mp->blockmap->RoughBlockSearch(actor, 6, PIT_WraithvergeLook))
     {
-      actor->target = target;
+      // PIT_WraithvergeLook has set the target
       actor->flags |= MF_NOCLIPLINE; //|MF_NOCLIPTHING;
       actor->eflags |= MFE_SKULLFLY;
       actor->flags &= ~MF_MISSILE;

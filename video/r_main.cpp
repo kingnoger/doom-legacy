@@ -62,8 +62,6 @@ Rend R;
 
 angle_t G_ClipAimingPitch(angle_t pitch);
 
-extern bool devparm;			//in d_main.cpp
-
 
 int                     viewangleoffset = 0; // obsolete, for multiscreen setup...
 

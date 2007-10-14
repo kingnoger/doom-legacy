@@ -39,10 +39,9 @@
 
 using namespace std;
 
-typedef bool (*traverser_t)(struct intercept_t *in);
-typedef bool (*line_iterator_t)(struct line_t *l);
 typedef bool (*thing_iterator_t)(class Actor *a);
 typedef bool (*thinker_iterator_t)(Thinker *t);
+
 
 /// \brief A single game map and all the stuff it contains.
 /// \nosubgrouping
@@ -114,43 +113,12 @@ public:
   class Actor    *skybox_pov; ///< default skybox viewpoint
   //@}
 
-  /// \name Blockmap
-  /// Created from axis aligned bounding box of the map, a rectangular array of
-  /// blocks of size 128 map units square. See blockmapheader_t.
-  /// Used to speed up collision detection agains lines and things by a spatial subdivision in 2D.
-  //@{
-#define MAPBLOCKUNITS   128
-#define MAPBLOCKBITS    7
-  //#define MAPBLOCKSIZE    (MAPBLOCKUNITS*FRACUNIT)
-  //#define MAPBLOCKSHIFT   (FRACBITS+7)
-  //#define MAPBMASK        (MAPBLOCKSIZE-1)
-  //#define MAPBTOFRAC      (MAPBLOCKSHIFT-FRACBITS)
+
+  /// Blockmap for this Map
+  class blockmap_t *blockmap;
   // MAXRADIUS is for precalculated sector block boxes
   // the spider demon is larger, but we do not have any moving sectors nearby
 #define MAXRADIUS       32
-#define MAPBLOCK_END    0xFFFF ///< terminator for a blocklist
-
-  struct blockmap_t
-  {
-    fixed_t  orgx, orgy;    ///< origin (lower left corner) of block map in map coordinates
-    int      width, height; ///< size of the blockmap in mapblocks
-    Uint16 **index;  ///< width*height array of pointers to the blocklists
-    Uint16  *lists;  ///< packed array of -1 terminated blocklists
-
-    inline int BlockX(fixed_t x) const { return (x - orgx).floor() >> MAPBLOCKBITS; }
-    inline int BlockY(fixed_t y) const { return (y - orgy).floor() >> MAPBLOCKBITS; }
-  } bmap;
-
-  class  Actor       **blocklinks;   ///< width*height array of thing chains
-  struct polyblock_t **PolyBlockMap; ///< width*height array of polyblock chains
-
-  bool BlockLinesIterator(int x, int y, line_iterator_t func);
-  bool BlockThingsIterator(int x, int y, thing_iterator_t func);
-
-  bool BlockIterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func);
-  bool BlockIterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
-
-  //@}
 
 
   /// \name Reject
@@ -335,9 +303,6 @@ public:
   // in p_maputl.cpp
   bool IterateThinkers(thinker_iterator_t func);
   bool IterateActors(thing_iterator_t func);
-  bool PathTraverse(const vec_t<fixed_t>& p1, const vec_t<fixed_t>& p2, int flags, traverser_t trav);
-  Actor *RoughBlockSearch(Actor *center, Actor *master, int distance, int flags);
-  Actor *RoughBlockCheck(Actor *center, Actor *master, int index, int flags);
   void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
 
   // in p_hpspr.cpp
@@ -451,9 +416,6 @@ public:
   polyobj_t *GetPolyobj(int num);
   int  GetPolyobjMirror(int num);
 
-  void LinkPolyobj(polyobj_t *po);
-  void UnLinkPolyobj(polyobj_t *po);
-  bool PO_CheckBlockingActors(seg_t *seg, polyobj_t *po);
   bool PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
   bool PO_RotatePolyobj(polyobj_t *po, angle_t angle);
   bool PO_Busy(int num);

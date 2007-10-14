@@ -32,6 +32,7 @@
 
 #include "g_game.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 
@@ -1672,7 +1673,7 @@ void pusher_t::Think()
       // point pusher. Crosses sectors, so use blockmap.
 
       tmpusher = this; // MT_PUSH/MT_PULL point source
-      mp->BlockIterateThingsRadius(x, y, radius + MAXRADIUS, PIT_PushThing);
+      mp->blockmap->IterateThingsRadius(x, y, radius + MAXRADIUS, PIT_PushThing);
       return;
     }
 

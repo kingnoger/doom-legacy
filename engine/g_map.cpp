@@ -21,6 +21,7 @@
 /// \brief Map class implementation
 
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_mapinfo.h"
 #include "g_game.h"
 #include "g_player.h"
@@ -68,26 +69,23 @@ Map::Map(MapInfo *i)
   hexen_format = false;
 
   vertexes = NULL;
-  segs = NULL;
+  lines = NULL;
+  sides = NULL;
   sectors = NULL;
   subsectors = NULL;
   nodes = NULL;
-  lines = NULL;
-  sides = NULL;
+  segs = NULL;
   polyobjs = NULL;
-  PolyBlockMap = NULL;
   linebuffer = NULL;
-
   glvertexes   = NULL;
   glvis = NULL;
 
-  bmap.index = NULL;
-  bmap.lists = NULL;
-  blocklinks = NULL;
-
+  blockmap = NULL;
   rejectmatrix = NULL;
 
   fadetable = NULL;
+  skytexture = NULL;
+  skybox_pov = NULL;
 
   levelscript = NULL;
   runningscripts = NULL;
@@ -98,14 +96,13 @@ Map::Map(MapInfo *i)
   ACStrings = NULL;
 
   mapthings = NULL;
-
-  botnodes = NULL;
+  force_pointercheck = false;
 
   ActiveAmbientSeq = NULL;
 
-  force_pointercheck = false;
-
   braintargeton = 0;
+
+  botnodes = NULL;
 };
 
 
@@ -113,23 +110,12 @@ Map::Map(MapInfo *i)
 Map::~Map()
 {
   Z_Free(vertexes);
-  Z_Free(segs);
-  Z_Free(subsectors);
-  Z_Free(sectors);
-  Z_Free(nodes);
   Z_Free(lines);
   Z_Free(sides);
-  Z_Free(linebuffer);
-
-  // Remove GL nodes if they exist.
-  if (glvertexes)
-    Z_Free(glvertexes);
-  if(glvis)
-    Z_Free(glvis);
-
-  Z_Free(bmap.index);
-  Z_Free(bmap.lists);
-
+  Z_Free(sectors);
+  Z_Free(subsectors);
+  Z_Free(nodes);
+  Z_Free(segs);
   if (polyobjs)
     {
       for (int i=0; i < NumPolyobjs; i++)
@@ -142,11 +128,15 @@ Map::~Map()
 	}
 
       Z_Free(polyobjs);
-      Z_Free(blocklinks);
-      Z_Free(PolyBlockMap);
-      // FIXME there is a lot of PU_LEVEL polyblockmap stuff that is not yet freed
     }
+  Z_Free(linebuffer);
+  // Remove GL nodes if they exist.
+  if (glvertexes)
+    Z_Free(glvertexes);
+  if(glvis)
+    Z_Free(glvis);
 
+  delete blockmap;
   Z_Free(rejectmatrix);
 
   // FIXME free FS stuff

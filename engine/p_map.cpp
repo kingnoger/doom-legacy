@@ -80,6 +80,7 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_decorate.h"
 
 #include "g_damage.h"
@@ -104,26 +105,24 @@ extern int boomsupport;
 //  Radius iteration
 //===========================================
 
-static Actor *tmthing;
+static Actor *tmthing; // initiator for iteration, used by some PIT_* functions
 static bbox_t tmb; // bounding box, used by line PIT_* functions
 
 // iterates lines around (x,y) using func
-bool Map::BlockIterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func)
+bool blockmap_t::IterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func)
 {
-  validcount++; // used by BlockLinesIterator to make sure we only process a line once
+  validcount++; // used by LinesIterator to make sure we only process a line once
   tmb.Set(x, y, radius);
 
-  int xl, xh, yl, yh, bx, by;
-
   // check lines within box
-  xl = bmap.BlockX(tmb[BOXLEFT]);
-  xh = bmap.BlockX(tmb[BOXRIGHT]);
-  yl = bmap.BlockY(tmb[BOXBOTTOM]);
-  yh = bmap.BlockY(tmb[BOXTOP]);
+  int xl = max(0, BlockX(tmb[BOXLEFT]));
+  int xh = min(BlockX(tmb[BOXRIGHT]), width-1);
+  int yl = max(0, BlockY(tmb[BOXBOTTOM]));
+  int yh = min(BlockY(tmb[BOXTOP]), height-1);
 
-  for (bx=xl; bx<=xh; bx++)
-    for (by=yl; by<=yh; by++)
-      if (!BlockLinesIterator(bx, by, func))
+  for (int bx=xl; bx<=xh; bx++)
+    for (int by=yl; by<=yh; by++)
+      if (!LinesIterator(bx, by, func))
 	return false;
 
   return true;
@@ -134,21 +133,19 @@ static fixed_t tmx, tmy; // temporary tmthing position, used by some thing PIT_*
 
 
 // iterates things around (x,y) using func
-bool Map::BlockIterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func)
+bool blockmap_t::IterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func)
 {
-  int xl,xh,yl,yh,bx,by;
-
   tmx = x;
   tmy = y;
 
-  xl = bmap.BlockX(x - radius);
-  xh = bmap.BlockX(x + radius);
-  yl = bmap.BlockY(y - radius);
-  yh = bmap.BlockY(y + radius);
+  int xl = max(0, BlockX(x - radius));
+  int xh = min(BlockX(x + radius), width-1);
+  int yl = max(0, BlockY(y - radius));
+  int yh = min(BlockY(y + radius), height-1);
 
-  for (bx=xl ; bx<=xh ; bx++)
-    for (by=yl ; by<=yh ; by++)
-      if (!BlockThingsIterator(bx, by, func))
+  for (int bx=xl; bx<=xh; bx++)
+    for (int by=yl; by<=yh; by++)
+      if (!ThingsIterator(bx, by, func))
 	return false;
 
   return true;
@@ -386,13 +383,7 @@ void Actor::UnsetPosition(bool clear_touching_sectorlist)
       if (bprev)
 	bprev->bnext = bnext;
       else
-        {
-	  int blockx = mp->bmap.BlockX(pos.x);
-	  int blocky = mp->bmap.BlockY(pos.y);
-
-	  if (blockx>=0 && blockx < mp->bmap.width && blocky>=0 && blocky < mp->bmap.height)
-	    mp->blocklinks[blocky * mp->bmap.width + blockx] = bnext;
-        }
+	mp->blockmap->Replace(pos.x, pos.y, bnext);
 
       bprev = bnext = NULL;
     }
@@ -443,34 +434,13 @@ void Actor::SetPosition()
       mp->CreateSecNodeList(this, pos.x, pos.y);
     }
 
-  int blockx, blocky;
-  Actor **link;
-
-  // link into blockmap
-  if (! (flags & MF_NOBLOCKMAP))
+  // Link into blockmap. Inert things don't need to be in the blockmap.
+  if (!(flags & MF_NOBLOCKMAP))
     {
-      // inert things don't need to be in blockmap
-      blockx = mp->bmap.BlockX(pos.x);
-      blocky = mp->bmap.BlockY(pos.y);
-
-      if (blockx>=0
-	  && blockx < mp->bmap.width
-	  && blocky>=0
-	  && blocky < mp->bmap.height)
-        {
-	  link = &mp->blocklinks[blocky * mp->bmap.width + blockx];
-	  bprev = NULL;
-	  bnext = *link;
-	  if (*link)
-	    (*link)->bprev = this;
-
-	  *link = this;
-        }
-      else
-        {
-	  // thing is off the map
-	  bnext = bprev = NULL;
-        }
+      bprev = NULL;
+      bnext = mp->blockmap->Replace(pos.x, pos.y, this);
+      if (bnext)
+	bnext->bprev = this;
     }
 }
 
@@ -719,7 +689,7 @@ bool Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
       PosCheck.op.lowfloor = PosCheck.op.bottom; // necessary if no lines are encountered...
 
       // check lines
-      if (!(flags & MF_NOCLIPLINE) && !mp->BlockIterateLinesRadius(p.x, p.y, radius, PIT_CheckLine))
+      if (!(flags & MF_NOCLIPLINE) && !mp->blockmap->IterateLinesRadius(p.x, p.y, radius, PIT_CheckLine))
 	ret = false;
     }
 
@@ -735,7 +705,7 @@ bool Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
       // The bounding box is extended by MAXRADIUS because Actors are grouped into mapblocks
       // based on their origin point, and can overlap into adjacent blocks by up to MAXRADIUS units.
       if (ret && // early out
-	  !(flags & MF_NOCLIPTHING) && !mp->BlockIterateThingsRadius(p.x, p.y, radius + MAXRADIUS, PIT_CheckThing))
+	  !(flags & MF_NOCLIPTHING) && !mp->blockmap->IterateThingsRadius(p.x, p.y, radius + MAXRADIUS, PIT_CheckThing))
 	ret = false;
     }
 
@@ -907,13 +877,13 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
 
   // find bestslideline and -frac
   corner.x = leadx; corner.y = leady;
-  mp->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
+  mp->blockmap->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
 
   corner.x = trailx; corner.y = leady;
-  mp->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
+  mp->blockmap->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
 
   corner.x = leadx; corner.y = traily;
-  mp->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
+  mp->blockmap->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_SlideTraverse);
 
   // move up to the wall
   if (bestslidefrac == 2)
@@ -1027,7 +997,7 @@ void Actor::BounceWall(fixed_t nx, fixed_t ny)
   bestslideline = NULL;
 
   corner.x = leadx; corner.y = leady;
-  mp->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_BounceTraverse);
+  mp->blockmap->PathTraverse(corner, corner + delta, PT_ADDLINES, PTR_BounceTraverse);
 
   if (!bestslideline)
     return;
@@ -1277,7 +1247,7 @@ Actor *Actor::AimLineAttack(angle_t ang, float distance, float& sinpitch)
   fixed_t temp = distance * Cos(pitch); // XY length
   vec_t<fixed_t> delta(temp * Cos(ang), temp * Sin(ang), distance * aimsine);
 
-  mp->PathTraverse(s, s+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_AimTraverse);
+  mp->blockmap->PathTraverse(s, s+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_AimTraverse);
 
   // found a target?
   sinpitch = trace.sin_pitch; // unchanged if no target was found
@@ -1326,7 +1296,7 @@ static bool PTR_LineTrace(intercept_t *in)
   // we need the right Map * from somewhere.
   Map *m = trace.mp;
 
-  // NOTE: The Map::PathTraverse tracing system works strictly in the XY plane using blockmap.
+  // NOTE: The blockmap_t::PathTraverse tracing system works strictly in the XY plane.
   // Hence a Z-plane (floor, ceiling, fake floor) may actually intercept the trace
   // BEFORE it reaches its next designated intercept_t.
 
@@ -1529,7 +1499,8 @@ Actor *Actor::LineTrace(angle_t ang, float distance, float sine, bool inter)
   // end point
   vec_t<fixed_t> delta(temp * Cos(ang), temp * Sin(ang), fixed_t(sine*distance));
 
-  mp->PathTraverse(s, s+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_LineTrace);
+  trace.mp = mp; // HACK: PTR_LineTrace needs a Map reference
+  mp->blockmap->PathTraverse(s, s+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_LineTrace);
 
   return target_actor;
 }
@@ -1619,7 +1590,7 @@ void Map::SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixe
 
       vec_t<fixed_t> delta(distance * Cos(anglesplat), distance * Sin(anglesplat), 0);
 
-      PathTraverse(r, r+delta, PT_ADDLINES, PTR_BloodTraverse);
+      blockmap->PathTraverse(r, r+delta, PT_ADDLINES, PTR_BloodTraverse);
     }
 
 #ifdef FLOORSPLATS
@@ -1690,7 +1661,7 @@ void PlayerPawn::UseLines()
 
   vec_t<fixed_t> delta(USERANGE * Cos(yaw), USERANGE * Sin(yaw), 0);
 
-  mp->PathTraverse(pos, pos+delta, PT_ADDLINES, PTR_UseTraverse);
+  mp->blockmap->PathTraverse(pos, pos+delta, PT_ADDLINES, PTR_UseTraverse);
 }
 
 
@@ -1762,7 +1733,7 @@ bool PlayerPawn::UsePuzzleItem(int type)
 
   vec_t<fixed_t> delta(USERANGE * Cos(yaw), USERANGE * Sin(yaw), 0);
 
-  mp->PathTraverse(pos, pos+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_PuzzleItemTraverse);
+  mp->blockmap->PathTraverse(pos, pos+delta, PT_ADDLINES | PT_ADDTHINGS, PTR_PuzzleItemTraverse);
   return PuzzleActivated;
 }
 
@@ -1863,7 +1834,7 @@ void Actor::RadiusAttack(Actor *culprit, int damage, fixed_t rad, int dtype, boo
   Bomb.dtype = dtype;
   Bomb.damage_owner = downer;
 
-  mp->BlockIterateThingsRadius(pos.x, pos.y, Bomb.radius + MAXRADIUS, PIT_RadiusAttack);
+  mp->blockmap->IterateThingsRadius(pos.x, pos.y, Bomb.radius + MAXRADIUS, PIT_RadiusAttack);
 }
 
 
@@ -2137,7 +2108,6 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
   // represent the sectors the Thing has vacated.
 
   msecnode_t *node = sector_list = thing->touching_sectorlist;
-  
   while (node)
     {
       node->m_thing = NULL;
@@ -2146,7 +2116,7 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 
   tmthing = thing;
 
-  BlockIterateLinesRadius(x, y, tmthing->radius, PIT_GetSectors);
+  blockmap->IterateLinesRadius(x, y, tmthing->radius, PIT_GetSectors);
 
   // Add the sector of the (x,y) point to sector_list.
 
@@ -2224,7 +2194,7 @@ bool Actor::TeleportMove(const vec_t<fixed_t> &p)
     {
       Actor *a = PosCheck.thingshit[i];
       if (a)
-	a->Damage(tmthing, tmthing, 10000, dt_telefrag | dt_always); // 'frag it
+	a->Damage(this, this, 10000, dt_telefrag | dt_always); // 'frag it
     }
 
   // the move is ok, so link the thing into its new position
@@ -2271,7 +2241,7 @@ void P_ThrustSpike(Actor *actor)
 {
   tmthing = actor;
   // stomp on any things contacted
-  actor->mp->BlockIterateThingsRadius(actor->pos.x, actor->pos.y, actor->radius+MAXRADIUS, PIT_ThrustStompThing);
+  actor->mp->blockmap->IterateThingsRadius(actor->pos.x, actor->pos.y, actor->radius+MAXRADIUS, PIT_ThrustStompThing);
 }
 
 

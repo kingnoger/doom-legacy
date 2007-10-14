@@ -25,6 +25,7 @@
 
 #include "g_actor.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 
 #include "p_spec.h"
 #include "p_maputl.h"
@@ -601,7 +602,7 @@ bool Map::PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
   if (!po)
     I_Error("PO_MovePolyobj:  Invalid polyobj.\n");
 
-  UnLinkPolyobj(po);
+  blockmap->PO_UnLink(po);
 
   seg_t **segList = po->segs;
   bool blocked = false;
@@ -631,7 +632,7 @@ bool Map::PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
   segList = po->segs;
   for (count = po->numsegs; count; count--, segList++)
     {
-      if (PO_CheckBlockingActors(*segList, po))
+      if (blockmap->PO_CheckBlockingActors(*segList, po))
 	{
 	  blocked = true;
 	}
@@ -661,12 +662,12 @@ bool Map::PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y)
 	    }
 	  segList++;
 	}
-      LinkPolyobj(po);
+      blockmap->PO_Link(po);
       return false;
     }
   po->spawnspot.x += x;
   po->spawnspot.y += y;
-  LinkPolyobj(po);
+  blockmap->PO_Link(po);
   return true;
 }
 
@@ -701,7 +702,7 @@ bool Map::PO_RotatePolyobj(polyobj_t *po, angle_t angle)
   if (!po)
     I_Error("PO_RotatePolyobj:  Invalid polyobj.\n");
 
-  UnLinkPolyobj(po);
+  blockmap->PO_UnLink(po);
 
   seg_t **segList = po->segs;
   vertex_t *originalPts = po->originalPts;
@@ -723,7 +724,7 @@ bool Map::PO_RotatePolyobj(polyobj_t *po, angle_t angle)
   validcount++;
   for (count = po->numsegs; count; count--, segList++)
     {
-      if (PO_CheckBlockingActors(*segList, po))
+      if (blockmap->PO_CheckBlockingActors(*segList, po))
 	{
 	  blocked = true;
 	}
@@ -754,29 +755,29 @@ bool Map::PO_RotatePolyobj(polyobj_t *po, angle_t angle)
 	    }
 	  (*segList)->angle -= angle;
 	}
-      LinkPolyobj(po);
+      blockmap->PO_Link(po);
       return false;
     }
   po->angle += angle;
-  LinkPolyobj(po);
+  blockmap->PO_Link(po);
   return true;
 }
 
 
 //==========================================================================
 
-void Map::UnLinkPolyobj(polyobj_t *po)
+void blockmap_t::PO_UnLink(polyobj_t *po)
 {
   // remove the polyobj from each blockmap section
   for (int j = po->bbox[BOXBOTTOM]; j <= po->bbox[BOXTOP]; j++)
     {
-      int index = j*bmap.width;
+      int index = j*width;
       for (int i = po->bbox[BOXLEFT]; i <= po->bbox[BOXRIGHT]; i++)
 	{
-	  if (i >= 0 && i < bmap.width && j >= 0 && j < bmap.height)
+	  if (i >= 0 && i < width && j >= 0 && j < height)
 	    {
-	      polyblock_t *link = PolyBlockMap[index+i];
-	      while(link != NULL && link->polyobj != po)
+	      polyblock_t *link = cells[index+i].polys;
+	      while (link != NULL && link->polyobj != po)
 		link = link->next;
 
 	      if (link == NULL)
@@ -789,47 +790,34 @@ void Map::UnLinkPolyobj(polyobj_t *po)
 }
 
 
-void Map::LinkPolyobj(polyobj_t *po)
+void blockmap_t::PO_Link(polyobj_t *po)
 {
-  fixed_t leftX, rightX, topY, bottomY;
-  int i, j;
-
   // calculate the polyobj bbox
+  bbox_t bbox;
+  bbox.Clear();
+
   seg_t **tempSeg = po->segs;
-  rightX = leftX = (*tempSeg)->v1->x;
-  topY = bottomY = (*tempSeg)->v1->y;
+  for (int i = 0; i < po->numsegs; i++)
+    bbox.Add(tempSeg[i]->v1->x, tempSeg[i]->v1->y);
 
-  for (i = 0; i < po->numsegs; i++, tempSeg++)
-    {
-      if ((*tempSeg)->v1->x > rightX)
-	rightX = (*tempSeg)->v1->x;
+  po->bbox[BOXRIGHT]  = BlockX(bbox[BOXRIGHT]);
+  po->bbox[BOXLEFT]   = BlockX(bbox[BOXLEFT]);
+  po->bbox[BOXTOP]    = BlockY(bbox[BOXTOP]);
+  po->bbox[BOXBOTTOM] = BlockY(bbox[BOXBOTTOM]);
 
-      if ((*tempSeg)->v1->x < leftX)
-	leftX = (*tempSeg)->v1->x;
-
-      if ((*tempSeg)->v1->y > topY)
-	topY = (*tempSeg)->v1->y;
-
-      if ((*tempSeg)->v1->y < bottomY)
-	bottomY = (*tempSeg)->v1->y;
-    }
-  po->bbox[BOXRIGHT]  = bmap.BlockX(rightX);
-  po->bbox[BOXLEFT]   = bmap.BlockX(leftX);
-  po->bbox[BOXTOP]    = bmap.BlockY(topY);
-  po->bbox[BOXBOTTOM] = bmap.BlockY(bottomY);
   // add the polyobj to each blockmap section
-  for (j = po->bbox[BOXBOTTOM]*bmap.width; j <= po->bbox[BOXTOP]*bmap.width; j += bmap.width)
+  for (int j = po->bbox[BOXBOTTOM]*width; j <= po->bbox[BOXTOP]*width; j += width)
     {
-      for (i = po->bbox[BOXLEFT]; i <= po->bbox[BOXRIGHT]; i++)
+      for (int i = po->bbox[BOXLEFT]; i <= po->bbox[BOXRIGHT]; i++)
 	{
-	  if (i >= 0 && i < bmap.width && j >= 0 && j < bmap.height*bmap.width)
+	  if (i >= 0 && i < width && j >= 0 && j < height*width)
 	    {
-	      polyblock_t **link = &PolyBlockMap[j+i];
+	      polyblock_t **link = &cells[j+i].polys;
 	      polyblock_t *tempLink;
 
 	      if (!(*link))
 		{ // Create a new link at the current block cell
-		  *link = (polyblock_t *)Z_Malloc(sizeof(polyblock_t), PU_LEVEL, 0);
+		  *link = static_cast<polyblock_t*>(Z_Malloc(sizeof(polyblock_t), PU_LEVEL, 0));
 		  (*link)->next = NULL;
 		  (*link)->prev = NULL;
 		  (*link)->polyobj = po;
@@ -838,7 +826,7 @@ void Map::LinkPolyobj(polyobj_t *po)
 	      else
 		{
 		  tempLink = *link;
-		  while (tempLink->next != NULL && tempLink->polyobj != NULL)
+		  while (tempLink->next && tempLink->polyobj)
 		    tempLink = tempLink->next;
 		}
 	      if (tempLink->polyobj == NULL)
@@ -848,7 +836,7 @@ void Map::LinkPolyobj(polyobj_t *po)
 		}
 	      else
 		{
-		  tempLink->next = (polyblock_t *)Z_Malloc(sizeof(polyblock_t), PU_LEVEL, 0);
+		  tempLink->next = static_cast<polyblock_t*>(Z_Malloc(sizeof(polyblock_t), PU_LEVEL, 0));
 		  tempLink->next->next = NULL;
 		  tempLink->next->prev = tempLink;
 		  tempLink->next->polyobj = po;
@@ -861,34 +849,34 @@ void Map::LinkPolyobj(polyobj_t *po)
 
 
 
-bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
+bool blockmap_t::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 {
   Actor *mobj;
   int i, j;
 
   line_t *ld = seg->linedef;
 
-  int top =    bmap.BlockY(ld->bbox.box[BOXTOP] + MAXRADIUS);
-  int bottom = bmap.BlockY(ld->bbox.box[BOXBOTTOM] - MAXRADIUS);
-  int left =   bmap.BlockX(ld->bbox.box[BOXLEFT] - MAXRADIUS);
-  int right =  bmap.BlockX(ld->bbox.box[BOXRIGHT] + MAXRADIUS);
+  int top =    BlockY(ld->bbox[BOXTOP] + MAXRADIUS);
+  int bottom = BlockY(ld->bbox[BOXBOTTOM] - MAXRADIUS);
+  int left =   BlockX(ld->bbox[BOXLEFT] - MAXRADIUS);
+  int right =  BlockX(ld->bbox[BOXRIGHT] + MAXRADIUS);
 
   bool blocked = false;
 
   bottom = bottom < 0 ? 0 : bottom;
-  bottom = bottom >= bmap.height ? bmap.height-1 : bottom;
+  bottom = bottom >= height ? height-1 : bottom;
   top = top < 0 ? 0 : top;
-  top = top >= bmap.height  ? bmap.height-1 : top;
+  top = top >= height  ? height-1 : top;
   left = left < 0 ? 0 : left;
-  left = left >= bmap.width ? bmap.width-1 : left;
+  left = left >= width ? width-1 : left;
   right = right < 0 ? 0 : right;
-  right = right >= bmap.width ?  bmap.width-1 : right;
+  right = right >= width ?  width-1 : right;
 
-  for (j = bottom*bmap.width; j <= top*bmap.width; j += bmap.width)
+  for (j = bottom*width; j <= top*width; j += width)
     {
       for (i = left; i <= right; i++)
 	{
-	  for (mobj = blocklinks[j+i]; mobj; mobj = mobj->bnext)
+	  for (mobj = cells[j+i].actors; mobj; mobj = mobj->bnext)
 	    {
 	      if (mobj->flags & MF_SOLID)
 		{
@@ -914,15 +902,15 @@ bool Map::PO_CheckBlockingActors(seg_t *seg, polyobj_t *po)
 
 void Map::InitPolyBlockMap()
 {
-  fixed_t leftX, rightX, topY, bottomY;
-
   for (int i = 0; i < NumPolyobjs; i++)
     {
-      LinkPolyobj(&polyobjs[i]);
+      blockmap->PO_Link(&polyobjs[i]);
 
+      /*
       // calculate a rough area
       // right now, working like shit...gotta fix this...
       seg_t **segList = polyobjs[i].segs;
+      fixed_t leftX, rightX, topY, bottomY;
       leftX = rightX = (*segList)->v1->x;
       topY = bottomY = (*segList)->v1->y;
       for (int j = 0; j < polyobjs[i].numsegs; j++, segList++)
@@ -944,6 +932,7 @@ void Map::InitPolyBlockMap()
 	      topY = (*segList)->v1->y;
 	    }
 	}
+      */
       //int area = ((rightX - leftX)*(topY - bottomY)).floor();
 
       //    fprintf(stdaux, "Area of Polyobj[%d]: %d\n", polyobjs[i].tag, area);

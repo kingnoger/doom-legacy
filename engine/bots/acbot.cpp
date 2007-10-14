@@ -33,6 +33,7 @@
 #include "g_game.h"
 #include "g_player.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_pawn.h"
 
 #include "d_items.h"
@@ -157,7 +158,7 @@ bool ACBot::QuickReachable(Actor *g)
 	  return false;
       }
 
-  return mp->PathTraverse(pawn->pos, goal->pos, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->blockmap->PathTraverse(pawn->pos, goal->pos, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 
@@ -171,7 +172,7 @@ bool ACBot::QuickReachable(fixed_t x, fixed_t y)
   last_floorz = pawn->Feet(); // 3d floors...
   vec_t<fixed_t> r(x, y, 0);
 
-  return mp->PathTraverse(pawn->pos, r, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
+  return mp->blockmap->PathTraverse(pawn->pos, r, PT_ADDLINES|PT_ADDTHINGS, PTR_QuickReachable);
 }
 
 

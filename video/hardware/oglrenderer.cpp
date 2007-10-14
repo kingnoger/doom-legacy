@@ -882,6 +882,15 @@ void OGLRenderer::RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material 
       }
     glEnd();
 
+    glColor3f(0.8, 0.0, 0.0);
+    glBegin(GL_POINTS);
+    for (int curseg = loopstart; curseg != loopend; curseg += loopinc)
+      {
+	vertex_t *v = mp->segs[curseg].v1;
+	glVertex3f(v->x.Float(), v->y.Float(), height);
+      }
+    glEnd();
+
     glEnable(GL_TEXTURE_2D);
     glColor4f(1.0, 1.0, 1.0, 1.0);
   }

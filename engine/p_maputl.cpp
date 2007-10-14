@@ -30,6 +30,7 @@
 #include "doomdef.h"
 #include "g_actor.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 
 #include "m_bbox.h"
 #include "r_poly.h"
@@ -534,44 +535,35 @@ line_opening_t *line_opening_t::Get(line_t *line, Actor *thing)
   If the function returns false, exit with false without checking anything else.
  
   The validcount flags are used to avoid checking lines that are marked in multiple mapblocks,
-  so increment validcount before the first call to BlockLinesIterator, then make one or more calls to it.
+  so increment validcount before the first call to LinesIterator, then make one or more calls to it.
 */
-bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
+bool blockmap_t::LinesIterator(int x, int y, line_iterator_t func)
 {
-  int i;
+  blockmapcell_t *cell = &cells[y*width + x];
 
-  if (x<0 || y<0 || x>=bmap.width || y>=bmap.height)
-    return true;
-
-  // first iterate through polyblockmap, then normal blockmap
-  int cell = y*bmap.width + x;
-
-  polyblock_t *polyLink = PolyBlockMap[cell];
-
-  while (polyLink)
+  // first iterate through polyblockmap
+  for (polyblock_t *p = cell->polys; p; p = p->next)
     {
-      if (polyLink->polyobj)
+      if (p->polyobj && p->polyobj->validcount != validcount)
 	{
-	  if (polyLink->polyobj->validcount != validcount)
+	  p->polyobj->validcount = validcount;
+	  seg_t **tempSeg = p->polyobj->segs;
+	  for (int i=0; i < p->polyobj->numsegs; i++, tempSeg++)
 	    {
-	      polyLink->polyobj->validcount = validcount;
-	      seg_t **tempSeg = polyLink->polyobj->segs;
-	      for (i=0; i < polyLink->polyobj->numsegs; i++, tempSeg++)
-		{
-		  if ((*tempSeg)->linedef->validcount == validcount)
-		    continue;
-
-		  (*tempSeg)->linedef->validcount = validcount;
-		  if (!func((*tempSeg)->linedef))
-		    return false;
-		}
+	      if ((*tempSeg)->linedef->validcount == validcount)
+		continue;
+	      
+	      (*tempSeg)->linedef->validcount = validcount;
+	      if (!func((*tempSeg)->linedef))
+		return false;
 	    }
 	}
-      polyLink = polyLink->next;
     }
 
+  line_t *lines = parent_map->lines;
+
   // iterate through the blocklist
-  for (Uint16 *p = bmap.index[cell]; *p != MAPBLOCK_END; p++) // index skips the initial zero marker
+  for (Uint16 *p = cell->blocklist; *p != MAPBLOCK_END; p++) // index skips the initial zero marker
     {
       line_t *ld = &lines[*p];
 
@@ -593,20 +585,13 @@ bool Map::BlockLinesIterator(int x, int y, line_iterator_t func)
   For each Actor in the given mapblock, call the passed \ref g_pit PIT function.
   If the function returns false, exit with false without checking anything else.
 */
-bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
+bool blockmap_t::ThingsIterator(int x, int y, thing_iterator_t func)
 {
-  Actor *mobj;
+  // iterate through the actor list
+  for (Actor *mobj = cells[y*width + x].actors; mobj; mobj = mobj->bnext)
+    if (!func(mobj))
+      return false;
 
-  if (x<0 || y<0 || x>=bmap.width || y>=bmap.height)
-    return true;
-
-  //added:15-02-98: check interaction (ligne de tir, ...)
-  //                avec les objets dans le blocmap
-  for (mobj = blocklinks[y*bmap.width+x]; mobj; mobj = mobj->bnext)
-    {
-      if (!func(mobj))
-	return false;
-    }
   return true;
 }
 
@@ -616,123 +601,76 @@ bool Map::BlockThingsIterator(int x, int y, thing_iterator_t func)
 /// \ingroup g_iterators
 /*!
   \param[in] distance is in MAPBLOCKUNITS
+  \return true if an iterator returns false (which immediately stops the iteration)
 */
-Actor *Map::RoughBlockSearch(Actor *center, Actor *master, int distance, int flags)
+bool blockmap_t::RoughBlockSearch(Actor *center, int distance, thing_iterator_t func)
 {
-  // TODO this is pretty ugly. One that searches a circular area would be better...
-  int count;
-  Actor *target;
+  extern Actor *blocksearch_self;
+  blocksearch_self = center; // for the iterators
 
-  int startX = bmap.BlockX(center->pos.x);
-  int startY = bmap.BlockY(center->pos.y);
-	
-  if (startX >= 0 && startX < bmap.width && startY >= 0 && startY < bmap.height)
+  // searches from (x,y) outwards in increasing-radius mapblock squares
+  int startX = BlockX(center->pos.x);
+  int startY = BlockY(center->pos.y);
+
+  if (startX >= 0 && startX < width && startY >= 0 && startY < height)
+    if (!ThingsIterator(startX, startY, func))
+      return true; // found a target right away
+
+  for (int count = 1; count <= distance; count++)
     {
-      if ((target = RoughBlockCheck(center, master, startY*bmap.width+startX, flags)))
-	{ // found a target right away
-	  return target;
-	}
-    }
-
-  for (count = 1; count <= distance; count++)
-    {
-      int blockX = startX-count;
-      int blockY = startY-count;
-
-      if (blockY < 0)
-	blockY = 0;
-      else if (blockY >= bmap.height)
-	blockY = bmap.height-1;
-
-      if (blockX < 0)
-	blockX = 0;
-      else if (blockX >= bmap.width)
-	blockX = bmap.width-1;
-
-      int blockIndex = blockY*bmap.width+blockX;
-      int firstStop = startX+count;
-      if (firstStop < 0)
+      int xl = startX - count;
+      if (xl < 0)
+	xl = 0;
+      else if (xl >= width)
 	continue;
 
-      if (firstStop >= bmap.width)
-	firstStop = bmap.width-1;
-
-      int secondStop = startY+count;
-      if (secondStop < 0)
+      int yl = startY - count;
+      if (yl < 0)
+	yl = 0;
+      else if (yl >= height)
 	continue;
 
-      if (secondStop >= bmap.height)
-	secondStop = bmap.height-1;
+      int xh = startX + count;
+      if (xh < 0)
+	continue;
+      if (xh >= width)
+	xh = width-1;
 
-      int thirdStop = secondStop*bmap.width+blockX;
-      secondStop = secondStop*bmap.width+firstStop;
-      firstStop += blockY*bmap.width;
-      int finalStop = blockIndex;		
+      int yh = startY + count;
+      if (yh < 0)
+	continue;
+      if (yh >= height)
+	yh = height-1;
 
-      // Trace the first block section (along the top)
-      for ( ; blockIndex <= firstStop; blockIndex++)
-	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
-	  return target;
+      // y 3 2
+      // ^  s
+      // | b 1
+      // +-->x
 
-      // Trace the second block section (right edge)
-      for (blockIndex--; blockIndex <= secondStop; blockIndex += bmap.width)
-	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
-	  return target;
+      int cx = xl;
+      int cy = yl;
 
-      // Trace the third block section (bottom edge)
-      for (blockIndex -= bmap.width; blockIndex >= thirdStop; blockIndex--)
-	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
-	  return target;
+      // Trace the first block section (low y)
+      for ( ; cx <= xh; cx++)
+	if (!ThingsIterator(cx, cy, func))
+	  return true;
 
-      // Trace the final block section (left edge)
-      for (blockIndex++; blockIndex > finalStop; blockIndex -= bmap.width)
-	if ((target = RoughBlockCheck(center, master, blockIndex, flags)))
-	  return target;
+      // Trace the second block section (high x)
+      for (cx--, cy++; cy <= yh; cy++)
+	if (!ThingsIterator(cx, cy, func))
+	  return true;
+
+      // Trace the third block section (high y)
+      for (cy--, cx--; cx >= xl; cx--)
+	if (!ThingsIterator(cx, cy, func))
+	  return true;
+
+      // Trace the final block section (low x)
+      for (cx++, cy--; cy >= yl; cy--)
+	if (!ThingsIterator(cx, cy, func))
+	  return true;
     }
-  return NULL;	
-}
-
-
-/// \brief Searches a single blockmap cell for Actors.
-/// \ingroup g_iterators
-/*!
-  TODO rewrite using blockmap iterators (-> PIT_...)
-*/
-Actor *Map::RoughBlockCheck(Actor *center, Actor *master, int index, int flags)
-{
-  enum { friendly = 1, bloodsc = 2 }; // you could add more
-
-  Actor *link;
-  for (link = blocklinks[index]; link; link = link->bnext)
-    if ((link->flags & MF_SHOOTABLE) &&
-	(link->flags & MF_VALIDTARGET) && // meaning "monster or player"
-	!(link->flags2 & MF2_DORMANT))
-      {
-	if (link == master)
-	  continue; // don't target master
-
-	if ((flags & friendly) &&
-	    (link->owner == master)) // or his little helpers TODO teammates
-	  continue;
-
-	if (flags & bloodsc)
-	  {
-	    if (CheckSight(center, link))
-	      {
-		angle_t angle = R_PointToAngle2(master->pos.x, master->pos.y, link->pos.x, link->pos.y) - master->yaw;
-		angle >>= 24;
-		if (angle>226 || angle<30)
-		  return link;
-	      }
-	  }
-	else
-	  {
-	    if (CheckSight(center, link))
-	      return link;
-	  }
-      }
-
-  return NULL;
+  return false; // no target found
 }
 
 
@@ -934,9 +872,8 @@ bool trace_t::TraverseIntercepts(traverser_t func, float maxfrac)
 
 
 
-void trace_t::Init(Map *m, const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
+void trace_t::Init(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
 {
-  mp = m;
   start = v1;
   delta = v2-v1;
 
@@ -966,7 +903,7 @@ void trace_t::Init(Map *m, const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2)
   adding line/thing intercepts and then calling the traverser function for each intercept.
   \return true if the traverser function returns true for all lines
 */
-bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int flags, traverser_t trav)
+bool blockmap_t::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int flags, traverser_t trav)
 {
   // small HACK: make local copies so we can change them
   vec_t<fixed_t> p1(v1);
@@ -978,22 +915,23 @@ bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int f
 
 #define MAPBLOCKSIZE (MAPBLOCKUNITS * fixed_t::UNIT)
 
-  if (((p1.x-bmap.orgx).value() & (MAPBLOCKSIZE-1)) == 0)
+  // TODO why is this needed?
+  if (((p1.x-orgx).value() & (MAPBLOCKSIZE-1)) == 0)
     p1.x += 1; // don't side exactly on a line
 
-  if (((p1.y-bmap.orgy).value() & (MAPBLOCKSIZE-1)) == 0)
+  if (((p1.y-orgy).value() & (MAPBLOCKSIZE-1)) == 0)
     p1.y += 1; // don't side exactly on a line
 
   // set up the trace struct
-  trace.Init(this, p1, p2);
+  trace.Init(p1, p2);
 
-  p1.x -= bmap.orgx;
-  p1.y -= bmap.orgy;
+  p1.x -= orgx;
+  p1.y -= orgy;
   int xt1 = p1.x.floor() >> MAPBLOCKBITS;
   int yt1 = p1.y.floor() >> MAPBLOCKBITS;
 
-  p2.x -= bmap.orgx;
-  p2.y -= bmap.orgy;
+  p2.x -= orgx;
+  p2.y -= orgy;
   int xt2 = p2.x.floor() >> MAPBLOCKBITS;
   int yt2 = p2.y.floor() >> MAPBLOCKBITS;
 
@@ -1051,15 +989,18 @@ bool Map::PathTraverse(const vec_t<fixed_t>& v1, const vec_t<fixed_t>& v2, int f
 
   for (int count = 0 ; count < 64 ; count++)
     {
+      if (mapx < 0 || mapx >= width || mapy < 0 || mapy >= height)
+	continue; // outside the blockmap, skip
+
       if (flags & PT_ADDLINES)
         {
-	  if (!BlockLinesIterator (mapx, mapy, PIT_AddLineIntercepts))
+	  if (!LinesIterator(mapx, mapy, PIT_AddLineIntercepts))
 	    return false;   // early out
         }
 
       if (flags & PT_ADDTHINGS)
         {
-	  if (!BlockThingsIterator (mapx, mapy, PIT_AddThingIntercepts))
+	  if (!ThingsIterator(mapx, mapy, PIT_AddThingIntercepts))
 	    return false;   // early out
         }
 

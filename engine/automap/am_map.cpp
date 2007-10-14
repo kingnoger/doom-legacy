@@ -31,6 +31,7 @@
 #include "g_input.h"
 #include "g_pawn.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_mapinfo.h"
 
 #include "hud.h"
@@ -1088,8 +1089,9 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of vertical gridlines
   start = m_x;
-  if ((start - mp->bmap.orgx) % MAPBLOCKUNITS != 0)
-    start += MAPBLOCKUNITS - ((start - mp->bmap.orgx) % MAPBLOCKUNITS);
+  fixed_t temp = mp->blockmap->FracX(start);
+  if (temp != 0)
+    start += MAPBLOCKUNITS - temp;
   end = m_x + m_w;
 
   // draw vertical gridlines
@@ -1104,8 +1106,9 @@ void AutoMap::drawGrid(int color)
 
   // Figure out start of horizontal gridlines
   start = m_y;
-  if ((start - mp->bmap.orgy) % MAPBLOCKUNITS != 0)
-    start += MAPBLOCKUNITS - ((start - mp->bmap.orgy) % MAPBLOCKUNITS);
+  temp = mp->blockmap->FracY(start);
+  if (temp != 0)
+    start += MAPBLOCKUNITS - temp;
   end = m_y + m_h;
 
   // draw horizontal gridlines

@@ -37,6 +37,7 @@
 #include "g_player.h"
 #include "g_pawn.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_mapinfo.h"
 #include "g_level.h"
 #include "g_decorate.h"
@@ -833,25 +834,130 @@ void Map::LoadSideDefs2(int lump)
 }
 
 
-void Map::GenerateBlockMap()
+
+blockmap_t::~blockmap_t()
 {
-  bmap.orgx = root_bbox[BOXLEFT];
-  bmap.orgy = root_bbox[BOXBOTTOM];
-  bmap.width = bmap.BlockX(root_bbox[BOXRIGHT]) + 1;
-  bmap.height = bmap.BlockY(root_bbox[BOXTOP]) + 1;
+  Z_Free(cells);
+  Z_Free(lists);
+}
 
-  int cells = bmap.width * bmap.height;
-  CONS_Printf("Generating blockmap (%dx%d blocks)...", bmap.width, bmap.height);
+// Load a blockmap from a lump.
+blockmap_t::blockmap_t(int lump)
+{
+  lists = NULL;
+  cells = NULL;
 
-  vector<Uint16> xxx[cells];
+  int size = fc.LumpLength(lump)/2;
 
-  for (int i=0; i<numlines; i++)
+  Uint16 *blockmap_lump = static_cast<Uint16*>(fc.CacheLumpNum(lump, PU_LEVEL));
+  Uint16 *blockmap_index = blockmap_lump + 4; // the offsets array
+
+  // Endianness: everything in blockmap is expressed in 2-byte shorts
+  for (int i=0; i < size; i++)
+    blockmap_lump[i] = SHORT(blockmap_lump[i]);
+
+  // read the header
+  blockmapheader_t *bm = reinterpret_cast<blockmapheader_t*>(blockmap_lump);
+  orgx = bm->origin_x;
+  orgy = bm->origin_y;
+  width = bm->width;
+  height = bm->height;
+
+  // init the index
+  int numcells = width * height;
+
+  // check the blockmap for errors
+  int errors = 0;
+  int first = 4 + numcells; // first possible blocklist offset (in shorts)
+  int list_size = size - first; // blocklist size
+
+  if (list_size < 2) // one empty blocklist (two shorts) is the minimal size
     {
-      line_t *li = &lines[i];
-      double x1 = (li->v1->x - bmap.orgx).Float() / MAPBLOCKUNITS;
-      double y1 = (li->v1->y - bmap.orgy).Float() / MAPBLOCKUNITS;
-      double x2 = (li->v2->x - bmap.orgx).Float() / MAPBLOCKUNITS;
-      double y2 = (li->v2->y - bmap.orgy).Float() / MAPBLOCKUNITS;
+      Z_Free(blockmap_lump);
+      CONS_Printf("Blockmap is corrupted (blocklist is too short).\n");
+      throw -1;
+    }
+
+  lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
+  memcpy(lists, &blockmap_lump[first], 2*list_size); // copy the lists
+
+  // Build a new blockmap index using pointers
+  cells = static_cast<blockmapcell_t *>(Z_Malloc(numcells * sizeof(blockmapcell_t), PU_LEVEL, 0));
+  memset(cells, 0, numcells * sizeof(blockmapcell_t));
+
+  for (int i=0; i < numcells && errors < 50; i++)
+    {
+      int offs = blockmap_index[i] - first;
+      if (offs < 0)
+	{
+	  CONS_Printf(" Invalid blocklist offset for cell %d: %d (possible offset overflow).\n",
+		      i, blockmap_index[i]);
+	  errors++;
+	  // TEST: assume that (short) offset has overflowed, fix
+	  offs += 0x10000;
+	}
+
+      if (offs >= list_size)
+	{
+	  CONS_Printf(" Cell %d blocklist offset points past the lump!\n", i);
+	  errors++;
+	  continue;
+	}
+
+      // build new blockmap index
+      cells[i].blocklist = &lists[offs+1]; // skip the zero marker
+
+      if (lists[offs] != 0x0000)
+	{
+	  CONS_Printf(" Cell %d blocklist does not start with zero!\n", i);
+	  errors++;
+	}
+
+      while (offs < list_size && lists[offs] != MAPBLOCK_END)
+	offs++;
+
+      if (offs >= list_size)
+	{
+	  CONS_Printf(" Cell %d blocklist is unterminated!\n", i);
+	  errors++;
+	  continue;
+	}
+    }
+
+  Z_Free(blockmap_lump);
+
+  if (errors)
+    {
+      Z_Free(lists); lists = NULL;
+      Z_Free(cells); cells = NULL;
+      CONS_Printf("Blockmap (%dx%d cells, %d bytes) had some errors.\n", width, height, 2*size);
+      throw -1;
+    }
+}
+
+
+// Build a new blockmap
+blockmap_t::blockmap_t(Map *mp)
+{
+  parent_map = mp;
+
+  orgx = mp->root_bbox[BOXLEFT];
+  orgy = mp->root_bbox[BOXBOTTOM];
+  width = BlockX(mp->root_bbox[BOXRIGHT]) + 1;
+  height = BlockY(mp->root_bbox[BOXTOP]) + 1;
+
+  int numcells = width * height;
+  CONS_Printf("Generating blockmap (%dx%d blocks)...", width, height);
+
+  vector<Uint16> xxx[numcells];
+
+  for (int i=0; i < mp->numlines; i++)
+    {
+      line_t *li = &mp->lines[i];
+      double x1 = (li->v1->x - orgx).Float() / MAPBLOCKUNITS;
+      double y1 = (li->v1->y - orgy).Float() / MAPBLOCKUNITS;
+      double x2 = (li->v2->x - orgx).Float() / MAPBLOCKUNITS;
+      double y2 = (li->v2->y - orgy).Float() / MAPBLOCKUNITS;
 
       double dx = x2-x1;
       double dy = y2-y1;
@@ -913,7 +1019,7 @@ void Map::GenerateBlockMap()
       for (int count = abs(bx2-bx1) + abs(by2-by1); ; count--)
 	{
 	  // store the line number
-	  xxx[by1*bmap.width + bx1].push_back(i);
+	  xxx[by1*width + bx1].push_back(i);
 
 	  if (count <= 0)
 	    break;
@@ -936,39 +1042,42 @@ void Map::GenerateBlockMap()
 
   // find out blocklist size
   int list_size = 1; // "empty block" list (only end marker)
-  for (int i=0; i<cells; i++)
+  for (int i=0; i<numcells; i++)
     {
       int temp = xxx[i].size();
       if (temp)
 	list_size += temp + 1; // line numbers + end marker
     }
 
+  lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
+
   // Build a new blockmap index using pointers
-  bmap.index = static_cast<Uint16 **>(Z_Malloc(cells * sizeof(Uint16 *), PU_LEVEL, 0));
-  bmap.lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
+  cells = static_cast<blockmapcell_t *>(Z_Malloc(numcells * sizeof(blockmapcell_t), PU_LEVEL, 0));
+  memset(cells, 0, numcells * sizeof(blockmapcell_t));
 
   int idx = 0; // next free slot
-  bmap.lists[idx++] = MAPBLOCK_END; // "empty block" list
-  for (int i=0; i<cells; i++)
+  lists[idx++] = MAPBLOCK_END; // "empty block" list
+  for (int i=0; i<numcells; i++)
     {
       int temp = xxx[i].size();
       if (!temp)
-	bmap.index[i] = &bmap.lists[0];
+	cells[i].blocklist = &lists[0];
       else
 	{
 	  // add a new blocklist
-	  bmap.index[i] = &bmap.lists[idx];
+	  cells[i].blocklist = &lists[idx];
 	  for (int k=0; k<temp; k++)
-	    bmap.lists[idx++] = xxx[i][k];
-	  bmap.lists[idx++] = MAPBLOCK_END;
+	    lists[idx++] = xxx[i][k];
+	  lists[idx++] = MAPBLOCK_END;
 	}
     }
 
   if (idx != list_size)
     I_Error("FUCK!\n");
 
-  CONS_Printf("done. %d entries, %d bytes.\n", list_size, 2*(4 + cells + list_size));
+  CONS_Printf("done. %d entries, %d bytes.\n", list_size, 2*(4 + numcells + list_size));
 }
+
 
 
 void Map::LoadBlockMap(int lump)
@@ -978,115 +1087,21 @@ void Map::LoadBlockMap(int lump)
   if (M_CheckParm("-blockmap") ||
       size < 6 || // smallest possible blockmap
       size > 0x10000+1) // largest, always fully addressable blockmap
-    GenerateBlockMap(); // blockmap lump is invalid, we must build our own
+    blockmap = new blockmap_t(this); // blockmap lump is invalid, we must build our own
   else
     {
       // use the blockmap from the wad
-      bmap.index = NULL;
-      bmap.lists = NULL;
-
-      Uint16 *blockmap_lump = static_cast<Uint16*>(fc.CacheLumpNum(lump, PU_LEVEL));
-      Uint16 *blockmap_index = blockmap_lump + 4; // the offsets array
-
-      // Endianness: everything in blockmap is expressed in 2-byte shorts
-      for (int i=0; i < size; i++)
-	blockmap_lump[i] = SHORT(blockmap_lump[i]);
-
-      // read the header
-      blockmapheader_t *bm = reinterpret_cast<blockmapheader_t*>(blockmap_lump);
-      bmap.orgx = bm->origin_x;
-      bmap.orgy = bm->origin_y;
-      bmap.width = bm->width;
-      bmap.height = bm->height;
-
-      int cells = bmap.width * bmap.height;
-      // check the blockmap for errors
-      int errors = 0;
-      int first = 4 + cells; // first possible blocklist offset (in shorts)
-      int list_size = size - first; // blocklist size
-
       try
 	{
-	  if (list_size < 2) // one empty blocklist (two shorts) is the minimal size
-	    {
-	      CONS_Printf(" Blockmap is corrupted (blocklist is too short).\n");
-	      throw -1;
-	    }
-
-	  // Build a new blockmap index using pointers
-	  bmap.index = static_cast<Uint16 **>(Z_Malloc(cells * sizeof(Uint16 *), PU_LEVEL, 0));
-	  bmap.lists = static_cast<Uint16 *>(Z_Malloc(list_size * sizeof(Uint16), PU_LEVEL, 0));
-	  memcpy(bmap.lists, &blockmap_lump[first], 2*list_size); // copy the lists
-
-	  for (int i=0; i < cells && errors < 50; i++)
-	    {
-	      int offs = blockmap_index[i] - first;
-	      if (offs < 0)
-		{
-		  CONS_Printf(" Invalid blocklist offset for cell %d: %d (possible offset overflow).\n",
-			      i, blockmap_index[i]);
-		  errors++;
-		  // TEST: assume that (short) offset has overflowed, fix
-		  offs += 0x10000;
-		}
-
-	      if (offs >= list_size)
-		{
-		  CONS_Printf(" Cell %d blocklist offset points past the lump!\n", i);
-		  errors++;
-		  continue;
-		}
-
-	      // build new blockmap index
-	      bmap.index[i] = &bmap.lists[offs+1]; // skip the zero marker
-
-	      if (bmap.lists[offs] != 0x0000)
-		{
-		  CONS_Printf(" Cell %d blocklist does not start with zero!\n", i);
-		  errors++;
-		}
-
-	      while (offs < list_size && bmap.lists[offs] != MAPBLOCK_END)
-		offs++;
-
-	      if (offs >= list_size)
-		{
-		  CONS_Printf(" Cell %d blocklist is unterminated!\n", i);
-		  errors++;
-		  continue;
-		}
-	    }
-
-	  if (errors)
-	    {
-	      CONS_Printf("Map %s: Blockmap (%dx%d cells, %d bytes) had some errors.\n",
-		      lumpname.c_str(), bmap.width, bmap.height, 2*size);
-	      throw -1;
-	    }
-
-	  Z_Free(blockmap_lump);
+	  blockmap = new blockmap_t(lump);
+	  blockmap->parent_map = this;
 	}
       catch(int i)
 	{
-	  Z_Free(blockmap_lump);
-	  if (bmap.index)
-	    Z_Free(bmap.index);
-	  if (bmap.lists)
-	    Z_Free(bmap.lists);
-
-	  GenerateBlockMap(); // blockmap lump is invalid, we must build our own
+	  CONS_Printf("Building a blockmap from scratch.\n");
+	  blockmap = new blockmap_t(this); // blockmap lump is invalid, we must build our own
 	}
     }
-  
-  int cells = bmap.width * bmap.height;
-
-  // init the mobj chains
-  blocklinks = static_cast<Actor **>(Z_Malloc(cells * sizeof(Actor *), PU_LEVEL, 0));
-  memset(blocklinks, 0, cells * sizeof(Actor *));
-
-  // init the polyblockmap
-  PolyBlockMap = static_cast<polyblock_t **>(Z_Malloc(cells * sizeof(polyblock_t *), PU_LEVEL, 0));
-  memset(PolyBlockMap, 0, cells * sizeof(polyblock_t *));
 }
 
 
@@ -1703,7 +1718,28 @@ bool Map::Setup(tic_t start, bool spawnthings)
       return false;
     }
 
-  //CONS_Printf("%d vertexs %d segs %d subsector\n",numvertexes,numsegs,numsubsectors);
+  int minisegs = 0;
+  int botnodes2 = 0;
+  int psegs = 0;
+  for (int i=0; i<numsegs; i++)
+    {
+      seg_t *seg = &segs[i];
+      
+      if (!seg->linedef)
+	{
+	  minisegs++;
+	  if (!seg->partner_seg)
+	    CONS_Printf("miniseg %d w/o partner seg\n", i);
+	  else if (seg->partner_seg->linedef)
+	    {
+	      CONS_Printf("miniseg %d partner (%d-sided) not a miniseg\n", i, seg->partner_seg->linedef->flags & ML_TWOSIDED ? 2 : 1);
+	    }
+	}
+      else if (seg->linedef->flags & ML_TWOSIDED)
+	botnodes2++;
+    }
+  CONS_Printf("%d vertices, %d subsectors, %d segs, %d + %d botnodes\n",numvertexes,numsubsectors, numsegs, minisegs, botnodes2);
+
   return true;
 }
 

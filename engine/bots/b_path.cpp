@@ -26,6 +26,7 @@
 
 #include "g_game.h"
 #include "g_map.h"
+#include "g_blockmap.h"
 #include "g_actor.h"
 #include "g_pawn.h"
 
@@ -311,7 +312,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       if (mo)
 	{
 	  pawn_height = mo->height;
-	  if (mp->BlockIterateLinesRadius(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
+	  if (mp->blockmap->IterateLinesRadius(destx, desty, mo->radius, PIT_BBoxFit) // does it fit there?
 	      /*
 	      && mp->PathTraverse(x, y, destx - 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x, y, destx + 1, desty + 1, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
@@ -322,7 +323,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
 	      && mp->PathTraverse(x - 1, y - 1, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      && mp->PathTraverse(x + 1, y - 1, destx, desty, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath)
 	      */
-	      && mp->PathTraverse(start, dest, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath))
+	      && mp->blockmap->PathTraverse(start, dest, PT_ADDLINES|PT_ADDTHINGS, PTR_BotPath))
 	    return true; // FIXME why do many traces with nearly identical endpoints??
 	  else
 	    {
@@ -333,7 +334,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
       else
 	{
 	  pawn_height = 56;
-	  return mp->PathTraverse(start, dest, PT_ADDLINES, PTR_BotPath);
+	  return mp->blockmap->PathTraverse(start, dest, PT_ADDLINES, PTR_BotPath);
 	}
     }
 

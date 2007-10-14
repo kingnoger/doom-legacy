@@ -1403,8 +1403,6 @@ bool dehacked_t::LoadDehackedLump(int lump)
   if (num_errors > 0)
     {
       CONS_Printf("DEH: %d warning(s).\n", num_errors);
-      if (devparm)
-	getchar();
     }
 
   loaded = true;
