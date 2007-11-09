@@ -192,12 +192,12 @@ void Command_SaveConfig_f()
 {
     char tmpstr[MAX_CONFIGNAME];
 
-    if (COM_Argc()!=2)
+    if (COM.Argc()!=2)
     {
         CONS_Printf("saveconfig <filename[.cfg]> : save config to a file\n");
         return;
     }
-    strcpy(tmpstr,COM_Argv(1));
+    strcpy(tmpstr,COM.Argv(1));
     FIL_DefaultExtension(tmpstr,".cfg");
 
     M_SaveConfig(tmpstr);
@@ -206,13 +206,13 @@ void Command_SaveConfig_f()
 
 void Command_LoadConfig_f()
 {
-    if (COM_Argc()!=2)
+    if (COM.Argc()!=2)
     {
         CONS_Printf("loadconfig <filename[.cfg]> : load config from a file\n");
         return;
     }
 
-    strcpy(configfile,COM_Argv(1));
+    strcpy(configfile,COM.Argv(1));
     FIL_DefaultExtension(configfile,".cfg");
 /*  for create, don't check
 
@@ -222,20 +222,20 @@ void Command_LoadConfig_f()
         return;
     }
 */
-    COM_BufInsertText(va("exec \"%s\"\n",configfile));
+    COM.PrependText(va("exec \"%s\"\n",configfile));
 
 }
 
 void Command_ChangeConfig_f()
 {
-    if (COM_Argc()!=2)
+    if (COM.Argc()!=2)
     {
         CONS_Printf("changeconfig <filaname[.cfg]> : save current config and load another\n");
         return;
     }
 
-    COM_BufAddText(va("saveconfig \"%s\"\n",configfile));
-    COM_BufAddText(va("loadconfig \"%s\"\n",COM_Argv(1)));
+    COM.AppendText(va("saveconfig \"%s\"\n",configfile));
+    COM.AppendText(va("loadconfig \"%s\"\n",COM.Argv(1)));
 }
 
 //
@@ -248,8 +248,8 @@ void M_FirstLoadConfig()
 
   // load config, make sure those commands doesnt require the screen..
   CONS_Printf("\n");
-  COM_BufInsertText(va("exec \"%s\"\n",configfile));
-  COM_BufExecute();       // make sure initial settings are done
+  COM.PrependText(va("exec \"%s\"\n",configfile));
+  COM.BufExecute();       // make sure initial settings are done
 
   // make sure I_Quit() will write back the correct config
   // (do not write back the config if it crash before)

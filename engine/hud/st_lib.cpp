@@ -72,9 +72,9 @@ void HudNumber::Update(bool force)
 void HudNumber::Draw()
 {
   int lnum = oldn = *n; // the number to be drawn
-  int w = nums[0]->worldwidth;
-  int h = nums[0]->worldheight;
-  int dx = x - digits * w; // drawing x coord (right-aligned field!)
+  float w = nums[0]->worldwidth;
+  float h = nums[0]->worldheight;
+  float dx = x - digits * w; // drawing x coord (right-aligned field!)
 
   // clear the area (right aligned field)
   // dont clear background in overlay
@@ -168,8 +168,8 @@ void HudMultIcon::Draw()
     {
       // sw mode: background is not always fully redrawn
       // restore background if necessary
-      int w, h;
-      int dx, dy;
+      float w, h;
+      float dx, dy;
       dx = x - icons[oldinum]->leftoffs;
       dy = y - icons[oldinum]->topoffs;
       w = icons[oldinum]->worldwidth;
@@ -211,8 +211,8 @@ void HudBinIcon::Draw()
   if (icons[oldstatus] && !hud.overlay_on && rendermode == render_soft)
     {
       // restore background if necessary
-      int w, h;
-      int dx, dy;
+      float w, h;
+      float dx, dy;
       dx = x - icons[1]->leftoffs;
       dy = y - icons[1]->topoffs;
       w = icons[1]->worldwidth;
@@ -583,7 +583,7 @@ void HudInventory::DrawNumber(int x, int y, int val)
   if (val == 1)
     return;
 
-  int w = nums[0]->worldwidth; // was 4
+  float w = nums[0]->worldwidth; // was 4
     
   if (val > 9)
     nums[val/10]->Draw(x, y, fgbuffer);

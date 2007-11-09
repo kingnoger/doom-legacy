@@ -343,7 +343,7 @@ static unsigned num_acsfuncs = sizeof(PCodeCmds)/sizeof(acsfunc_t);
 
 void Command_RunACS_f()
 {
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf("Usage: run-acs <script>\n");
       return;
@@ -353,10 +353,10 @@ void Command_RunACS_f()
     return;
   
   byte args[5] = {0,0,0,0,0};
-  int num = atoi(COM_Argv(1));
-  int i, n = COM_Argc() - 2;
+  int num = atoi(COM.Argv(1));
+  int i, n = COM.Argc() - 2;
   for (i=0; i<n; i++)
-    args[i] = atoi(COM_Argv(i+2));
+    args[i] = atoi(COM.Argv(i+2));
 
   // line_t* is always NULL...
   com_player->mp->StartACS(num, args, com_player->pawn, NULL, 0);
@@ -538,7 +538,7 @@ void Map::TagFinished(unsigned tag)
     return;
 
   for (int i = 0; i < ACScriptCount; i++)
-    if (ACSInfo[i].state == ACS_waitfortag && ACSInfo[i].waitValue == tag)
+    if (ACSInfo[i].state == ACS_waitfortag && ACSInfo[i].waitValue == int(tag))
       ACSInfo[i].state = ACS_running;
 }
 
@@ -1458,13 +1458,13 @@ static int CmdEndPrint()
     {
       PlayerPawn *p = (PlayerPawn *)ACScript->activator;
       if (p->player)
-	p->player->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
+	p->player->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD, 150);
     }
   else
     {
       int n = ACMap->players.size();
       for (int i = 0; i < n; i++)
-	ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
+	ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD, 150);
     }
 
   return SCRIPT_CONTINUE;
@@ -1475,7 +1475,7 @@ static int CmdEndPrintBold()
   int n = ACMap->players.size();
 
   for (int i = 0; i < n; i++)
-    ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD);
+    ACMap->players[i]->SetMessage(PrintBuffer, 1, PlayerInfo::M_HUD, 150);
 
   return SCRIPT_CONTINUE;
 }

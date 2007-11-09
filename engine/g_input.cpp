@@ -867,7 +867,7 @@ void G_CheckDoubleUsage(int keynum)
 
 void Command_Setcontrol_f()
 {
-  int na = COM_Argc();
+  int na = COM.Argc();
 
   if (na < 4 || na > 5)
     {
@@ -875,10 +875,10 @@ void Command_Setcontrol_f()
       return;
     }
 
-  int p = max(0, min(atoi(COM_Argv(1)), NUM_LOCALHUMANS-1));
+  int p = max(0, min(atoi(COM.Argv(1)), NUM_LOCALHUMANS-1));
   short (*gc)[2] = gamecontrol[p];
 
-  char *cname = COM_Argv(2);
+  char *cname = COM.Argv(2);
 
   int i;
   for (i = 0; i < num_gamecontrols && strcasecmp(cname, gamecontrolname[i]); i++)
@@ -890,12 +890,12 @@ void Command_Setcontrol_f()
       return;
     }
 
-  int keynum = G_KeyStringtoNum(COM_Argv(3));
+  int keynum = G_KeyStringtoNum(COM.Argv(3));
   G_CheckDoubleUsage(keynum);
   gc[i][0] = keynum;
 
   if (na == 5)
-    gc[i][1] = G_KeyStringtoNum(COM_Argv(4));
+    gc[i][1] = G_KeyStringtoNum(COM.Argv(4));
   else
     gc[i][1] = 0;
 }
@@ -908,7 +908,7 @@ void Command_BindJoyaxis_f()
   joybinding_t j;
   unsigned int i;
 
-  int na = COM_Argc();
+  int na = COM.Argc();
 
   if(na == 1) { // Print bindings.
     if(joybindings.size() == 0) {
@@ -930,12 +930,12 @@ void Command_BindJoyaxis_f()
     return;
   }
 
-  j.playnum = atoi(COM_Argv(1));
-  j.joynum  = atoi(COM_Argv(2));
-  j.axisnum = atoi(COM_Argv(3));
-  j.action  = joyactions_e(atoi(COM_Argv(4)));
+  j.playnum = atoi(COM.Argv(1));
+  j.joynum  = atoi(COM.Argv(2));
+  j.axisnum = atoi(COM.Argv(3));
+  j.action  = joyactions_e(atoi(COM.Argv(4)));
   if (na == 6)
-    j.scale = atof(COM_Argv(5));
+    j.scale = atof(COM.Argv(5));
   else
     j.scale = 1.0f;
 
@@ -977,7 +977,7 @@ void Command_UnbindJoyaxis_f()
 {
   int joynum  = -1;
   int axisnum = -1;
-  int na = COM_Argc();
+  int na = COM.Argc();
   vector<joybinding_t> newbind;
 
   if(joybindings.size() == 0) {
@@ -992,9 +992,9 @@ void Command_UnbindJoyaxis_f()
 
   // Does the user specify axis or joy number?
   if(na > 2)
-    axisnum = atoi(COM_Argv(2));
+    axisnum = atoi(COM.Argv(2));
   if(na > 1)
-    joynum = atoi(COM_Argv(1));
+    joynum = atoi(COM.Argv(1));
 
   for(unsigned int i=0; i<joybindings.size(); i++) {
     joybinding_t j = joybindings[i];

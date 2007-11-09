@@ -347,9 +347,9 @@ void GameInfo::BeginRecording()
 
 void G_DeferedPlayDemo (char* name)
 {
-  COM_BufAddText("playdemo \"");
-  COM_BufAddText(name);
-  COM_BufAddText("\"\n");
+  COM.AppendText("playdemo \"");
+  COM.AppendText(name);
+  COM.AppendText("\"\n");
 }
 
 

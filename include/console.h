@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
 //-----------------------------------------------------------------------------
 
 /// \file
@@ -24,8 +23,13 @@
 #ifndef console_h
 #define console_h 1
 
-#include "doomtype.h"
+#include <deque>
+#include <string>
 
+#include "doomtype.h"
+#include "keys.h"
+
+using namespace std;
 
 /// \brief Console
 ///
@@ -40,6 +44,8 @@ public:
   bool refresh; ///< explicitly refresh screen after each CONS_Printf (game is not yet in display loop)
   bool recalc;  ///< set true when screen size has changed. on next tick, console will conform
 
+  char *bindtable[NUMINPUTS]; ///< console key bindings
+
 protected:
   bool graphic; ///< console can be drawn
   bool active;  ///< console is active (accepting input)
@@ -48,19 +54,17 @@ protected:
 
 
   // console input
-#define  CON_MAXPROMPTCHARS 256
-  char inputlines[32][CON_MAXPROMPTCHARS]; // hold last 32 prompt lines for history
-  int  input_cx;       // position in current input line
-  int  input_cy;      // current input line number
-  int  input_hist;      // line number of history input line to restore
+#define  CON_MAXINPUT 256
+#define  CON_HISTORY 32
+  deque<string> input_history; ///< input history (current line is always input_history.front())
+  int           input_browse;  ///< input history line number being browsed/edited
 
 
   // console output
-  char *con_buffer; ///< wrapping buffer that stores formatted console output
+#define CON_MAXLINECHARS 120 // nobody wants to read lines longer than this
+#define CON_LINES 100 // reasonable output history
+  char  con_buffer[CON_LINES][CON_MAXLINECHARS+1]; ///< wrapping output buffer (ASCII or UTF-8)
   char *con_line;   ///< pointer to current output line
-
-  int con_cols;     ///< console text buffer width in columns
-  int con_lines;    ///< console text buffer height in rows
 
   int con_cx;       ///< cursor position in current line (column number)
   int con_cy;       ///< cursor line number in con_buffer, wraps around using modulo
@@ -68,10 +72,9 @@ protected:
 
 
   // hud lines, used when console is closed
-#define  CON_MAXHUDLINES 5
-  int con_hudlines;                   ///< number of console heads up message lines
-  int con_lineowner[CON_MAXHUDLINES]; ///< In splitscreen, which player gets this line of text
-  int con_hudtime[CON_MAXHUDLINES];   ///< remaining time of display for hud msg lines
+#define  CON_HUDLINES 5
+  int con_lineowner[CON_HUDLINES]; ///< In splitscreen, which player gets this line of text
+  int con_hudtime[CON_HUDLINES];   ///< remaining time of display for hud msg lines
 
   // graphics
   class Material *con_backpic; ///< console background picture, loaded static
@@ -79,6 +82,9 @@ protected:
 
   int con_destheight; ///< destination height in pixels
   int con_height;     ///< current console height in pixels
+
+  float con_width; ///< printing area width in pixels
+  float con_lineheight; ///< height of a line in pixels
 
 
 protected:

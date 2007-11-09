@@ -215,6 +215,7 @@ export video_objects = \
 	$(objdir)/jpeg.o \
 	$(objdir)/screen.o \
 	$(objdir)/v_video.o \
+	$(objdir)/r_font.o \
 	$(objdir)/r_render.o \
 	$(objdir)/r_bsp.o \
 	$(objdir)/r_data.o \

@@ -45,6 +45,7 @@
 #include "r_main.h"
 #include "m_misc.h"
 #include "w_wad.h"
+#include "v_video.h"
 
 #include "i_system.h"
 #include "i_video.h"
@@ -95,18 +96,17 @@ void Command_Setcontrol_f();
 void Command_BindJoyaxis_f();
 void Command_UnbindJoyaxis_f();
 
-void Command_Water_f();
 
 /// Used for setting player properties.
 void Command_Player_f()
 {
-  if (COM_Argc() != 4)
+  if (COM.Argc() != 4)
     {
       CONS_Printf("player <number> <attribute> <value>\n");
       return;
     }
 
-  int n = atoi(COM_Argv(1));
+  int n = atoi(COM.Argv(1));
   if (n >= NUM_LOCALHUMANS)
     {
       CONS_Printf("Only %d local players supported.\n", NUM_LOCALHUMANS);
@@ -114,8 +114,8 @@ void Command_Player_f()
     }
   LocalPlayerInfo *p = &LocalPlayers[n];
 
-  const char *attr = COM_Argv(2);
-  const char *val  = COM_Argv(3);
+  const char *attr = COM.Argv(2);
+  const char *val  = COM.Argv(3);
   int ival = atoi(val);
 
   if (!strcasecmp(attr, "name"))
@@ -167,6 +167,8 @@ void CL_Init()
   CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
   R_Init();
 
+  font_t::Init();
+
   // we need the HUD font for the console
   // HUD font, crosshairs, say commands
   CONS_Printf("HU_Init: Init the Heads Up Display\n");
@@ -189,15 +191,12 @@ void CL_Init()
   S_Read_SNDINFO(fc.FindNumForNameFile("SNDINFO", 0));
   S_Read_SNDSEQ(fc.FindNumForNameFile("SNDSEQ", 0));
 
-  COM_AddCommand("player", Command_Player_f);
-  COM_AddCommand("setcontrol", Command_Setcontrol_f);
-  COM_AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
-  COM_AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
+  COM.AddCommand("player", Command_Player_f);
+  COM.AddCommand("setcontrol", Command_Setcontrol_f);
+  COM.AddCommand("bindjoyaxis", Command_BindJoyaxis_f);
+  COM.AddCommand("unbindjoyaxis", Command_UnbindJoyaxis_f);
 
-  COM_AddCommand("screenshot",M_ScreenShot);
-
-  // FIXME WATER HACK TEST UNTIL FULLY FINISHED
-  COM_AddCommand("dev_water", Command_Water_f);
+  COM.AddCommand("screenshot",M_ScreenShot);
 
   // client info
   char *temp = I_GetUserName();

@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -394,12 +393,12 @@ public:
     pcent = p;
   };
   
-  int Draw(int x, int y, int n, int digits = 2);
-  int DrawPercent(int x, int y, int n);
+  float Draw(float x, float y, int n, int digits = 2);
+  float DrawPercent(float x, float y, int n);
 };
 
 
-int WI_Number::DrawPercent(int x, int y, int n)
+float WI_Number::DrawPercent(float x, float y, int n)
 {
   if (n < 0)
     return x;
@@ -409,7 +408,7 @@ int WI_Number::DrawPercent(int x, int y, int n)
 }
 
 
-int WI_Number::Draw(int x, int y, int n, int digits)
+float WI_Number::Draw(float x, float y, int n, int digits)
 {
   // how many digits are needed?
   if (digits < 0)
@@ -438,7 +437,7 @@ int WI_Number::Draw(int x, int y, int n, int digits)
   if (n == 1994)
     return 0;
 
-  int w = tex[0]->worldwidth;
+  float w = tex[0]->worldwidth;
 
   // draw the new number
   while (digits--)
@@ -469,7 +468,7 @@ WI_Number Num;
 // Draws "<Levelname> Finished!"
 static void WI_drawLF(const char *name)
 {
-  int y = WI_TITLEY;
+  float y = WI_TITLEY;
 
   // draw <LevelName>
   if (lastname_tex)
@@ -495,7 +494,7 @@ static void WI_drawLF(const char *name)
 // Draws "Entering <LevelName>"
 static void WI_drawEL(const char *nextname)
 {
-  int y = WI_TITLEY;
+  float y = WI_TITLEY;
 
   // draw "Entering"
   if (entering_tex)
@@ -520,7 +519,7 @@ static void WI_drawEL(const char *nextname)
 
 // Display level completion time and par,
 //  or "sucks" message if overflow.
-static void WI_drawTime(int x, int y, int t)
+static void WI_drawTime(float x, float y, int t)
 {
   if (t < 0)
     return;
@@ -1049,7 +1048,7 @@ void Intermission::DrawCoopStats()
     {
       // single player stats are a bit different
       // line height
-      int lh = (3*(num[0]->worldheight))/2;
+      float lh = (3*(num[0]->worldheight))/2;
 
       if (big_font)
         {
@@ -1070,7 +1069,7 @@ void Intermission::DrawCoopStats()
     }
   else
     {
-      int x, y;
+      float x, y;
 
       // draw stat titles (top line)
       if (big_font)
@@ -1096,7 +1095,7 @@ void Intermission::DrawCoopStats()
         }
       // draw stats
       int i, n = plrs.size();
-      int pwidth = percent->worldwidth;
+      float pwidth = percent->worldwidth;
       int you = ViewPlayers.size() ? ViewPlayers[0]->number : 0;
 
       for (i=0 ; i<n ; i++)

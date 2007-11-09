@@ -399,7 +399,7 @@ void LNetInterface::SendChat(int from, int to, const char *msg)
 	}
 
       // TODO how to handle messages for local (server) players?
-      CONS_Printf("\3%s: %s\n", sender->name.c_str(), msg);
+      CONS_Printf("\a%s: %s\n", sender->name.c_str(), msg);
     }
   else if (server_con)
     server_con->rpcChat(from, to, msg);

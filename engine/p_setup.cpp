@@ -1616,8 +1616,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
   // Set the gravity for the level
   if (cv_gravity.value != int(info->gravity * fixed_t::UNIT))
     {
-      COM_BufAddText(va("gravity %f\n", info->gravity));
-      COM_BufExecute();
+      COM.AppendText(va("gravity %f\n", info->gravity));
+      COM.BufExecute();
     }
 
   SetupSky();

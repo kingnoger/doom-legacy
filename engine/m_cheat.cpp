@@ -85,7 +85,7 @@ void Command_CheatGimme_f()
   if (!game.server || !com_player)
     return;
 
-  if (COM_Argc()<2)
+  if (COM.Argc()<2)
     {
       CONS_Printf ("gimme [health] [ammo] [armor] ...\n");
       return;
@@ -94,8 +94,8 @@ void Command_CheatGimme_f()
   PlayerPawn* p = com_player->pawn;
   if (p == NULL) return;
 
-  for (i=1; i<COM_Argc(); i++) {
-    s = COM_Argv(i);
+  for (i=1; i<COM.Argc(); i++) {
+    s = COM.Argv(i);
 
     if (!strncmp(s,"health",6))
       {
@@ -595,7 +595,7 @@ static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
     msg = STSTR_CLEV;
 
   p->player->SetMessage(msg, false);
-  COM_BufAddText(va("map %d\n", mapnum));
+  COM.AppendText(va("map %d\n", mapnum));
 }
 
 static void CheatChickenFunc(PlayerPawn *p, const byte *arg)

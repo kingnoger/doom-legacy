@@ -91,8 +91,46 @@ static int lastmousey = 0;
 static bool warp_mouse = false;
 
 
+static char qwerty_shiftmap[128] =
+{
+  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+  ' ', '!', '"', '#', '$', '%', '&',
+  '"', // shift-'
+  '(', ')', '*', '+',
+  '<', // shift-,
+  '_', // shift--
+  '>', // shift-.
+  '?', // shift-/
+  ')', // shift-0
+  '!', // shift-1
+  '@', // shift-2
+  '#', // shift-3
+  '$', // shift-4
+  '%', // shift-5
+  '^', // shift-6
+  '&', // shift-7
+  '*', // shift-8
+  '(', // shift-9
+  ':',
+  ':', // shift-;
+  '<',
+  '+', // shift-=
+  '>', '?', '@',
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '[', // shift-[
+  '!', // shift-backslash - OH MY GOD DOES WATCOM SUCK - Not Watcom but C :D
+  ']', // shift-]
+  '"', '_',
+  '\'', // shift-`
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+  'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  '{', '|', '}', '~', 127
+};
+
 //
-//  Translates the SDL key into Doom key
+//  Translates the SDL key into Doom key.
 //
 static int xlatekey(SDLKey sym)
 {
@@ -158,28 +196,38 @@ void I_GetEvent()
 #endif
 
   //SDL_PumpEvents(); //SDL_PollEvent calls this automatically
-  int temp;
-
   while (SDL_PollEvent(&inputEvent))
     {
       switch (inputEvent.type)
         {
         case SDL_KEYDOWN:
+	  {
 	  event.type = ev_keydown;
-	  event.data1 = xlatekey(inputEvent.key.keysym.sym);
+	  SDLKey sym = inputEvent.key.keysym.sym;
+	  event.data1 = xlatekey(sym); // key symbol
 
+	  int mod = inputEvent.key.keysym.mod; // modifier key states
 	  // TODO actually this belongs in D_PostEvent, but not until we have another interface...
-	  temp = inputEvent.key.keysym.mod; // modifier key status
-	  shiftdown = (temp & KMOD_SHIFT);
-	  altdown = (temp & KMOD_ALT);
+	  shiftdown = mod & KMOD_SHIFT;
+	  altdown = mod & KMOD_ALT;
+
+	  // Corresponding ASCII char, if applicable (for console etc.), otherwise zero.
+	  // Handles QWERTY-style keyboard shift mapping (temporary, should use the SDL Unicode feature for this...).
+	  event.data2 = (sym < 128) ? ((mod & KMOD_SHIFT) ? qwerty_shiftmap[sym] : sym) : 0;
 
 	  D_PostEvent(&event);
+	  }
 	  break;
+
         case SDL_KEYUP:
 	  event.type = ev_keyup;
 	  event.data1 = xlatekey(inputEvent.key.keysym.sym);
+
+	  shiftdown = inputEvent.key.keysym.mod & KMOD_SHIFT; // SHIFT may just have been released
+	  altdown = inputEvent.key.keysym.mod & KMOD_ALT; // same for ALT
 	  D_PostEvent(&event);
 	  break;
+
         case SDL_MOUSEMOTION:
 	  if (cv_usemouse[0].value)
             {
@@ -216,6 +264,7 @@ void I_GetEvent()
                 }
             }
 	  break;
+
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
 	  if (cv_usemouse[0].value)
@@ -246,6 +295,7 @@ void I_GetEvent()
         case SDL_QUIT:
 	  I_Quit();
 	  break;
+
         default:
 	  break;	  
         }

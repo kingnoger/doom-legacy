@@ -1304,7 +1304,7 @@ void PlayerPawn::PlayerInSpecialSector()
     {
       // SECRET SECTOR
       player->secrets++;
-      player->SetMessage("\3You found a secret area!\n");
+      player->SetMessage("\a\2You found a secret area!\n");
       sec->special &= ~SS_secret;
     }
 }

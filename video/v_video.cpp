@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Texture blitting, blitting rectangles between buffers. Font system.
+/// \brief Texture blitting, blitting rectangles between buffers.
 
 #include <ctype.h>
 
@@ -248,9 +248,9 @@ void LumpTexture::DrawFill(int x, int y, int w, int h)
 //=================================================================
 
 /// Copies a rectangular area from one screen buffer to another
-void V_CopyRect(int srcx, int srcy, int srcscrn,
-                int width, int height,
-                int destx, int desty, int destscrn)
+void V_CopyRect(float srcx, float srcy, int srcscrn,
+                float width, float height,
+                float destx, float desty, int destscrn)
 {
   // WARNING don't mix
   if ((srcscrn & V_SLOC) || (destscrn & V_SLOC))
@@ -279,12 +279,16 @@ void V_CopyRect(int srcx, int srcy, int srcscrn,
              srcscrn, width, height, destx, desty, destscrn);
 #endif
 
-  byte *src = vid.screens[srcscrn]+vid.width*srcy+srcx + vid.scaledofs;
-  byte *dest = vid.screens[destscrn]+vid.width*desty+destx + vid.scaledofs;
+  int sx = int(srcx); int sy = int(srcy);
+  int dx = int(destx); int dy = int(desty);
+  int w = int(width); int h = int(height);
 
-  for (; height>0 ; height--)
+  byte *src = vid.screens[srcscrn] + vid.width*sy + sx + vid.scaledofs;
+  byte *dest = vid.screens[destscrn] + vid.width*dy + dx + vid.scaledofs;
+
+  for (; h>0 ; h--)
     {
-      memcpy (dest, src, width);
+      memcpy (dest, src, w);
       src += vid.width;
       dest += vid.width;
     }
@@ -390,29 +394,29 @@ void V_DrawFadeScreen()
 
 
 /// Simple translucence with one color, coords are true LFB coords
-void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
+void V_DrawFadeConsBack(float x1, float y1, float x2, float y2)
 {
   if (rendermode!=render_soft)
     {
-      OGLRenderer::FadeScreenMenuBack(0x00500000, y2);
+      //FIXME OGLRenderer::FadeScreenMenuBack(0x00500000, y2);
       return;
     }
 
   if (vid.BytesPerPixel == 1)
     {
-      for (int y=y1; y<y2; y++)
+      for (int y=int(y1); y<int(y2); y++)
         {
 	  byte *buf = vid.screens[0] + vid.width*y;
-          for (int x=x1 ; x<x2 ; x++)
+          for (int x=int(x1) ; x<int(x2) ; x++)
             buf[x] = greenmap[buf[x]];
         }
     }
   else
     {
-      int w = x2-x1;
-      for (int y=y1 ; y<y2 ; y++)
+      int w = int(x2-x1);
+      for (int y=int(y1) ; y<int(y2) ; y++)
         {
-	  short *wput = (short*)(vid.screens[0] + vid.width*y) + x1;
+	  short *wput = (short*)(vid.screens[0] + vid.width*y) + int(x1);
           for (int x=0 ; x<w ; x++)
 	    {
 	      *wput = ((*wput&0x7bde) + (15<<5)) >>1;
@@ -420,204 +424,4 @@ void V_DrawFadeConsBack(int x1, int y1, int x2, int y2)
 	    }
         }
     }
-}
-
-
-//========================================================================
-//                           Font system
-//========================================================================
-
-#define HU_FONTSTART    '!'     // the first font character
-#define HU_FONTEND      '_'     // the last font character
-#define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1) // default font size
-
-// Doom:
-// STCFN033-95 + 121 : small red font
-
-// Heretic:
-// FONTA01-59 : medium silver font
-// FONTB01-58 : large green font, some symbols empty
-
-// Hexen:
-// FONTA01-59 : medium silver font
-// FONTAY01-59 : like FONTA but yellow
-// FONTB01-58 : large red font, some symbols empty
-
-font_t *hud_font;
-font_t *big_font; // TODO used width-1 instead of width...
-
-
-font_t::font_t(int startlump, int endlump, char firstchar)
-{
-  if (startlump < 0 || endlump < 0)
-    I_Error("Incomplete font!\n");
-
-  int truesize = endlump - startlump + 1; // we have this many lumps
-  char lastchar = firstchar + truesize - 1;
-
-  // the font range must include '!' and '_'. We will duplicate letters if need be.
-  start = min(firstchar, '!');
-  end = max(lastchar, '_');
-  int size = end - start + 1;
-
-  font.resize(size);
-
-  for (int i = start; i <= end; i++)
-    if (i < firstchar || i > lastchar)
-      // replace the missing letters with the first char
-      font[i - start] = materials.GetLumpnum(startlump);
-    else
-      font[i - start] = materials.GetLumpnum(i - firstchar + startlump);
-
-  // use the character '0' as a "prototype" for the font
-  if (start <= '0' && '0' <= end)
-    {
-      height = font['0' - start]->worldheight;
-      width = font['0' - start]->worldwidth;
-    }
-  else
-    {
-      height = font[0]->worldheight;
-      width = font[0]->worldwidth;
-    }
-}
-
-
-// Writes a single character (draw WHITE if bit 7 set)
-void font_t::DrawCharacter(float x, float y, char c, int flags)
-{
-  if (c & 0x80)
-    {
-      // special "white" property used by console
-      flags |= V_MAP;
-      current_colormap = whitemap;
-      c &= 0x7F;
-    }
-
-  c = toupper(c);
-  if (c < start || c > end)
-    return;
-
-  Material *m = font[c - start];
-  m->Draw(x, y, flags);
-}
-
-
-
-//  Draw a string using the font
-//  NOTE: the text is centered for screens larger than the base width
-void font_t::DrawString(float x, float y, const char *str, int flags)
-{
-  if (flags & V_WHITEMAP)
-    {
-      current_colormap = whitemap;
-      flags |= V_MAP;
-    }
-
-  float dupx = 1;
-  float dupy = 1;
-
-  if (rendermode == render_opengl)
-    {
-      if (flags & V_SSIZE)
-	{
-	  dupx = vid.fdupx;
-	  dupy = vid.fdupy;
-	}
-
-      if (flags & V_SLOC)
-	{
-	  x *= vid.fdupx;
-	  y *= vid.fdupy;
-	  flags &= ~V_SLOC; // not passed on to Texture::Draw
-	}
-    }
-  else
-    {
-      if (flags & V_SSIZE)
-	{
-	  dupx = vid.dupx;
-	  dupy = vid.dupy;
-	}
-
-      if (flags & V_SLOC)
-	{
-	  x *= vid.dupx;
-	  y *= vid.dupy;
-	  flags &= ~V_SLOC; // not passed on to Texture::Draw
-	}
-    }
-
-  // cursor coordinates
-  float cx = x;
-  float cy = y;
-  float rowheight = (height + 1) * dupy;
-
-  while (1)
-    {
-      int c = *str++;
-      if (!c)
-        break;
-
-      if (c == '\n')
-        {
-          cx = x;
-	  cy += rowheight;
-          continue;
-        }
-
-      c = toupper(c);
-      if (c < start || c > end)
-        {
-          cx += 4*dupx;
-          continue;
-        }
-
-      Material *m = font[c - start];
-      m->Draw(cx, cy, flags);
-
-      cx += m->worldwidth * dupx;
-    }
-}
-
-
-// returns the width of the string (unscaled)
-float font_t::StringWidth(const char *str)
-{
-  float w = 0;
-
-  for (int i = 0; str[i]; i++)
-    {
-      int c = toupper(str[i]);
-      if (c < start || c > end)
-        w += 4;
-      else
-        w += font[c - start]->worldwidth;
-    }
-
-  return w;
-}
-
-
-// returns the width of the next n chars of str
-float font_t::StringWidth(const char *str, int n)
-{
-  float w = 0;
-
-  for (int i = 0; i<n && str[i]; i++)
-    {
-      int c = toupper(str[i]);
-      if (c < start || c > end)
-        w += 4;
-      else
-        w += font[c - start]->worldwidth;
-    }
-
-  return w;
-}
-
-
-float font_t::StringHeight(const char *str)
-{
-  return height;
 }

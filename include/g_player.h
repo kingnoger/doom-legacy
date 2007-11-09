@@ -179,9 +179,10 @@ public:
 
   struct message_t
   {
+    string msg;
     int priority;
     int type;
-    string msg;
+    int extradata;
   };
 
   deque<message_t> messages; ///< local message queue
@@ -227,7 +228,7 @@ public:
   void ExitLevel(int nextmap, int ep); ///< sets requestmap and ep if not already set, goes to PST_LEAVINGMAP state
   void Reset(bool resetpawn, bool resetfrags);  // resets the player (when starting a new level, for example)
 
-  virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE);
+  virtual void SetMessage(const char *msg, int priority = 0, int type = M_CONSOLE, int extradata = 0);
 
   /// Client: Calculate the walking / running viewpoint bobbing and weapon swing
   void CalcViewHeight();

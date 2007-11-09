@@ -500,7 +500,7 @@ void PlayerInfo::Ticker()
 }
 
 // send a message to the player
-void PlayerInfo::SetMessage(const char *msg, int priority, int type)
+void PlayerInfo::SetMessage(const char *msg, int priority, int type, int extradata)
 {
   if (priority > options.messagefilter)
     return;  // not interested (lesser is more important!)
@@ -512,9 +512,10 @@ void PlayerInfo::SetMessage(const char *msg, int priority, int type)
       // the player is local and has room in her message queue
       // TODO high priority overrides low priority messages?
       message_t temp;
+      temp.msg = msg; // makes a copy of msg, so we can use va() etc.
       temp.priority = priority;
       temp.type = type;
-      temp.msg = msg; // makes a copy of msg, so we can use va() etc.
+      temp.extradata = extradata;
 
       messages.push_back(temp);
     }

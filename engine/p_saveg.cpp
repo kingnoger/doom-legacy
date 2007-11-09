@@ -2120,7 +2120,7 @@ void GameInfo::LoadGame(int slot)
   // dearchive all the modifications
   if (Unserialize(a))
     {
-      CONS_Printf("\3Savegame file corrupted!\n\n");
+      CONS_Printf("\aSavegame file corrupted!\n\n");
       SV_Reset();
       return;
     }

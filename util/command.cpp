@@ -45,108 +45,6 @@
 #include "g_player.h"
 
 
-// =========================================================================
-//                      VARIABLE SIZE BUFFERS
-// =========================================================================
-
-/// \brief Variable size buffer
-struct vsbuf_t
-{
-  enum
-  {
-    VSBUFMINSIZE = 256
-  };
-
-  bool  allowoverflow;  // if false, do a I_Error
-  bool  overflowed;     // set to true if the buffer size failed
-  byte *data;
-  int   maxsize;
-  int   cursize;
-
-  void  VS_Alloc(int initsize);
-  void  VS_Free();
-  void  VS_Clear();
-  void *VS_GetSpace(int length);
-  void  VS_Write(void *data, int length);  ///<  Copy data at end of variable sized buffer
-  void  VS_Print(char *data); ///<  Print text in variable size buffer, like VS_Write + trailing 0
-};
-
-
-
-
-void vsbuf_t::VS_Alloc(int initsize)
-{
-  if (initsize < VSBUFMINSIZE)
-    initsize = VSBUFMINSIZE;
-  data = (byte *)Z_Malloc(initsize, PU_STATIC, NULL);
-  maxsize = initsize;
-  cursize = 0;
-
-  allowoverflow = false;
-  overflowed = false;
-}
-
-
-void vsbuf_t::VS_Free()
-{
-  //  Z_Free(data);
-  cursize = 0;
-}
-
-
-void vsbuf_t::VS_Clear()
-{
-  cursize = 0;
-}
-
-
-void *vsbuf_t::VS_GetSpace(int length)
-{
-  if (cursize + length > maxsize)
-    {
-      if (!allowoverflow)
-        I_Error("overflow 111");
-
-      if (length > maxsize)
-        I_Error("overflow l%i 112", length);
-
-      overflowed = true;
-      CONS_Printf("VS buffer overflow");
-      VS_Clear();
-    }
-
-  void *temp = data + cursize;
-  cursize += length;
-
-  return temp;
-}
-
-
-void vsbuf_t::VS_Write(void *newdata, int length)
-{
-  memcpy(VS_GetSpace(length), newdata, length);
-}
-
-
-void vsbuf_t::VS_Print(char *newdata)
-{
-  int len = strlen(newdata) + 1;
-
-  if (data[cursize - 1])
-    memcpy((byte *)VS_GetSpace(len), newdata, len); // no trailing 0
-  else
-    memcpy((byte *)VS_GetSpace(len - 1) - 1, newdata, len); // write over trailing 0
-}
-
-
-
-
-//=========================================================================
-//                           COMMAND BUFFER
-//=========================================================================
-
-static bool COM_Exists (char *com_name);
-static void COM_ExecuteString (char *text);
 
 static void COM_Alias_f();
 static void COM_Echo_f();
@@ -155,20 +53,21 @@ static void COM_Wait_f();
 static void COM_Help_f();
 static void COM_Toggle_f();
 
-static char com_token[1024];
-static char *COM_Parse(char *data);
 
-CV_PossibleValue_t CV_OnOff[] =    {{0,"Off"}, {1,"On"},    {0,NULL}};
-CV_PossibleValue_t CV_YesNo[] =    {{0,"No"} , {1,"Yes"},   {0,NULL}};
-CV_PossibleValue_t CV_Unsigned[] = {{0,"MIN"}, {999999999,"MAX"}, {0,NULL}};
+//=========================================================================
+//                           COMMAND BUFFER
+//=========================================================================
 
-#define COM_BUF_SIZE    8192   // command buffer size
+/// console commands
+struct xcommand_t
+{
+  const char  *name;
+  xcommand_t  *next;
+  com_func_t   function;
+};
 
-int     com_wait;       // one command per frame (for cmd sequences)
 
-
-// command aliases
-//
+/// command aliases
 struct cmdalias_t
 {
   cmdalias_t *next;
@@ -176,68 +75,81 @@ struct cmdalias_t
   char    *value;     // the command string to replace the alias
 };
 
-cmdalias_t  *com_alias; // aliases list
+
+command_buffer_t COM;
+
+
+command_buffer_t::command_buffer_t()
+{
+  com_commands = NULL;
+  com_alias = NULL;
+
+  com_maxsize = 256;
+
+  com_wait = 0;
+
+  com_argc = 0;
+  com_args = NULL;
+  for (int k=0; k<MAX_ARGS; k++)
+    com_argv[k] = NULL;
+}
+
+
+//  Initialise command buffer and add basic commands
+void command_buffer_t::Init()
+{
+  CONS_Printf("COM_Init: Init the command buffer\n");
+
+#define COM_BUF_SIZE    8192   // command buffer size
+
+  // set command buffer maximum size
+  com_maxsize = COM_BUF_SIZE;
+
+  // add standard commands
+  AddCommand("alias",COM_Alias_f);
+  AddCommand("echo", COM_Echo_f);
+  AddCommand("exec", COM_Exec_f);
+  AddCommand("wait", COM_Wait_f);
+  AddCommand("help", COM_Help_f);
+  AddCommand("toggle", COM_Toggle_f);
+}
 
 
 
-static vsbuf_t com_text;     // variable sized buffer
+
+
+
 
 
 //  Add text in the command buffer (for later execution)
 //
-void COM_BufAddText(char *text)
+void command_buffer_t::AppendText(const char *text)
 {
-  int l = strlen(text);
+  unsigned len = strlen(text);
 
-  if (com_text.cursize + l >= com_text.maxsize)
+  if (com_text.length() + len >= com_maxsize)
     {
       CONS_Printf("Command buffer full!\n");
       return;
     }
-  com_text.VS_Write(text, l);
+  com_text.append(text);
 }
 
 
-// Adds command text immediately after the current command
+// Adds command text in front of the command buffer (immediately after the current command)
 // Adds a \n to the text
-//
-void COM_BufInsertText(char *text)
+void command_buffer_t::PrependText(const char *text)
 {
-  char    *temp;
-  int     templen;
-
-  // copy off any commands still remaining in the exec buffer
-  templen = com_text.cursize;
-  if (templen)
-    {
-      temp = (char *)ZZ_Alloc(templen);
-      memcpy(temp, com_text.data, templen);
-      com_text.VS_Clear();
-    }
-  else
-    temp = NULL;    // shut up compiler
-
-  // add the entire text of the file (or alias)
-  COM_BufAddText(text);
-
-  // add the copied off data
-  if (templen)
-    {
-      com_text.VS_Write(temp, templen);
-      Z_Free(temp);
-    }
+  com_text.insert(0, text);
 }
 
 
 //  Flush (execute) console commands in buffer
 //   does only one if com_wait
 //
-void COM_BufExecute()
+void command_buffer_t::BufExecute()
 {
   int     i;
-  char    *text;
-  char    line[1024];
-  int     quotes;
 
   if (com_wait)
     {
@@ -245,13 +157,14 @@ void COM_BufExecute()
       return;
     }
 
-  while (com_text.cursize)
+  while (!com_text.empty())
     {
       // find a '\n' or ; line break
-      text = (char *)com_text.data;
+      const char *text = com_text.c_str();
+      int n = com_text.length();
 
-      quotes = 0;
-      for (i=0 ; i< com_text.cursize ; i++)
+      int quotes = 0;
+      for (i=0; i < n; i++)
         {
           if (text[i] == '"')
             quotes++;
@@ -261,7 +174,8 @@ void COM_BufExecute()
             break;
         }
 
-      memcpy (line, text, i);
+      char line[1024];
+      memcpy(line, text, i);
       line[i] = 0;
 
       // flush the command text from the command buffer, _BEFORE_
@@ -269,14 +183,13 @@ void COM_BufExecute()
       // command text buffer, in that case, new commands are inserted
       // at the beginning, in place of the actual, so it doesn't
       // overflow
-      if (i == com_text.cursize)
+      if (i == n)
         // the last command was just flushed
-        com_text.cursize = 0;
+        com_text.clear();
       else
         {
           i++;
-          com_text.cursize -= i;
-          memcpy (text, text+i, com_text.cursize);
+	  com_text.erase(0, i);
         }
 
       // execute the command line
@@ -296,71 +209,13 @@ void COM_BufExecute()
 //                            COMMAND EXECUTION
 // =========================================================================
 
-struct xcommand_t
-{
-  char        *name;
-  xcommand_t  *next;
-  com_func_t   function;
-};
 
-static  xcommand_t  *com_commands = NULL;     // current commands
-
-
-#define MAX_ARGS        80
-static int         com_argc;
-static char       *com_argv[MAX_ARGS];
-static char       *com_null_string = "";
-static char       *com_args = NULL;          // current command args or NULL
 
 PlayerInfo *com_player; // player associated with the current command. 
 // Only "interactive" commands may require this.
 
 
-//  Initialise command buffer and add basic commands
-void COM_Init()
-{
-  CONS_Printf("COM_Init: Init the command buffer\n");
-
-  // allocate command buffer
-  com_text.VS_Alloc(COM_BUF_SIZE);
-
-  // add standard commands
-  COM_AddCommand ("alias",COM_Alias_f);
-  COM_AddCommand ("echo", COM_Echo_f);
-  COM_AddCommand ("exec", COM_Exec_f);
-  COM_AddCommand ("wait", COM_Wait_f);
-  COM_AddCommand ("help", COM_Help_f);
-  COM_AddCommand ("toggle", COM_Toggle_f);
-}
-
-
-// Returns how many args for last command
-//
-int COM_Argc()
-{
-  return com_argc;
-}
-
-
-// Returns string pointer for given argument number
-//
-char *COM_Argv (int arg)
-{
-  if ( arg >= com_argc || arg < 0 )
-    return com_null_string;
-  return com_argv[arg];
-}
-
-
-// Returns string pointer of all command args
-//
-char *COM_Args()
-{
-  return com_args;
-}
-
-
-int COM_CheckParm(char *check)
+int command_buffer_t::CheckParm(const char *check)
 {
   for (int i = 1; i < com_argc; i++)
     {
@@ -375,7 +230,7 @@ int COM_CheckParm(char *check)
 //
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
-static void COM_TokenizeString(char *text)
+void command_buffer_t::COM_TokenizeString(char *text)
 {
   // clear the args from the last string
   for (int i=0 ; i<com_argc ; i++)
@@ -423,7 +278,7 @@ static void COM_TokenizeString(char *text)
 
 // Add a command before existing ones.
 //
-void COM_AddCommand(char *name, com_func_t func)
+void command_buffer_t::AddCommand(const char *name, com_func_t func)
 {
   xcommand_t  *cmd;
 
@@ -437,9 +292,9 @@ void COM_AddCommand(char *name, com_func_t func)
   // fail if the command already exists
   for (cmd=com_commands ; cmd ; cmd=cmd->next)
     {
-      if (!strcmp (name, cmd->name))
+      if (!strcasecmp(name, cmd->name))
         {
-          CONS_Printf ("Command %s already exists\n", name);
+          CONS_Printf("Command %s already exists\n", name);
           return;
         }
     }
@@ -454,13 +309,11 @@ void COM_AddCommand(char *name, com_func_t func)
 
 //  Returns true if a command by the name given exists
 //
-static bool COM_Exists(char *com_name)
+bool command_buffer_t::Exists(char *com_name)
 {
-  xcommand_t  *cmd;
-
-  for (cmd=com_commands ; cmd ; cmd=cmd->next)
+  for (xcommand_t *cmd = com_commands ; cmd ; cmd=cmd->next)
     {
-      if (!strcmp (com_name,cmd->name))
+      if (!strcasecmp(com_name,cmd->name))
         return true;
     }
 
@@ -471,17 +324,16 @@ static bool COM_Exists(char *com_name)
 //  Command completion using TAB key like '4dos'
 //  Will skip 'skips' commands
 //
-char *COM_CompleteCommand(char *partial, int skips)
+const char *command_buffer_t::CompleteCommand(char *partial, int skips)
 {
-  xcommand_t  *cmd;
   int len = strlen(partial);
 
   if (!len)
     return NULL;
 
   // check functions
-  for (cmd=com_commands ; cmd ; cmd=cmd->next)
-    if (!strncmp (partial,cmd->name, len))
+  for (xcommand_t  *cmd=com_commands ; cmd ; cmd=cmd->next)
+    if (!strncasecmp(partial,cmd->name, len))
       if (!skips--)
         return cmd->name;
 
@@ -493,7 +345,7 @@ char *COM_CompleteCommand(char *partial, int skips)
 // Parses a single line of text into arguments and tries to execute it.
 // The text can come from the command buffer, a remote client, or stdin.
 //
-static void COM_ExecuteString(char *text)
+void command_buffer_t::COM_ExecuteString(char *text)
 {
   xcommand_t  *cmd;
   cmdalias_t *a;
@@ -501,7 +353,7 @@ static void COM_ExecuteString(char *text)
   COM_TokenizeString(text);
 
   // execute the command line
-  if (!COM_Argc())
+  if (!Argc())
     return;     // no tokens
 
   // try to find the player "using" the command buffer
@@ -515,7 +367,7 @@ static void COM_ExecuteString(char *text)
   // check functions
   for (cmd=com_commands ; cmd ; cmd=cmd->next)
     {
-      if (!strcmp(com_argv[0],cmd->name))
+      if (!strcasecmp(com_argv[0],cmd->name))
         {
           cmd->function();
           return;
@@ -525,9 +377,9 @@ static void COM_ExecuteString(char *text)
   // check aliases
   for (a=com_alias ; a ; a=a->next)
     {
-      if (!strcmp (com_argv[0], a->name))
+      if (!strcasecmp(com_argv[0], a->name))
         {
-          COM_BufInsertText (a->value);
+          PrependText (a->value);
           return;
         }
     }
@@ -537,7 +389,7 @@ static void COM_ExecuteString(char *text)
   // (don't flood the console in software mode with bad gr_xxx command)
   if (!consvar_t::Command())
     {
-      CONS_Printf("Unknown command '%s'\n", COM_Argv(0));
+      CONS_Printf("Unknown command '%s'\n", Argv(0));
     }
 }
 
@@ -549,7 +401,7 @@ static void COM_ExecuteString(char *text)
 
 //  Parse a token out of a string, handles script files too
 //  returns the data pointer after the token
-static char *COM_Parse(char *data)
+char *command_buffer_t::COM_Parse(char *data)
 {
   if (!data)
     return NULL;
@@ -631,24 +483,24 @@ static void COM_Alias_f()
   char        cmd[1024];
   int         i, c;
 
-  if (COM_Argc()<3)
+  if (COM.Argc()<3)
     {
       CONS_Printf("alias <name> <command>\n");
       return;
     }
 
   a = (cmdalias_t *)ZZ_Alloc(sizeof(cmdalias_t));
-  a->next = com_alias;
-  com_alias = a;
+  a->next = COM.com_alias;
+  COM.com_alias = a;
 
-  a->name = Z_StrDup (COM_Argv(1));
+  a->name = Z_StrDup (COM.Argv(1));
 
   // copy the rest of the command line
   cmd[0] = 0;     // start out with a null string
-  c = COM_Argc();
+  c = COM.Argc();
   for (i=2 ; i< c ; i++)
     {
-      strcat(cmd, COM_Argv(i));
+      strcat(cmd, COM.Argv(i));
       if (i != c)
         strcat(cmd, " ");
     }
@@ -662,8 +514,8 @@ static void COM_Alias_f()
 //
 static void COM_Echo_f()
 {
-  for (int i = 1; i < COM_Argc(); i++)
-    CONS_Printf("%s ",COM_Argv(i));
+  for (int i = 1; i < COM.Argc(); i++)
+    CONS_Printf("%s ",COM.Argv(i));
   CONS_Printf("\n");
 }
 
@@ -672,7 +524,7 @@ static void COM_Echo_f()
 //
 static void COM_Exec_f()
 {
-  if (COM_Argc() != 2)
+  if (COM.Argc() != 2)
     {
       CONS_Printf ("exec <filename> : run a script file\n");
       return;
@@ -681,18 +533,18 @@ static void COM_Exec_f()
   byte *buf = NULL;
 
   // load file
-  FIL_ReadFile(COM_Argv(1), &buf);
+  FIL_ReadFile(COM.Argv(1), &buf);
 
   if (!buf)
     {
-      CONS_Printf ("Couldn't execute file %s\n",COM_Argv(1));
+      CONS_Printf ("Couldn't execute file %s\n",COM.Argv(1));
       return;
     }
 
-  CONS_Printf ("Executing %s\n",COM_Argv(1));
+  CONS_Printf ("Executing %s\n",COM.Argv(1));
 
   // insert text file into the command buffer
-  COM_BufInsertText((char *)buf);
+  COM.PrependText((char *)buf);
 
   // free buffer
   Z_Free(buf);
@@ -704,19 +556,19 @@ static void COM_Exec_f()
 //
 static void COM_Wait_f()
 {
-  if (COM_Argc()>1)
-    com_wait = atoi(COM_Argv(1));
+  if (COM.Argc()>1)
+    COM.com_wait = atoi(COM.Argv(1));
   else
-    com_wait = 1;   // 1 frame
+    COM.com_wait = 1;   // 1 frame
 }
 
 static void COM_Help_f()
 {
   consvar_t  *cvar;
 
-  if (COM_Argc() > 1)
+  if (COM.Argc() > 1)
     {
-      cvar = consvar_t::FindVar(COM_Argv(1));
+      cvar = consvar_t::FindVar(COM.Argv(1));
       if (cvar)
         {
           CONS_Printf("Variable %s:\n", cvar->name);
@@ -752,15 +604,15 @@ static void COM_Help_f()
       int i=0;
 
       // commands
-      CONS_Printf("\2Commands\n");
-      for (xcommand_t *cmd = com_commands; cmd; cmd=cmd->next)
+      CONS_Printf("\2Commands:\n");
+      for (xcommand_t *cmd = COM.com_commands; cmd; cmd=cmd->next)
         {
           CONS_Printf("%s ",cmd->name);
           i++;
         }
 
       // variables
-      CONS_Printf("\2\nVariable\n");
+      CONS_Printf("\2\nVariables:\n");
       for (cvar = consvar_t::cvar_list; cvar; cvar = cvar->next)
         {
           CONS_Printf("%s ",cvar->name);
@@ -776,29 +628,29 @@ static void COM_Help_f()
 
 static void COM_Toggle_f()
 {
-  if (COM_Argc() != 2 && COM_Argc() != 3)
+  if (COM.Argc() != 2 && COM.Argc() != 3)
     {
       CONS_Printf("Toggle <cvar_name> [-1]\n"
                   "Toggle the value of a cvar\n");
       return;
     }
-  consvar_t *cvar = consvar_t::FindVar(COM_Argv(1));
+  consvar_t *cvar = consvar_t::FindVar(COM.Argv(1));
   if (!cvar)
     {
-      CONS_Printf("%s is not a cvar\n",COM_Argv(1));
+      CONS_Printf("%s is not a cvar\n",COM.Argv(1));
       return;
     }
 
   // netcvar don't change imediately
   cvar->flags |= CV_ANNOUNCE_ONCE;
-  if (COM_Argc() == 3)
-    cvar->AddValue(atol(COM_Argv(2)));
+  if (COM.Argc() == 3)
+    cvar->AddValue(atol(COM.Argv(2)));
   else
     cvar->AddValue(1);
 }
 
 
-// =========================================================================
+//==========================================================================
 //
 //                           CONSOLE VARIABLES
 //
@@ -808,16 +660,22 @@ static void COM_Toggle_f()
 //   console vars acts like simplified commands, because a function can be
 //   attached to them, and called whenever a console var is modified
 //
-// =========================================================================
+//==========================================================================
 
 consvar_t *consvar_t::cvar_list = NULL;
+
+
+CV_PossibleValue_t CV_OnOff[] =    {{0,"Off"}, {1,"On"},    {0,NULL}};
+CV_PossibleValue_t CV_YesNo[] =    {{0,"No"} , {1,"Yes"},   {0,NULL}};
+CV_PossibleValue_t CV_Unsigned[] = {{0,"MIN"}, {999999999,"MAX"}, {0,NULL}};
+
 
 //  Search if a variable has been registered
 //  returns true if given variable has been registered
 consvar_t *consvar_t::FindVar(const char *name)
 {
   for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
-    if (!strcmp(name, cvar->name))
+    if (!strcasecmp(name, cvar->name))
       return cvar;
 
   return NULL;
@@ -942,7 +800,7 @@ bool consvar_t::Reg()
 	}
 
       // check for overlap with a command
-      if (COM_Exists(name))
+      if (COM.Exists(name))
 	{
 	  I_Error("%s is a command name\n", name);
 	  return false;
@@ -1023,7 +881,7 @@ const char *consvar_t::CompleteVar(const char *partial, int skips)
 
   // check functions
   for (consvar_t *cvar = cvar_list; cvar; cvar = cvar->next)
-    if (!strncmp(partial, cvar->name, len))
+    if (!strncasecmp(partial, cvar->name, len))
       if (!skips--)
         return cvar->name;
 
@@ -1198,18 +1056,18 @@ fixed_t consvar_t::Get() const
 bool consvar_t::Command()
 {
   // check variables
-  consvar_t *v = FindVar(COM_Argv(0));
+  consvar_t *v = FindVar(COM.Argv(0));
   if (!v)
     return false;
 
   // perform a variable print or set
-  if (COM_Argc() == 1)
+  if (COM.Argc() == 1)
     {
       CONS_Printf("\"%s\" is \"%s\" default is \"%s\"\n", v->name, v->str, v->defaultvalue);
       return true;
     }
 
-  v->Set(COM_Argv(1));
+  v->Set(COM.Argv(1));
   return true;
 }
 

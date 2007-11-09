@@ -23,8 +23,12 @@
 #ifndef command_h
 #define command_h 1
 
+#include <string>
 #include <stdio.h>
+
 #include "doomtype.h"
+
+using namespace std;
 
 //===================================
 // Command buffer & command execution
@@ -33,28 +37,78 @@
 typedef void (*com_func_t)();
 extern class PlayerInfo *com_player;
 
-void    COM_AddCommand(char *name, com_func_t func);
+/// \brief The command buffer.
+class command_buffer_t
+{
+public:
+  struct xcommand_t  *com_commands; ///< currently known commands
+  struct cmdalias_t  *com_alias; ///< aliases list
 
-int     COM_Argc();
-char    *COM_Argv(int arg);   // if argv>argc, returns empty string
-char    *COM_Args();
-int     COM_CheckParm(char *check); // like M_CheckParm :)
+  string com_text; ///< actual command buffer
+  unsigned com_maxsize;
 
-// match existing command or NULL
-char    *COM_CompleteCommand(char *partial, int skips);
+  int    com_wait; ///< one command per frame (for cmd sequences)
 
-// insert at queu (at end of other command)
-void    COM_BufAddText(char *text);
+  // parsing
+#define MAX_ARGS        80
+  int         com_argc;
+  char       *com_args; ///< current command args or NULL
+  char       *com_argv[MAX_ARGS];
 
-// insert in head (before other command)
-void    COM_BufInsertText(char *text);
+  char com_token[1024];
 
-// Execute commands in buffer, flush them
-void    COM_BufExecute();
+protected:
+  void  COM_ExecuteString(char *text);
+  void  COM_TokenizeString(char *text);
+  char *COM_Parse(char *data);
 
-// setup command buffer, at game tartup
-void    COM_Init();
+public:
+  /// Constructor
+  command_buffer_t();
 
+  /// Setup command buffer, at game startup.
+  void Init();
+
+  void AddCommand(const char *name, com_func_t func);
+
+
+  //COM_BufAddText
+  /// Add text to the end of the command buffer
+  void AppendText(const char *text);
+  //COM_BufInsertText
+  /// Add text to the beginning of the command buffer
+  void PrependText(const char *text);
+
+  //COM_BufExecute
+  /// Execute commands in buffer, flush them.
+  void BufExecute();
+
+
+  /// Returns how many args for last command.
+  int Argc() { return com_argc; }
+
+  /// Returns string pointer of all command args.
+  char *Args() { return com_args; }
+
+  /// Returns string pointer for given argument number.
+  char *Argv(int arg)
+  {
+    if (arg >= com_argc || arg < 0)
+      return "";
+    return com_argv[arg];
+  }
+
+  int CheckParm(const char *check);
+
+
+  const char *CompleteCommand(char *partial, int skips);
+
+  /// Checks if the named command exists.
+  bool Exists(char *com_name);
+
+};
+
+extern command_buffer_t COM;
 
 
 

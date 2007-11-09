@@ -45,42 +45,48 @@ enum texture_draw_e
 };
 
 
-/// \brief Class for raster fonts
+
+/// \brief ABC for fonts
 class font_t
 {
-protected:
-  char  start, end;     ///< first and last ASCII characters included in the font
-  std::vector<class Material*> font; ///< one Material per symbol
+#define TABWIDTH 32.0
 
 public:
   float height, width;  ///< world dimensions of the character '0' in the font
 
 public:
-  font_t(int startlump, int endlump, char firstchar = '!');
+  virtual ~font_t();
 
-  /// Write a single character (draw WHITE if bit 7 set)
-  void DrawCharacter(float x, float y, char c, int flags);
-  /// Write a string using the font.
-  void DrawString(float x, float y, const char *str, int flags);
-  /// Returns the width of the string in unscaled pixels
-  float StringWidth(const char *str);
-  float StringWidth(const char *str, int n);
-  float StringHeight(const char *str);
+  /// Write a single ASCII character (draw WHITE if bit 7 set), return width
+  virtual float DrawCharacter(float x, float y, char c, int flags) = 0;
+  /// Write an UTF-8 string using the font, return string width.
+  virtual float DrawString(float x, float y, const char *str, int flags) = 0;
+
+  /// Returns the width of the UTF-8 string in unscaled pixels.
+  virtual float StringWidth(const char *str) = 0;
+  /// Returns the width of the first n characters of an UTF-8 string in unscaled pixels.
+  virtual float StringWidth(const char *str, int n) = 0;
+  /// Returns the height of the UTF-8 string in unscaled pixels.
+  virtual float StringHeight(const char *str) { return height; }
+
+  static void Init();
 };
+
+extern font_t *hud_font;
+extern font_t *big_font;
+
 
 /// color translation
 extern byte    translationtables[MAXSKINCOLORS][256];
 extern byte   *current_colormap; // for applying colormaps to Drawn Textures
-extern font_t *hud_font;
-extern font_t *big_font;
 
 
 void VID_BlitLinearScreen(byte *srcptr, byte *destptr, int width,
 			  int height, int srcrowbytes, int destrowbytes);
 
-void V_CopyRect(int srcx,  int srcy,  int srcscrn,
-		int width, int height,
-		int destx, int desty, int destscrn);
+void V_CopyRect(float srcx,  float srcy,  int srcscrn,
+		float width, float height,
+		float destx, float desty, int destscrn);
 
 
 // Draw a linear block of pixels into the view buffer.
@@ -95,7 +101,7 @@ void V_DrawFill(int x, int y, int w, int h, int c);
 //added:10-02-98: fade down the screen buffer before drawing the menu over
 void V_DrawFadeScreen();
 //added:20-03-98: test console
-void V_DrawFadeConsBack(int x1, int y1, int x2, int y2);
+void V_DrawFadeConsBack(float x1, float y1, float x2, float y2);
 
 
 //added:12-02-98:

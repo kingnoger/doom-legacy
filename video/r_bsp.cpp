@@ -729,7 +729,7 @@ bool Rend::R_CheckBBox(bbox_t &bbox)
 #ifdef OLDWATER
 // this one is set par subsector, and used by r_segs code to mark water planes
 fixed_t             waterheight;
-#endif
+
 
 //Fab: hack, until water is finished
 fixed_t             dev_waterheight = fixed_t::FMIN;
@@ -747,7 +747,7 @@ void Command_Water_f (void)
 
   dev_waterheight = (atoi(COM_Argv(1)) << 16) + 1;
 }
-
+#endif
 
 drawseg_t*   firstseg;
 

@@ -144,8 +144,8 @@ void D_PageDrawer(char *lumpname)
     {
       if ((vid.width>BASEVIDWIDTH) || (vid.height>BASEVIDHEIGHT) )
         {
-          for (int y=0; y<vid.height; y += window_background->worldheight)
-            for (int x=0; x<vid.width; x += window_background->worldwidth)
+          for (float y=0; y<vid.height; y += window_background->worldheight)
+            for (float x=0; x<vid.width; x += window_background->worldwidth)
               window_background->Draw(x,y,0);
         }
     }

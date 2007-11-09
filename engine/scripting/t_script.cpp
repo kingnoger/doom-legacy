@@ -421,7 +421,7 @@ void COM_FS_DumpScript_f()
 {
   script_t *script;
   
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf("usage: FS_DumpScript <scriptnum>\n");
       return;
@@ -432,14 +432,14 @@ void COM_FS_DumpScript_f()
 
   Map *m = com_player->mp;
 
-  if (!strcmp(COM_Argv(1), "level"))
+  if (!strcmp(COM.Argv(1), "level"))
     script = m->levelscript;
   else
-    script = m->levelscript->children[atoi(COM_Argv(1))];
+    script = m->levelscript->children[atoi(COM.Argv(1))];
   
   if (!script)
     {
-      CONS_Printf("script '%s' not defined.\n", COM_Argv(1));
+      CONS_Printf("script '%s' not defined.\n", COM.Argv(1));
       return;
     }
   
@@ -450,7 +450,7 @@ void COM_FS_DumpScript_f()
 
 void COM_FS_RunScript_f()
 {
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf("Usage: FS_RunScript <script>\n");
       return;
@@ -461,7 +461,7 @@ void COM_FS_RunScript_f()
 
   Map *m = com_player->mp;
 
-  int sn = atoi(COM_Argv(1));
+  int sn = atoi(COM.Argv(1));
   
   if (!m->levelscript->children[sn])
     {

@@ -107,9 +107,9 @@ static gamemission_t mission = gmi_doom2;
 void BeginGame(int episode, int skill, bool public_server)
 {
   if (public_server)
-    COM_BufAddText(va("newgame %s server %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
+    COM.AppendText(va("newgame %s server %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
   else
-    COM_BufAddText(va("newgame %s local %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
+    COM.AppendText(va("newgame %s local %d %d\n", game.mapinfo_lump.c_str(), episode, skill));
 }
 
 
@@ -572,7 +572,7 @@ void D_DoomMain()
     D_CheckWadVersion();
 
   // command buffer
-  COM_Init();
+  COM.Init();
 
   // system-specific stuff
   CONS_Printf("SYS_Init: Init system-specific stuff.\n");
@@ -669,7 +669,7 @@ void D_DoomMain()
 
   p = M_CheckParm("-loadgame");
   if (p && M_IsNextParm())
-    COM_BufAddText(va("load %d\n", atoi(myargv[p+1])));
+    COM.AppendText(va("load %d\n", atoi(myargv[p+1])));
   else if (autostart)
     BeginGame(episode, sk, public_server);
   else
@@ -679,10 +679,10 @@ void D_DoomMain()
   M_PushSpecialParameters();
 
   // user settings
-  COM_BufAddText("exec autoexec.cfg\n");
+  COM.AppendText("exec autoexec.cfg\n");
 
   // execute all the waiting commands in the buffer
-  COM_BufExecute();
+  COM.BufExecute();
 
   // end of loading screen: CONS_Printf() will no more call FinishUpdate()
   con.refresh = false;

@@ -815,7 +815,7 @@ void Menu::DrawMenu()
 		  const char *t = textbox.GetText();
 		  hud_font->DrawString(x+8, dy+12, t, V_SCALE);
 		  if (AnimCount < 4)
-		    hud_font->DrawCharacter(x+8+hud_font->StringWidth(t), dy + 12, '_' | 0x80, V_SCALE);
+		    hud_font->DrawCharacter(x+8+hud_font->StringWidth(t), dy + 12, '_', V_WHITEMAP | V_SCALE);
 		}
 	      else
 		hud_font->DrawString(x+8, dy+12, cv->str, V_SCALE);
@@ -864,7 +864,7 @@ void Menu::DrawMenu()
   if ((items[itemOn].flags & IT_DISPLAY_MASK) < IT_STRING)
     pointer[which_pointer]->Draw(x-32, cursory-5, V_SCALE);
   else if (AnimCount < 4)  //blink cursor
-    hud_font->DrawCharacter(x-10, cursory, '*' | 0x80, V_SCALE);
+    hud_font->DrawCharacter(x-10, cursory, '*', V_WHITEMAP | V_SCALE);
 }
 
 
@@ -981,7 +981,7 @@ void M_EndGameResponse(int ch)
 
   //currentMenu->lastOn = itemOn;
   Menu::Close(true);
-  COM_BufAddText("reset\n");
+  COM.AppendText("reset\n");
 }
 
 void M_EndGame(int choice)
@@ -1745,7 +1745,7 @@ static void M_HandleSetupPlayerSkin(int val)
 
   // check skin change
   if (myskin != setupm_player->skin)
-    COM_BufAddText(va("%s \"%s\"",setupm_cvskin->name ,skins[myskin].name));
+    COM.AppendText(va("%s \"%s\"",setupm_cvskin->name ,skins[myskin].name));
 }
 */
 
@@ -1892,7 +1892,7 @@ void Menu::DrawSetupPlayer()
 
   // draw text cursor for name
   //if (itemOn == 0 && AnimCount < 4)   //blink cursor
-  //  hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()),y,'_' | 0x80, V_SCALE);
+  //  hud_font->DrawCharacter(x+98+hud_font->StringWidth(setupm_player->name.c_str()), y, '_', V_WHITEMAP | V_SCALE);
 
   // draw box around guy
   M_DrawTextBox(4, y+44, PLBOXW, PLBOXH);
@@ -2202,7 +2202,7 @@ void Menu::DrawVideoMode()
     {
       i = 16 - 10 + ((vidm_current / vidm_column_size)*8*13);
       j = y + ((vidm_current % vidm_column_size)*8);
-      hud_font->DrawCharacter(i, j, '*' | 0x80, V_SCALE);
+      hud_font->DrawCharacter(i, j, '*', V_WHITEMAP | V_SCALE);
     }
 }
 
@@ -2673,7 +2673,7 @@ bool Menu::Responder(event_t *ev)
   // quick dev screenshot hack...
   if (devparm && ch == KEY_F1)
     {
-      COM_BufAddText("screenshot\n");
+      COM.AppendText("screenshot\n");
       return true;
     }
 
@@ -2754,7 +2754,7 @@ bool Menu::Responder(event_t *ev)
 	  break;
 
         case KEY_PAUSE:
-          COM_BufAddText("pause\n");
+          COM.AppendText("pause\n");
           return true;
 
 	default: // not a recognized keydown event

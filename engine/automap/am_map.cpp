@@ -440,6 +440,7 @@ void AutoMap::InitVariables()
   if (game.mode >= gm_heretic)
     {
       // different palette
+      /*
       REDS       = 12*8;
       REDRANGE   = 1;
       BLUES      = (256-4*16+8);
@@ -454,6 +455,22 @@ void AutoMap::InitVariables()
       YELLOWRANGE= 1;
       DBLACK      = 0;
       DWHITE      = 4*8;
+      PARCH	  = 13*8-1;
+      */
+      REDS       = 9*16+1;
+      REDRANGE   = 16;
+      BLUES      = 12*16;
+      BLUERANGE  = 16;
+      GREENS     = 13*16+1;
+      GREENRANGE = 16;
+      GRAYS      = 0;
+      GRAYSRANGE = 16;
+      BROWNS     = 7*16+8;
+      BROWNRANGE = 8;
+      YELLOWS    = 9*16;
+      YELLOWRANGE= 1;
+      DBLACK      = 0;
+      DWHITE      = 255;
       PARCH	  = 13*8-1;
 
       if (game.mode == gm_heretic)

@@ -101,7 +101,7 @@ void M_PushSpecialParameters()
 	  strcat(s,"\n");
 
 	  // push it
-	  COM_BufAddText (s);
+	  COM.AppendText(s);
 	  i--;
         }
     }

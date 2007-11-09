@@ -309,7 +309,7 @@ void GameInfo::TryRunTics(tic_t elapsed)
     elapsed = 1;
 
   if (elapsed >= 1)
-    COM_BufExecute(); // process command buffer
+    COM.BufExecute(); // process command buffer
 
   I_GetEvent();
 
@@ -553,14 +553,14 @@ void InitNetwork()
       // server address only in ip
       if (server_hostname[0] && !ipx)
         {
-	  COM_BufAddText("connect \"");
-	  COM_BufAddText(server_hostname);
-	  COM_BufAddText("\"\n");
+	  COM.AppendText("connect \"");
+	  COM.AppendText(server_hostname);
+	  COM.AppendText("\"\n");
         }
       else
         {
 	  // so we're on a LAN
-	  COM_BufAddText("connect any\n");
+	  COM.AppendText("connect any\n");
         }
     }
 
@@ -575,7 +575,6 @@ void InitNetwork()
 void Command_Listserv_f() {}
 
 void Command_Clear_f();
-void Command_Keymap_f();
 void Command_Bind_f();
 
 void Command_SaveConfig_f();
@@ -659,68 +658,67 @@ void SV_Init()
   */
 
   // console
-  COM_AddCommand("cls", Command_Clear_f);
-  COM_AddCommand("keymap", Command_Keymap_f);
-  COM_AddCommand("bind", Command_Bind_f);
+  COM.AddCommand("cls", Command_Clear_f);
+  COM.AddCommand("bind", Command_Bind_f);
 
   // config file management  
-  COM_AddCommand("saveconfig", Command_SaveConfig_f);
-  COM_AddCommand("loadconfig", Command_LoadConfig_f);
-  COM_AddCommand("changeconfig", Command_ChangeConfig_f);
+  COM.AddCommand("saveconfig", Command_SaveConfig_f);
+  COM.AddCommand("loadconfig", Command_LoadConfig_f);
+  COM.AddCommand("changeconfig", Command_ChangeConfig_f);
 
   // informational commands
-  COM_AddCommand("version", Command_Version_f);
-  COM_AddCommand("meminfo", Command_Meminfo_f);
-  COM_AddCommand("gameinfo", Command_GameInfo_f);
-  COM_AddCommand("mapinfo", Command_MapInfo_f);
-  COM_AddCommand("players", Command_Players_f);
-  COM_AddCommand("frags", Command_Frags_f);
+  COM.AddCommand("version", Command_Version_f);
+  COM.AddCommand("meminfo", Command_Meminfo_f);
+  COM.AddCommand("gameinfo", Command_GameInfo_f);
+  COM.AddCommand("mapinfo", Command_MapInfo_f);
+  COM.AddCommand("players", Command_Players_f);
+  COM.AddCommand("frags", Command_Frags_f);
 
   // chat commands
-  COM_AddCommand("say"    , Command_Say_f);
-  COM_AddCommand("sayto"  , Command_Sayto_f);
-  COM_AddCommand("sayteam", Command_Sayteam_f);
-  COM_AddCommand("chatmacro", Command_Chatmacro_f);
+  COM.AddCommand("say"    , Command_Say_f);
+  COM.AddCommand("sayto"  , Command_Sayto_f);
+  COM.AddCommand("sayteam", Command_Sayteam_f);
+  COM.AddCommand("chatmacro", Command_Chatmacro_f);
 
   // basic commands for controlling the game
-  COM_AddCommand("pause", Command_Pause_f);
-  COM_AddCommand("quit",  Command_Quit_f);
-  COM_AddCommand("connect", Command_Connect_f);
-  COM_AddCommand("reset", Command_Reset_f);
+  COM.AddCommand("pause", Command_Pause_f);
+  COM.AddCommand("quit",  Command_Quit_f);
+  COM.AddCommand("connect", Command_Connect_f);
+  COM.AddCommand("reset", Command_Reset_f);
 
   // game management (server only)
-  COM_AddCommand("save", Command_Save_f);
-  COM_AddCommand("load", Command_Load_f);
-  COM_AddCommand("playdemo", Command_Playdemo_f);
-  COM_AddCommand("stopdemo", Command_Stopdemo_f);
-  COM_AddCommand("addfile", Command_Addfile_f);
-  COM_AddCommand("kick", Command_Kick_f);
-  COM_AddCommand("kill", Command_Kill_f);
+  COM.AddCommand("save", Command_Save_f);
+  COM.AddCommand("load", Command_Load_f);
+  COM.AddCommand("playdemo", Command_Playdemo_f);
+  COM.AddCommand("stopdemo", Command_Stopdemo_f);
+  COM.AddCommand("addfile", Command_Addfile_f);
+  COM.AddCommand("kick", Command_Kick_f);
+  COM.AddCommand("kill", Command_Kill_f);
 
-  COM_AddCommand("newgame", Command_NewGame_f);
-  COM_AddCommand("startgame", Command_StartGame_f);
-  COM_AddCommand("map", Command_Map_f);
+  COM.AddCommand("newgame", Command_NewGame_f);
+  COM.AddCommand("startgame", Command_StartGame_f);
+  COM.AddCommand("map", Command_Map_f);
 
-  COM_AddCommand("runacs", Command_RunACS_f);
+  COM.AddCommand("runacs", Command_RunACS_f);
   FS_Init();
-  COM_AddCommand("fs_dumpscript", COM_FS_DumpScript_f);
-  COM_AddCommand("fs_runscript",  COM_FS_RunScript_f);
-  COM_AddCommand("fs_running",    COM_FS_Running_f);
+  COM.AddCommand("fs_dumpscript", COM_FS_DumpScript_f);
+  COM.AddCommand("fs_runscript",  COM_FS_RunScript_f);
+  COM.AddCommand("fs_running",    COM_FS_Running_f);
 
   // bots
-  COM_AddCommand("addbot", Command_AddBot_f);
+  COM.AddCommand("addbot", Command_AddBot_f);
 
   // cheat commands, I'm bored of deh patches renaming the idclev ! :-)
-  COM_AddCommand("noclip", Command_CheatNoClip_f);
-  COM_AddCommand("god", Command_CheatGod_f);
-  COM_AddCommand("gimme", Command_CheatGimme_f);
+  COM.AddCommand("noclip", Command_CheatNoClip_f);
+  COM.AddCommand("god", Command_CheatGod_f);
+  COM.AddCommand("gimme", Command_CheatGimme_f);
 
   //Added by Hurdler for master server connection
   cv_masterserver.Reg();
-  COM_AddCommand("listserv", Command_Listserv_f);
+  COM.AddCommand("listserv", Command_Listserv_f);
 
   // misc
-  COM_AddCommand("convertmap", Command_ConvertMap_f);
+  COM.AddCommand("convertmap", Command_ConvertMap_f);
 
   // register console variables
   cv_publicserver.Reg();

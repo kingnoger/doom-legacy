@@ -120,34 +120,6 @@ void ST_LoadDoomData();
 //  sets the defaults border patch for the window borders.
 void HUD::Init()
 {
-  int startlump, endlump;
-  // TODO add legacy default font (in legacy.wad)
-
-  // "hud font"
-  switch (game.mode)
-    {
-    case gm_heretic:
-    case gm_hexen:
-      startlump = fc.GetNumForName("FONTA01");
-      endlump  =  fc.GetNumForName("FONTA59");
-      break;
-    default:
-      startlump = fc.GetNumForName("STCFN033");
-      endlump =   fc.GetNumForName("STCFN095");
-    }
-
-  hud_font = new font_t(startlump, endlump);
-
-  // "big font"
-  if (fc.FindNumForName("FONTB_S") < 0)
-    big_font = NULL;
-  else
-    {
-      startlump = fc.FindNumForName("FONTB01");
-      endlump   = fc.GetNumForName("FONTB58");
-      big_font = new font_t(startlump, endlump);
-    }
-
   //----------- cache all legacy.wad stuff here
 
   PatchRankings = materials.Get("RANKINGS");
@@ -195,49 +167,46 @@ bool HUD::Responder(event_t *ev)
     }
   else
     {
-      int c = ev->data1;
-
-      // use console translations for chat
-      if (shiftdown)
-        c = shiftxform[c];
-      else if (con_keymap != la_english)
-        c = KeyTranslation(c);
+      int k = ev->data1;
 
       // send a macro
       if (altdown)
         {
-          c = c - '0';
-          if (c > 9)
+          k = k - '0';
+          if (k > 9 || k < 0)
             return false;
 
           // kill (and send) the last message
 	  SendChat();
 
           // send the macro message
-	  chat_msg = chat_macros[c]->str;
+	  chat_msg = chat_macros[k]->str;
 	  SendChat();
 	  return true;
         }
       else
         {
+	  // chat input
+	  int c = ev->data2;
+
 	  if (c >= ' ' && c <= '_')
 	    {
 	      if (chat_msg.length() < 80)
 		chat_msg.push_back(c);
 	      return true;
 	    }
-	  else if (c == KEY_BACKSPACE)
+	  else if (k == KEY_BACKSPACE)
 	    {
 	      if (!chat_msg.empty())
 		chat_msg.erase(--chat_msg.end());
 	      return true;
 	    }
-          else if (c == KEY_ENTER)
+          else if (k == KEY_ENTER)
             {
 	      SendChat();
 	      return true;
             }
-          else if (c == KEY_ESCAPE)
+          else if (k == KEY_ESCAPE)
 	    {
 	      chat_on = false;
 	      return true;
@@ -277,7 +246,7 @@ void HUD::Ticker()
 	      CONS_Printf("%s\n", m.msg.c_str());
 	      break;
 	    case PlayerInfo::M_HUD:
-	      tips.push_back(new HudTip(m.msg, 150));
+	      tips.push_back(new HudTip(m.msg, m.extradata));
 	      break;
 	    }
 
@@ -312,7 +281,7 @@ void HUD::SendChat()
 {
   // send the message, get out of chat mode
   if (chat_msg.length() > 3)
-    COM_BufInsertText(va("say %s", chat_msg.c_str()));
+    COM.PrependText(va("say %s", chat_msg.c_str()));
 
   chat_msg.clear();
   chat_on = false;
@@ -420,10 +389,10 @@ void HUD::DrawCommon()
   // draw chat string plus cursor
   if (chat_on)
     {
-      hud_font->DrawString(HU_INPUTX, HU_INPUTY, chat_msg.c_str(), V_SCALE | V_WHITEMAP);
-      int cx = HU_INPUTX + hud_font->StringWidth(chat_msg.c_str());
+      float cx = HU_INPUTX;
+      cx += hud_font->DrawString(cx, HU_INPUTY, chat_msg.c_str(), V_SCALE | V_WHITEMAP);
       if (hu_tick < 4)
-	hud_font->DrawCharacter(cx, HU_INPUTY, '_' | 0x80, V_SCALE);
+	hud_font->DrawCharacter(cx, HU_INPUTY, '_', V_WHITEMAP | V_SCALE);
     }
 
   // draw deathmatch rankings
@@ -739,21 +708,21 @@ void HU_HackChatmacros()
 //
 void Command_Chatmacro_f()
 {
-  if (COM_Argc()<2)
+  if (COM.Argc()<2)
     {
       CONS_Printf("chatmacro <0-9> : view chatmacro\n"
                   "chatmacro <0-9> \"chat message\" : change chatmacro\n");
       return;
     }
 
-  int i = atoi(COM_Argv(1)) % 10;
+  int i = atoi(COM.Argv(1)) % 10;
 
-  if (COM_Argc() == 2)
+  if (COM.Argc() == 2)
     {
       CONS_Printf("chatmacro %d is \"%s\"\n",i,chat_macros[i]->str);
       return;
     }
 
   // change a chatmacro
-  chat_macros[i]->Set(COM_Argv(2));
+  chat_macros[i]->Set(COM.Argv(2));
 }

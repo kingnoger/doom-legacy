@@ -26,7 +26,6 @@
 #include <png.h>
 
 #include "doomdef.h"
-#include "console.h"
 #include "r_data.h"
 #include "w_wad.h"
 #include "z_zone.h"

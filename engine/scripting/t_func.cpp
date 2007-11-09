@@ -261,7 +261,7 @@ void SF_Input()
 
 void SF_Beep()
 {
-  CONS_Printf("\3");
+  CONS_Printf("\a");
 }
 
 
@@ -366,7 +366,7 @@ void SF_Tip()
   for (i=0; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD);
+  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD, 150);
   Z_Free(tempstr);
 }
 
@@ -396,7 +396,7 @@ void SF_TimedTip()
   for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD); // TODO tiptime
+  trigger_player->SetMessage(tempstr, 1, PlayerInfo::M_HUD, tiptime);
   Z_Free(tempstr);
 }
 
@@ -423,7 +423,7 @@ void SF_PlayerTip()
   for (i=1; i<t_argc; i++)
     sprintf(tempstr, "%s%s", tempstr, stringvalue(t_argv[i]));
 
-  p->SetMessage(tempstr, 1, PlayerInfo::M_HUD);
+  p->SetMessage(tempstr, 1, PlayerInfo::M_HUD, 150);
   Z_Free(tempstr);
 }
 
@@ -686,8 +686,7 @@ void SF_MaxPlayerAmmo()
   if (t_argc == 3)
     {
       int newmax = intvalue(t_argv[2]);
-      // FIXME make maxammo again changeable
-      //p->maxammo[ammonum] = newmax;
+      p->maxammo[ammonum] = newmax;
     }
 
   t_return.value.i = p->maxammo[ammonum];
@@ -1962,7 +1961,7 @@ void SF_RunCommand()
   for(i=0; i<t_argc; i++)
     sprintf(tempstr,"%s%s", tempstr, stringvalue(t_argv[i]));
 
-  COM_BufAddText(tempstr);
+  COM.AppendText(tempstr);
   Z_Free(tempstr);
 }
 
@@ -2334,9 +2333,6 @@ void SF_SetHUPicDisplay()
 
 
 // Hurdler: I'm enjoying FS capability :)
-#warning setcorona: Hurdler, must be uncommented once the new dynamic light code is OK
-#if 0
-extern light_t lspr[];
 
 int String2Hex(const char *s)
 {
@@ -2350,6 +2346,9 @@ int String2Hex(const char *s)
 
 void SF_SetCorona()
 {
+#warning setcorona: Hurdler, must be uncommented once the new dynamic light code is OK
+#if 0
+
     if (rendermode == render_soft)
         return; // do nothing in software mode
     if (t_argc != 3 && t_argc != 7)
@@ -2408,8 +2407,8 @@ void SF_SetCorona()
         lspr[num].dynamic_radius = t_argv[7].value.f;
         lspr[num].dynamic_sqrradius = sqrt(lspr[num].dynamic_radius);
     }
-}
 #endif // if 0
+}
 
 
 // Exl: Modified by Tox to take a pitch parameter
@@ -2605,7 +2604,5 @@ void FS_init_functions()
   new_function("setpicvisible", SF_SetHUPicDisplay);
 
   // Hurdler's stuff :)
-#if 0 //FIXME: Hurdler, must be uncommented once the new dynamic light code is OK
   new_function("setcorona", SF_SetCorona);
-#endif
 }

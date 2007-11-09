@@ -122,14 +122,14 @@ static void Command_Cd_f()
   if (!initialized)
     return;
 
-  if (COM_Argc() < 2) {
+  if (COM.Argc() < 2) {
     CONS_Printf("cd [on] [off] [remap] [reset] [open]\n"
 		"   [info] [play <track>] [resume]\n"
 		"   [stop] [pause] [loop <track>]\n");
     return;
   }
 
-  command = COM_Argv(1);
+  command = COM.Argv(1);
 
   if (!strncmp(command, "on", 2)) {
     enabled = true;
@@ -143,7 +143,7 @@ static void Command_Cd_f()
   }
 	
   if (!strncmp(command, "remap", 5)) {
-    ret = COM_Argc() - 2;
+    ret = COM.Argc() - 2;
     if (ret <= 0) {
       for (n = 1; n < MAX_CD_TRACKS; n++)
 	if (cdRemap[n] != n)
@@ -151,7 +151,7 @@ static void Command_Cd_f()
       return;
     }
     for (n = 1; n <= ret; n++)
-      cdRemap[n] = atoi(COM_Argv(n+1));
+      cdRemap[n] = atoi(COM.Argv(n+1));
     return;
   }
         
@@ -189,12 +189,12 @@ static void Command_Cd_f()
   }
 
   if (!strncmp(command, "play", 4)) {
-    I_PlayCD((byte)atoi(COM_Argv(2)), false);
+    I_PlayCD((byte)atoi(COM.Argv(2)), false);
     return;
   }
 
   if (!strncmp(command, "loop", 4)) {
-    I_PlayCD((byte)atoi(COM_Argv(2)), true);
+    I_PlayCD((byte)atoi(COM.Argv(2)), true);
     return;
   }
 
@@ -213,7 +213,7 @@ static void Command_Cd_f()
     return;
   }
         
-  CONS_Printf("Invalid command \"cd %s\"\n", COM_Argv(1));
+  CONS_Printf("Invalid command \"cd %s\"\n", COM.Argv(1));
 }
 
 
@@ -371,7 +371,7 @@ void I_InitCD()
 
   CDAudio_GetAudioDiskInfo();
 
-  COM_AddCommand("cd", Command_Cd_f);
+  COM.AddCommand("cd", Command_Cd_f);
     
   CONS_Printf(" CD audio initialized.\n");
     

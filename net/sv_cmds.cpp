@@ -66,9 +66,9 @@ void Command_GameInfo_f()  // TODO
 void Command_MapInfo_f()
 {
   MapInfo *m;
-  if (COM_Argc() > 1)
+  if (COM.Argc() > 1)
     {
-      m = game.FindMapInfo(strupr(COM_Argv(1)));
+      m = game.FindMapInfo(strupr(COM.Argv(1)));
       if (!m)
 	{
 	  CONS_Printf("No such map.\n");
@@ -109,12 +109,12 @@ void Command_Players_f()
 // prints scoreboard
 void Command_Frags_f() // TODO
 {
-  if (COM_Argc() > 2)
+  if (COM.Argc() > 2)
     {
       CONS_Printf("Usage: frags [team]\n");
       return;
     }
-  bool team = (COM_Argc() == 2);
+  bool team = (COM.Argc() == 2);
 
   //int n = GI::GetFrags(&table, team);
   /*
@@ -147,13 +147,13 @@ bool ConvertMapToHexen(int lumpnum);
 /// writes the lumps on disk.
 void Command_ConvertMap_f()
 {
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf("Usage: convertmap <maplumpname>\n");
       return;
     }
 
-  const char *temp = strupr(COM_Argv(1));
+  const char *temp = strupr(COM.Argv(1));
   int lump = fc.FindNumForName(temp);
   if (lump == -1)
     {
@@ -174,14 +174,14 @@ void Command_ConvertMap_f()
 // helper function
 static void PasteMsg(char *buf, int i)
 {
-  int j = COM_Argc();
+  int j = COM.Argc();
 
-  strcpy(buf, COM_Argv(i++));
+  strcpy(buf, COM.Argv(i++));
 
   for ( ; i<j; i++)
     {
       strcat(buf, " ");
-      strcat(buf, COM_Argv(i));
+      strcat(buf, COM.Argv(i));
     }
 }
 
@@ -190,7 +190,7 @@ void Command_Say_f()
 {
   char buf[255];
 
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf ("say <message> : send a message\n");
       return;
@@ -208,7 +208,7 @@ void Command_Sayto_f()
 {
   char buf[255];
 
-  if (COM_Argc() < 3)
+  if (COM.Argc() < 3)
     {
       CONS_Printf ("sayto <playername|playernum> <message> : send a message to a player\n");
       return;
@@ -217,7 +217,7 @@ void Command_Sayto_f()
   if (!com_player)
     return;
 
-  PlayerInfo *p = game.FindPlayer(COM_Argv(1));
+  PlayerInfo *p = game.FindPlayer(COM.Argv(1));
   if (!p)
     return;
 
@@ -230,7 +230,7 @@ void Command_Sayteam_f()
 {
   char buf[255];
 
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf ("sayteam <message> : send a message to your team\n");
       return;
@@ -263,8 +263,8 @@ void Command_Pause_f()
 
   bool on;
 
-  if (COM_Argc() > 1)
-    on = atoi(COM_Argv(1));
+  if (COM.Argc() > 1)
+    on = atoi(COM.Argv(1));
   else
     on = !game.paused;
 
@@ -283,7 +283,7 @@ void Command_Quit_f()
 // connect to a remote server
 void Command_Connect_f()
 {
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf("connect <serveraddress> : connect to a server\n"
 		  "connect ANY : connect to the first LAN server found\n");
@@ -298,10 +298,10 @@ void Command_Connect_f()
 
   CONS_Printf("connecting...\n");
 
-  if (!strcasecmp(COM_Argv(1), "any"))
+  if (!strcasecmp(COM.Argv(1), "any"))
     game.net->CL_StartPinging(true);
   else
-    game.net->CL_Connect(Address(COM_Argv(1)));
+    game.net->CL_Connect(Address(COM.Argv(1)));
 }
 
 
@@ -326,7 +326,7 @@ void Command_Reset_f()
 // load a game
 void Command_Load_f() // TODO
 {
-  if (COM_Argc() != 2)
+  if (COM.Argc() != 2)
     {
       CONS_Printf("load <slot>: load a saved game\n");
       return;
@@ -338,14 +338,14 @@ void Command_Load_f() // TODO
       return;
     }
 
-  game.LoadGame(atoi(COM_Argv(1)));
+  game.LoadGame(atoi(COM.Argv(1)));
 }
 
 
 // save the game
 void Command_Save_f()
 {
-  if (COM_Argc() != 3)
+  if (COM.Argc() != 3)
     {
       CONS_Printf("save <slot> <desciption>: save game\n");
       return;
@@ -357,8 +357,8 @@ void Command_Save_f()
       return;
     }
 
-  int slot = atoi(COM_Argv(1));
-  char *desc = COM_Argv(2);
+  int slot = atoi(COM.Argv(1));
+  char *desc = COM.Argv(2);
 
   game.SaveGame(slot, desc);
 }
@@ -374,7 +374,7 @@ void Command_Playdemo_f ()
 {
   char    name[256];
 
-  if (COM_Argc() != 2)
+  if (COM.Argc() != 2)
     {
       CONS_Printf ("playdemo <demoname> : playback a demo\n");
       return;
@@ -388,7 +388,7 @@ void Command_Playdemo_f ()
     }
 
   // open the demo file
-  strcpy (name, COM_Argv(1));
+  strcpy (name, COM.Argv(1));
   // dont add .lmp so internal game demos can be played
   //FIL_DefaultExtension (name, ".lmp");
 
@@ -415,7 +415,7 @@ void Command_Stopdemo_f ()
 void Command_Addfile_f() // TODO
 {
   // FIXME rewrite the "late adding of wadfiles to the resource list"-system
-  if (COM_Argc() != 2)
+  if (COM.Argc() != 2)
     {
       CONS_Printf("addfile <wadfile.wad> : load wad file\n");
       return;
@@ -429,7 +429,7 @@ void Command_Addfile_f() // TODO
         }
   */
 
-  //P_AddWadFile(COM_Argv(1), NULL);
+  //P_AddWadFile(COM.Argv(1), NULL);
 }
 
 
@@ -437,7 +437,7 @@ void Command_Addfile_f() // TODO
 /// Initialize a new game using a MAPINFO lump
 void Command_NewGame_f()
 {
-  if (COM_Argc() < 3 || COM_Argc() > 5)
+  if (COM.Argc() < 3 || COM.Argc() > 5)
     {
       CONS_Printf("Usage: newgame <MAPINFO lump> (local | server) [episode] [skill]\n");
       return;
@@ -451,35 +451,35 @@ void Command_NewGame_f()
 
   int sk = sk_medium;
   int epi = 0;
-  if (COM_Argc() >= 4)
+  if (COM.Argc() >= 4)
     {
-      epi = atoi(COM_Argv(3))-1;
+      epi = atoi(COM.Argv(3))-1;
 
-      if (COM_Argc() >= 5)
+      if (COM.Argc() >= 5)
 	{
-	  sk = atoi(COM_Argv(4));
+	  sk = atoi(COM.Argv(4));
 	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < sk_baby) ? sk_baby : sk);
 	}
     }
 
-  int lump = fc.FindNumForName(COM_Argv(1));
+  int lump = fc.FindNumForName(COM.Argv(1));
   if (lump < 0)
     {
-      CONS_Printf("MAPINFO lump '%s' not found.\n", COM_Argv(1));
+      CONS_Printf("MAPINFO lump '%s' not found.\n", COM.Argv(1));
       return;
     }
 
   bool reread = false;
-  if (game.mapinfo_lump != COM_Argv(1))
+  if (game.mapinfo_lump != COM.Argv(1))
     {
-      game.mapinfo_lump = COM_Argv(1);
+      game.mapinfo_lump = COM.Argv(1);
       reread = true;
     }
 
   if (!game.SV_SpawnServer(reread))
     return;
 
-  if (!strcasecmp(COM_Argv(2), "server"))
+  if (!strcasecmp(COM.Argv(2), "server"))
     game.SV_SetServerState(true);
 
   const Episode *temp = game.GetEpisode(epi);
@@ -490,7 +490,7 @@ void Command_NewGame_f()
 // starts or restarts the game
 void Command_StartGame_f()
 {
-  if (COM_Argc() > 3)
+  if (COM.Argc() > 3)
     {
       CONS_Printf("Usage: startgame [episode] [skill]\n");
       return;
@@ -510,13 +510,13 @@ void Command_StartGame_f()
 
   int sk = sk_medium;
   int epi = 0;
-  if (COM_Argc() >= 2)
+  if (COM.Argc() >= 2)
     {
-      epi = atoi(COM_Argv(1))-1;
+      epi = atoi(COM.Argv(1))-1;
 
-      if (COM_Argc() >= 3)
+      if (COM.Argc() >= 3)
 	{
-	  sk = atoi(COM_Argv(2));
+	  sk = atoi(COM.Argv(2));
 	  sk = (sk > sk_nightmare) ? sk_nightmare : ((sk < sk_baby) ? sk_baby : sk);
   	}
     }
@@ -531,27 +531,27 @@ void Command_StartGame_f()
 /// Called either from map <mapname> console command, or idclev cheat.
 void Command_Map_f()
 {
-  if (COM_Argc() < 2 || COM_Argc() > 7)
+  if (COM.Argc() < 2 || COM.Argc() > 7)
     {
       CONS_Printf("Usage: map <number|name> [<entrypoint>]: warp players to a map.\n");
       return;
     }
 
-  if (COM_Argc() > 3)
+  if (COM.Argc() > 3)
     {
       CONS_Printf("Warning: Using old syntax for map command.\n");
       // map <mapname[.wad]> [-skill <1..5>] [-monsters <0/1>] [-noresetplayers]
       int i;
-      if ((i = COM_CheckParm("-skill")) != 0)
+      if ((i = COM.CheckParm("-skill")) != 0)
 	{
-	  int temp = atoi(COM_Argv(i + 1)) - 1;
+	  int temp = atoi(COM.Argv(i + 1)) - 1;
 	  game.skill = skill_t(max(min(temp, int(sk_nightmare)), int(sk_baby)));
 	}
 
-      if ((i = COM_CheckParm("-monsters")) != 0)
-	cv_nomonsters.Set(*COM_Argv(i + 1) == '0');
+      if ((i = COM.CheckParm("-monsters")) != 0)
+	cv_nomonsters.Set(*COM.Argv(i + 1) == '0');
 
-      if (COM_CheckParm("-noresetplayers"))
+      if (COM.CheckParm("-noresetplayers"))
 	; // TODO
     }
 
@@ -567,7 +567,7 @@ void Command_Map_f()
       return;
     }
 
-  MapInfo *m = game.FindMapInfo(strupr(COM_Argv(1)));
+  MapInfo *m = game.FindMapInfo(strupr(COM.Argv(1)));
   if (!m)
     {
       CONS_Printf("No such map.\n");
@@ -580,7 +580,7 @@ void Command_Map_f()
       return;
     }    
 
-  int ep = atoi(COM_Argv(2));
+  int ep = atoi(COM.Argv(2));
 
   CONS_Printf("Warping to %s (%s)...\n", m->nicename.c_str(), m->lumpname.c_str());
   game.currentcluster->Finish(m->mapnumber, ep);
@@ -608,7 +608,7 @@ void Command_RestartLevel_f()
 // throws out a remote client
 void Command_Kick_f()
 {
-  if (COM_Argc() != 2)
+  if (COM.Argc() != 2)
     {
       CONS_Printf("kick <playername> | <playernum> : kick a player from the game.\n");
       return;
@@ -616,7 +616,7 @@ void Command_Kick_f()
 
   if (game.server)
     {
-      PlayerInfo *p = game.FindPlayer(COM_Argv(1));
+      PlayerInfo *p = game.FindPlayer(COM.Argv(1));
       if (!p)
 	CONS_Printf("there is no player with that name/number\n");
       else
@@ -643,7 +643,7 @@ void Kill_pawn(Actor *v, Actor *k)
 // Kills just about anything
 void Command_Kill_f()
 {
-  if (COM_Argc() < 2)
+  if (COM.Argc() < 2)
     {
       CONS_Printf ("Usage: kill me | <playernum> | monsters\n");
       // TODO extend usage: kill team
@@ -653,7 +653,7 @@ void Command_Kill_f()
   if (!game.server)
     {
       // client players can only commit suicide
-      if (COM_Argc() > 2 || strcmp(COM_Argv(1), "me"))
+      if (COM.Argc() > 2 || strcmp(COM.Argv(1), "me"))
 	CONS_Printf("Only the server can kill others thru the console!\n");
       else if (com_player)
 	game.net->RequestSuicide(com_player->number);
@@ -662,9 +662,9 @@ void Command_Kill_f()
     }
 
   PlayerInfo *p;
-  for (int i=1; i<COM_Argc(); i++)
+  for (int i=1; i<COM.Argc(); i++)
     {
-      char *s = COM_Argv(i);
+      char *s = COM.Argv(i);
       Actor *m = NULL;
 
       if (!strcasecmp(s, "me") && com_player)
