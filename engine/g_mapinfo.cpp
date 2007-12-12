@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by Doom Legacy Team
+// Copyright (C) 2002-2007 by Doom Legacy Team
 //
 // This program is free software; you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -309,18 +309,27 @@ bool MapInfo::HubLoad()
 //  '=' sign is optional: all equals signs are internally turned to spaces
 //
 
-// TODO decide the actual format of MapInfo lump...
 
-// one command set per block
+// FIXME NOTE:
+// This sucks. We need offsets of data fields inside the MapInfo, MapCluster and Episode classes, but there is no 
+// universal way of getting them since g++ feels they are not POD objects, and its behavior depends on version.
+// I see no reason why this shouldn't work since we have no virtual tables, access restrictions or anything weird in them...
 
-#if __GNUC__ >= 4
-//#define MI_offset(field) ((char*)&(((MapInfo*)0)->field) - (char*)0)
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+
+#if GCC_VERSION >= 30400
 # define MI_offset(field) offsetof(MapInfo, field)
+# define CD_offset(field) offsetof(MapCluster, field)
+# define EP_offset(field) offsetof(Episode, field)
 #else
 # define MI_offset(field) (size_t(&MapInfo::field))
+# define CD_offset(field) (size_t(&MapCluster::field))
+# define EP_offset(field) (size_t(&Episode::field))
 #endif
 
+//#define MI_offset(field) ((char*)&(((MapInfo*)0)->field) - (char*)0)
 //#define MI_offset(field) (size_t(&((MapInfo *)0)->field))
+
 static parsercmd_t MapInfo_commands[]=
 {
   {P_ITEM_STR, "levelname",  MI_offset(nicename)},
@@ -457,15 +466,6 @@ static parsercmd_t MAPINFO_MAP_commands[] =
 #undef MI_offset
 
 
-
-#if __GNUC__ >= 4
-# define CD_offset(field) ((char*)&(((MapCluster*)0)->field) - (char*)0)
-//#define CD_offset(field) offsetof(MapCluster, field)
-#else
-# define CD_offset(field) (size_t(&MapCluster::field))
-#endif
-//#define CD_offset(field) (size_t(&((MapCluster *)0)->field))
-
 /// ZDoom clusterdef commands
 static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 {
@@ -480,11 +480,7 @@ static parsercmd_t MAPINFO_CLUSTERDEF_commands[] =
 };
 #undef CD_offset
 
-#if __GNUC__ >= 4
-# define EP_offset(field) ((char*)&(((Episode*)0)->field) - (char*)0)
-#else
-# define EP_offset(field) (size_t(&Episode::field))
-#endif
+
 
 /// MAPINFO episode commands
 static parsercmd_t MAPINFO_EPISODE_commands[] =
