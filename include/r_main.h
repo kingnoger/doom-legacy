@@ -182,6 +182,9 @@ extern int              extralight;
 // initializes the client part of the renderer
 void R_Init();
 
+/// Updates internal renderer state to the given tic.
+void R_Update(tic_t t);
+
 // just sets setsizeneeded true
 extern bool setsizeneeded;
 void   R_SetViewSize();

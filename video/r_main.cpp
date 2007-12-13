@@ -576,19 +576,15 @@ void R_ServerInit()
 }
 
 
-int P_Read_ANIMATED(int lump);
-int P_Read_ANIMDEFS(int lump);
-
 /// Initializes the client renderer.
 /// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
-  R_ServerInit();
   //TestAnims();
 
   // Read texture animations, insert them into the cache, replacing the originals.
-  if (P_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
-    P_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
+  if (R_Read_ANIMDEFS(fc.FindNumForName("ANIMDEFS")) < 0)
+    R_Read_ANIMATED(fc.FindNumForName("ANIMATED"));
 
   // prepare the window border textures
   R_InitViewBorder();

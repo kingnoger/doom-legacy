@@ -135,7 +135,6 @@ export engine_objects = \
 	$(objdir)/p_genlin.o \
 	$(objdir)/p_things.o \
 	$(objdir)/p_lights.o \
-	$(objdir)/p_anim.o \
 	$(objdir)/p_switch.o \
 	$(objdir)/p_poly.o \
 	$(objdir)/p_acs.o \
@@ -229,6 +228,7 @@ export video_objects = \
 	$(objdir)/r_splats.o \
 	$(objdir)/r_sprite.o \
 	$(objdir)/r_things.o \
+	$(objdir)/r_anim.o \
 	$(objdir)/oglrenderer.o \
 	$(objdir)/oglshaders.o \
 	$(objdir)/oglhelpers.o

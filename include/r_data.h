@@ -318,6 +318,7 @@ class Material : public cacheitem_t
 {
   friend class material_cache_t;
 public:
+  int   id_number; ///< index of this Material in the all_materials vector
   float worldwidth, worldheight; ///< dimensions in world units (from tex0)
   float leftoffs, topoffs;       ///< external image offsets in world units (from tex0) (used by sprites and HUD graphics)
 
@@ -420,12 +421,18 @@ protected:
 
   Material   *default_item; ///< the default data item
 
-  /// All known Materials stored here for simplicity, each also resides in one cachesource_t
-  std::set<Material*> all_materials;
-  typedef std::set<Material*>::iterator material_iterator_t;
+  /// All known Materials stored here in the order they were created, each also resides in one cachesource_t.
+  /// Used for texture animation.
+  std::vector<Material*> all_materials;
+  typedef std::vector<Material*>::iterator material_iterator_t;
 
-  /// inserts a Material into the given source
-  bool Insert(Material *m, cachesource_t &s, bool keep_old = false);
+  /// Inserts the Material into the all_materials vector and gives it a corresponding id.
+  inline void Register(Material *m)
+  {
+    m->id_number = all_materials.size();
+    all_materials.push_back(m);
+  }
+
 
   /// Creates a Material from the Texture, also inserts it to the given source.
   Material *BuildMaterial(Texture *t, cachesource_t &source, bool h_start = false);
@@ -436,6 +443,12 @@ protected:
   std::vector<int> palette_lump;
 
 public:
+  /// Returns the Material with id_number id, or NULL.
+  inline Material *GetID(unsigned id)
+  {
+    return (id < all_materials.size()) ? all_materials[id] : NULL;
+  }
+
   /// creates the palette conversion colormaps
   void InitPaletteConversion();
 
@@ -457,27 +470,20 @@ public:
   /// Deletes all OpenGL textures within Materials
   void ClearGLTextures();
 
-  /// Creates a new Material in cache or returns an existing one for updating. For NTEXTURE.
-  Material *Update(const char *name, material_class_t mode);
+  /// Returns an existing Material for updating. Does not change reference counts. For animated materials and NTEXTURE.
+  /// If none exists, either creates a new blank Material in cache or returns NULL.
+  Material *Edit(const char *name, material_class_t mode, bool create = false);
 
-  /// Insert a Material into the flat source, used by animated textures.
-  /// Pointers to original Materials are preserved in the master animation.
-  //inline void InsertFlat(Material *t) { Insert(t, flat_tex, true); };
-
-  /// Insert a Material into the doomtex source, used by animated textures.
-  /// Pointers to original Materials are preserved in the master animation.
-  //inline void InsertDoomTex(Material *t) { Insert(t, doom_tex, true); };
-
-  /// Returns an existing Material, (or, with TEX_lod, tries creating it if nonexistant).
+  /// Returns the named Material (with TEX_lod, tries creating it if nonexistant), or the default material if it does not exist.
   Material *Get(const char *name, material_class_t mode = TEX_lod);
 
-  /// Like Get, but takes a lump number instead of a name. For TEX_lod ONLY!
+  /// Finds the name of the lump n, then acts like Get(name, TEX_lod);
   Material *GetLumpnum(int n);
 
   /// Like Get, but truncates name to 8 chars (use with Doom map data structures!).
   Material *Get8char(const char *name, material_class_t mode = TEX_wall);
 
-  /// First checks if the lump is a valid colormap (or transmap). If not, acts like GetID(name, TEX_wall);
+  /// First checks if the lump is a valid colormap (or transmap). If not, acts like Get(name, TEX_wall);
   Material *GetMaterialOrColormap(const char *name, class fadetable_t*& cmap);
   Material *GetMaterialOrTransmap(const char *name, int& map_num);
 
@@ -522,6 +528,11 @@ byte NearestColor(byte r, byte g, byte b);
 
 // initializes the part of the renderer that even a dedicated server needs
 void R_ServerInit();
+
+// initialize texture animations
+int R_Read_ANIMATED(int lump);
+int R_Read_ANIMDEFS(int lump);
+
 
 // colormap management
 void R_InitColormaps();

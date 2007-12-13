@@ -764,6 +764,7 @@ column_t *DoomTexture::GetMaskedColumn(fixed_t fcol)
 Material::Material(const char *name)
   : cacheitem_t(name)
 {
+  id_number = -1;
   shader = NULL;
   tex.resize(1); // at least one Texture
   // The rest are taken care of by Initialize() later when Textures have been attached.
@@ -888,53 +889,35 @@ void material_cache_t::ClearGLTextures()
 }
 
 
-
-
-/// Inserts a Material into the given source, replaces and possibly deletes the original
-/// Returns true if an original was found.
-/*
-bool material_cache_t::Insert(Material *t, cachesource_t &s, bool keep_old)
-{
-  Material *old = reinterpret_cast<Material *>(s.Find(t->name));
-
-  if (old)
-    {
-      // A Material of that name is already there
-      // Happens when generating animated materials.
-      // Happens with H_START materials, and if other namespaces have duplicates.
-      //CONS_Printf("Material '%s' replaced!\n", old->name);
-
-      s.Replace(t); // remove the old instance from the map, so there is room for the new one!
-
-      if (!keep_old)
-	delete old;
-    }
-  else
-    {
-      if (keep_old)
-	I_Error("Bad animated material replace!\n");
-
-      s.Insert(t);
-    }
-
-  all_materials.insert(t);
-
-  return (old != NULL);
-}
-*/
-
-
-Material *material_cache_t::Update(const char *name, material_class_t mode)
+/// Creates a new blank Material in cache or returns an existing one for updating. Does not change reference counts. For NTEXTURE.
+Material *material_cache_t::Edit(const char *name, material_class_t mode, bool create)
 {
   cacheitem_t *t;
 
-  if (mode == TEX_sprite)
-    t = sprite_tex.Find(name);
-  else if (!(t = new_tex.Find(name)))
-    if (!(t = doom_tex.Find(name)))
-      t = flat_tex.Find(name);
+  switch (mode)
+    {
+    case TEX_wall: // walls
+      if (!(t = new_tex.Find(name)))
+	if (!(t = doom_tex.Find(name)))
+	  t = flat_tex.Find(name);
+      break;
 
-  if (!t)
+    case TEX_floor: // floors, ceilings
+      if (!(t = new_tex.Find(name)))
+	if (!(t = flat_tex.Find(name)))
+	  t = doom_tex.Find(name);
+      break;
+
+    case TEX_sprite: // sprite frames
+      t = sprite_tex.Find(name);
+      break;
+
+    case TEX_lod:
+      I_Error("material_cache_t::Edit() cannot be used with TEX_lod!\n");
+      return NULL;
+    }
+
+  if (!t && create)
     {
       Material *m = new Material(name);
       if (mode == TEX_sprite)
@@ -942,7 +925,7 @@ Material *material_cache_t::Update(const char *name, material_class_t mode)
       else
 	new_tex.Insert(m);
 
-      all_materials.insert(m);
+      Register(m);
       return m;
     }
   
@@ -974,7 +957,7 @@ Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t &source, boo
 
       m = new Material(name.c_str()); // create a new Material
       source.Insert(m);
-      all_materials.insert(m);
+      Register(m);
     }
 
   Material::TextureRef &r = m->tex[0];
@@ -1022,7 +1005,7 @@ void material_cache_t::InitPaletteConversion()
 }
 
 
-/// Returns the id of an existing Material, or tries creating it if nonexistant.
+/// Returns an existing Material, or tries creating it if nonexistant.
 Material *material_cache_t::Get8char(const char *name, material_class_t mode)
 {
   char name8[9]; // NOTE texture names in Doom map format are max 8 chars long and not always NUL-terminated!
@@ -1166,7 +1149,13 @@ Material *material_cache_t::GetMaterialOrTransmap(const char *name, int& map_num
 bool Read_NTEXTURE(int lump);
 
 /// Initializes the material cache, fills the cachesource_t containers with Material objects.
-/// Follows the JDS texture standard.
+/*!
+  Follows the JDS texture standard.
+  The reason we use texture_cache_t::LoadLump instead of texture_cache_t::Get here is to
+  avoid namespace overlaps by making sure a new Texture is created each time from a particular lump.
+  material_cache_t::BuildMaterial takes care of inserting the newly created Texture into the texture cache,
+  changing the name if it is already taken.
+*/
 int material_cache_t::ReadTextures()
 {
   int i, lump;

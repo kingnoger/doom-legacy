@@ -118,7 +118,7 @@ mat_type ::= SPRITE.   { d->is_sprite = true; }
 
 mat_name ::= str(A).
   {
-    d->m = materials.Update(A, d->is_sprite ? TEX_sprite : TEX_wall);
+    d->m = materials.Edit(A, d->is_sprite ? TEX_sprite : TEX_wall, true);
     d->texeloffsets = false;
     d->tex_unit = 0;
   }

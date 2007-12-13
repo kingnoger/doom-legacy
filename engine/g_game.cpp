@@ -411,6 +411,8 @@ void GameInfo::Drawer()
   int n = ViewPlayers.size();
   n = min(n, cv_splitscreen.value+1);
 
+  R_Update(tic); // tell the renderer that some time has passed
+
   for (int i = 0; i < n; i++)
     {
       // select correct viewport

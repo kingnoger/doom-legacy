@@ -163,7 +163,7 @@ void CL_Init()
   CONS_Printf("V_Init: Init the video module.\n");
   vid.Startup();
 
-  // init renderer (and texture system!)
+  // init renderer
   CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
   R_Init();
 

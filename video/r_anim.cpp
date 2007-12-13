@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// $Id$
+// $Id:$
 //
 // Copyright (C) 2003-2007 by DooM Legacy Team.
 //
@@ -100,8 +100,8 @@ static ANIMATED_t HereticAnims[] =
 #define MAX_FRAME_DEFS 20
 
 
-/// \brief Metaclass for animated Textures
-class AnimatedTexture : public Texture
+/// \brief Metaclass for animated Materials
+class AnimatedMaterial
 {
 public:
   struct framedef_t
@@ -110,112 +110,108 @@ public:
     int tics;
   };
 
+  Material      *mat; ///< Material to animate
   framedef_t *frames; ///< the animation frames
   int      numframes; ///< number of frames
   int   currentframe; ///< current frame index
-  tic_t    changetic; ///< when will the current frame end?
+  float   nextchange; ///< when will the current frame end?
   bool        master; ///< master copy (the one which owns (and deletes) the frames)
 
-protected:
-  Texture *Update();
-  virtual void GLGetData() {};
+
+  static vector<AnimatedMaterial *> animated_materials;
 
 public:
-  AnimatedTexture(const char *p, int n);
-  AnimatedTexture(const AnimatedTexture &a, int frame); // for constructing the slave copies
-  ~AnimatedTexture();
+  AnimatedMaterial(Material *m, int nframes);
+  AnimatedMaterial(Material *m, const AnimatedMaterial *a, int frame); // for constructing the slave copies
+  ~AnimatedMaterial();
 
-  /// Shorthand. To be called after the frames are set, and before the texture is used.
-  void SetDims()
+  void Update(tic_t t)
   {
-    width  = frames[0].tx->width;
-    height = frames[0].tx->height;
-    w_bits = frames[0].tx->w_bits;
-    h_bits = frames[0].tx->h_bits;
-    leftoffs = frames[0].tx->leftoffs;
-    topoffs = frames[0].tx->topoffs;
-  };
+    if (nextchange + 250 < t)
+      {
+	// skip too long intervals (also sort of handles the wrapping of tic_t, in case your game runs more than 3.8 years continuously...:)
+	nextchange = t+10;
+	return;
+      }
 
-  virtual bool Masked() { return Update()->Masked(); };
-  virtual column_t *GetMaskedColumn(fixed_t col) { return Update()->GetMaskedColumn(col); }
-  virtual byte *GetColumn(fixed_t col) { return Update()->GetColumn(col); }
-  virtual byte *GetData() { return Update()->GetData(); }
+    while (nextchange <= t)
+      {
+	// next frame
+	if (++currentframe == numframes)
+	  currentframe = 0;
 
-  /// The glid of the metatexture is never changed from NOTEXTURE
-  virtual GLuint GLPrepare() { return Update()->GLPrepare(); }
+	tic_t tics = frames[currentframe].tics;
+	if (tics > 255)
+	  tics = (tics >> 16) + P_Random() % ((tics & 0xFF00) >> 8); // Random tics     
+   
+	nextchange += tics;
+      }
 
-  virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
-		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags)
-  { Update()->Draw(dest_tl, dest_tr, dest_bl, col, row, colfrac, rowfrac, flags); }
+    mat->tex[0].t = frames[currentframe].tx; // change the tex0
+  }
 };
 
 
+vector<AnimatedMaterial *> AnimatedMaterial::animated_materials;
 
-AnimatedTexture::AnimatedTexture(const char *p, int n)
-  : Texture(p, -1)
+
+AnimatedMaterial::AnimatedMaterial(Material *m, int n)
+  : mat(m)
 {
+  frames = static_cast<framedef_t*>(Z_Malloc(n*sizeof(framedef_t), PU_TEXTURE, NULL));
   numframes = n;
   currentframe = 0;
-  changetic = game.tic;
-  
-  frames = (framedef_t *)Z_Malloc(n*sizeof(framedef_t), PU_TEXTURE, NULL);
+  nextchange = game.tic;
   master = true;
+
+  animated_materials.push_back(this);
 }
 
 
-AnimatedTexture::AnimatedTexture(const AnimatedTexture &m, int f)
-  : Texture(m.frames[f].tx->GetName(), -1)
+AnimatedMaterial::AnimatedMaterial(Material *m, const AnimatedMaterial *a, int f)
+  : mat(m)
 {
   // copy most fields from the master
-  numframes = m.numframes;
+  numframes = a->numframes;
   currentframe = f; // starts from a different frame
-  changetic = game.tic;
+  nextchange = game.tic;
 
-  frames = m.frames;
+  frames = a->frames;
   master = false; // does not own the frames
 
-  SetDims();
+  animated_materials.push_back(this);
 }
 
 
-AnimatedTexture::~AnimatedTexture()
+AnimatedMaterial::~AnimatedMaterial()
 {
   if (master && frames)
     Z_Free(frames);
 }
 
 
-Texture *AnimatedTexture::Update()
+
+
+void R_Update(tic_t t)
 {
-  while (changetic <= game.tic)
-    {
-      // next frame
-      if (++currentframe == numframes)
-	currentframe = 0;
-
-      tic_t tics = frames[currentframe].tics;
-      if (tics > 255)
-	tics = (tics >> 16) + P_Random() % ((tics & 0xFF00) >> 8); // Random tics     
-   
-      changetic += tics;
-    }
-
-  return frames[currentframe].tx;
+  int n = AnimatedMaterial::animated_materials.size();
+  for (int i=0; i<n; i++)
+    AnimatedMaterial::animated_materials[i]->Update(t);
 }
 
 
 
+
 /// Reads and interprets the Boom ANIMATED lump
-int P_Read_ANIMATED(int lump)
+int R_Read_ANIMATED(int lump)
 {
   int i, count = 0;
-  /*
-    // FIXME: ANIMATED
+
   ANIMATED_t *anims;
   if (lump >= 0)
     {
       CONS_Printf("Reading ANIMATED...\n");
-      anims = (ANIMATED_t *)fc.CacheLumpNum(lump, PU_STATIC);
+      anims = static_cast<ANIMATED_t*>(fc.CacheLumpNum(lump, PU_STATIC));
     }
   else if (game.mode == gm_heretic)
     anims = HereticAnims;
@@ -224,55 +220,51 @@ int P_Read_ANIMATED(int lump)
 
   for (ANIMATED_t *a = anims; a->istexture != -1; a++)
     {
-      // TODO problem with flats
-      // check different episode ?
-      int base, last;
+      Material *first, *last;
       if (a->istexture)
 	{
-	  base = tc.GetNoSubstitute(a->startname, TEX_wall);
-	  last = tc.GetNoSubstitute(a->endname, TEX_wall);
+	  first = materials.Edit(a->startname, TEX_wall);
+	  last  = materials.Edit(a->endname, TEX_wall);
 	}
       else
 	{
-	  base = tc.GetNoSubstitute(a->startname, TEX_floor);
-	  last = tc.GetNoSubstitute(a->endname, TEX_floor);
+	  first = materials.Edit(a->startname, TEX_floor);
+	  last  = materials.Edit(a->endname, TEX_floor);
 	}
 
-      int n = last - base + 1; // number of frames
-      if (n < 2 || n > MAX_FRAME_DEFS || base <= 0 || last <= 0)
+      if (!first)
 	{
-	  if (lump >= 0)
-	    CONS_Printf(" ANIMATED: Bad cycle from %s to %s", a->startname, a->endname);
+	  CONS_Printf(" ANIMATED: Unknown material %s", a->startname);
 	  continue;
 	}
 
+      if (!last)
+	{
+	  CONS_Printf(" ANIMATED: Unknown material %s", a->endname);
+	  continue;
+	}
+
+      int n = last->id_number - first->id_number + 1; // number of frames
+      if (n < 2 || n > MAX_FRAME_DEFS)
+	{
+	  CONS_Printf(" ANIMATED: Bad/too long cycle from %s to %s", a->startname, a->endname);
+	  continue;
+	}
+
+      int base = first->id_number;
       int tics = (lump >= 0) ? LONG(a->speed) : a->speed; // duration of one frame in tics
 
-      AnimatedTexture *t = new AnimatedTexture(a->startname, n);
+      // create the master copy, picking the frame Textures from the already generated Materials
+      AnimatedMaterial *m = new AnimatedMaterial(first, n);
       for (i=0; i<n; i++)
 	{
-	  t->frames[i].tx = tc[base + i];
-	  t->frames[i].tics = tics;
+	  m->frames[i].tx = materials.GetID(base + i)->tex[0].t;
+	  m->frames[i].tics = tics;
 	}
 
-      t->SetDims();
-
-      if (a->istexture)
-	{
-	  tc.InsertDoomTex(t);
-
-	  // create one slave instance for each frame of animation
-	  for (i=1; i<n; i++)
-	    tc.InsertDoomTex(new AnimatedTexture(*t, i));
-	}
-      else
-	{
-	  tc.InsertFlat(t);
-
-	  // create one slave instance for each frame of animation
-	  for (i=1; i<n; i++)
-	    tc.InsertFlat(new AnimatedTexture(*t, i));
-	}
+      // create one slave instance for each frame of animation
+      for (i=1; i<n; i++)
+	new AnimatedMaterial(materials.GetID(base + i), m, i);
 
       count++;
     }
@@ -282,17 +274,17 @@ int P_Read_ANIMATED(int lump)
       Z_Free(anims);
       CONS_Printf(" %d animations found.\n", count);
     }
-  */
+
   return count;
 }
 
 
 
+
 /// Parses the Hexen ANIMDEFS lump, creates the required animated textures
-int P_Read_ANIMDEFS(int lump)
+int R_Read_ANIMDEFS(int lump)
 {
-  int i, n, count = 0;
-  /* // FIXME ANIMDEFS
+  int i, count = 0;
   Parser p;
 
   if (!p.Open(lump))
@@ -300,12 +292,15 @@ int P_Read_ANIMDEFS(int lump)
 
   CONS_Printf("Reading ANIMDEFS...\n");
 
-  vector<AnimatedTexture::framedef_t> frames;
+  vector<AnimatedMaterial::framedef_t> frames;
 
   p.RemoveComments(';');
   enum p_state_e {PS_NONE, PS_FLAT, PS_TEX};
   p_state_e state = PS_NONE;
+
+  Material *first;
   int base = 0;
+
   char *name = NULL;
   while (p.NewLine())
     {
@@ -322,35 +317,18 @@ int P_Read_ANIMDEFS(int lump)
 	    {
 	      // record just ended
 
-	      n = frames.size();
+	      int n = frames.size();
 	      if (n < 2)
 		I_Error("AnimDef has framecount < 2.");
 
-	      // create the animation (it has the same name as its
-	      // 1st frame, which is thus overwritten from tc map)
-	      // TODO This is a problem if several animations share the frame!
-	      AnimatedTexture *t = new AnimatedTexture(name, n);
+	      // create the master copy, picking the frame Textures from the already generated Materials
+	      AnimatedMaterial *m = new AnimatedMaterial(first, n);
 	      for (i=0; i<n; i++)
-		t->frames[i] = frames[i];
+		m->frames[i] = frames[i];
 
-	      t->SetDims();
-
-	      if (state == PS_FLAT)
-		{
-		  tc.InsertFlat(t);
-
-		  // create one slave instance for each frame of animation
-		  for (i=1; i<n; i++)
-		    tc.InsertFlat(new AnimatedTexture(*t, i));
-		}
-	      else
-		{
-		  tc.InsertDoomTex(t);
-
-		  // create one slave instance for each frame of animation
-		  for (i=1; i<n; i++)
-		    tc.InsertDoomTex(new AnimatedTexture(*t, i));
-		}
+	      // create one slave instance for each frame of animation
+	      for (i=1; i<n; i++)
+		new AnimatedMaterial(materials.GetID(base + i), m, i);
 
 	      count++;
 	      frames.clear();
@@ -366,10 +344,10 @@ int P_Read_ANIMDEFS(int lump)
 		  if (frames.size() >= MAX_FRAME_DEFS)
 		    I_Error("Too many FrameDefs.");
 
-		  AnimatedTexture::framedef_t fd;
+		  AnimatedMaterial::framedef_t fd;
 
-		  n = base + p.GetInt() - 1;
-		  fd.tx = tc[n];
+		  int n = base + p.GetInt() - 1;
+		  fd.tx = materials.GetID(n)->tex[0].t;
 
 		  word = p.GetToken(" ");
 		  if (!strcasecmp(word, "tics"))
@@ -405,18 +383,27 @@ int P_Read_ANIMDEFS(int lump)
 
       if (!strcasecmp(word, "flat"))
 	{
-	  base = tc.GetNoSubstitute(name, TEX_floor);
-	  if (base > 0)
-	    state = PS_FLAT;
+	  first = materials.Edit(name, TEX_floor);
+	  if (first)
+	    {
+	      state = PS_FLAT;
+	      base = first->id_number;
+	    }
 	}
       else if (!strcasecmp(word, "texture"))
 	{
-	  base = tc.GetNoSubstitute(name, TEX_wall);
-	  if (base > 0)
-	    state = PS_TEX;
+	  first = materials.Edit(name, TEX_wall);
+	  if (first)
+	    {
+	      state = PS_TEX;
+	      base = first->id_number;
+	    }
 	}
       else
-	CONS_Printf(" Unknown command: '%s'", word);
+	{
+	  CONS_Printf(" Unknown command: '%s'", word);
+	  continue;
+	}
     }
 
 
@@ -424,6 +411,5 @@ int P_Read_ANIMDEFS(int lump)
     I_Error("Too many AnimDefs.");
 
   CONS_Printf(" %d animations found.\n", count);
-  */
   return count;
 }

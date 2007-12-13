@@ -54,6 +54,8 @@ protected:
 public:
   /// The safe way of inserting stuff into the hash_map.
   /// The main point is that 'name' is stored within the T structure itself.
+  /// If the hash_map already contains an item with the same key (name) as p, nothing is done.
+  /// \return true if p was succesfully inserted.
   inline bool Insert(T *p)
   {
     return dict_map.insert(typename dict_map_t::value_type(p->GetName(), p)).second;
@@ -61,6 +63,7 @@ public:
 
 
   /// Since hash_map is a unique associative container we need this, cannot just Insert new stuff with same key.
+  /// \return 1 if an old element was replaced, 0 if not.
   inline int Replace(T *p)
   {
     int n = dict_map.erase(p->GetName()); // erase the old instance by key
@@ -69,7 +72,8 @@ public:
   }
 
 
-  /// Remove the named element, if it exists. Returns number of elements removed (0 or 1).
+  /// Remove the named element, if it exists.
+  /// \return Number of elements removed (0 or 1).
   inline int Remove(const char *name)
   {
     return dict_map.erase(name); // erase the old instance by key
@@ -77,6 +81,7 @@ public:
 
 
   /// Tries to find the named item from the dictionary.
+  /// \return The element associated with the key name, or NULL if none is found.
   inline T *Find(const char *name)
   {
     dict_iter_t s = dict_map.find(name);
@@ -93,7 +98,8 @@ public:
       }
   }
 
-  /// Returns the number of items in the dictionary.
+  /// Dictionary size.
+  /// \return The number of items in the dictionary.
   inline unsigned Size() const { return dict_map.size(); }
 
   /// Erases all dictionary items.
