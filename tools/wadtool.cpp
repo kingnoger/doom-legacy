@@ -278,7 +278,7 @@ int CreateWad(const char *wadname, const char *inv_name)
 	; // pass the ws
 
       char *lumpname = &p[i];
-      for ( ; i<len && p[i] != '\n'; i++)
+      for ( ; i<len && !isspace(p[i]); i++) // we're looking for a newline, but windows users will have crap like \r before it
 	; // pass the lumpname
       p[i] = '\0';
 
