@@ -56,8 +56,6 @@
 #include "s_sound.h"
 #include "sounds.h"
 
-#include "d_main.h"
-
 #include "qmus2mid.h"
 
 

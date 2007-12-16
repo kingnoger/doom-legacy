@@ -335,11 +335,11 @@ void I_InitCD()
   if (M_CheckParm("-nocd"))
     return ;
     
-  CONS_Printf("I_InitCD: Init CD audio\n");
+  CONS_Printf(" Initializing CD audio...\n");
 
   // Initialize SDL first
   if (SDL_Init(SDL_INIT_CDROM) < 0) {
-    CONS_Printf("Couldn't initialize SDL CD: %s\n", SDL_GetError());
+    CONS_Printf(" Couldn't initialize SDL CD: %s\n", SDL_GetError());
     return;
   }
 

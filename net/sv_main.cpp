@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2006 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -100,7 +100,7 @@ Have polymorphed class GameType which creates these into GameInfo containers
 #include "cvars.h"
 #include "console.h"
 
-#include "d_main.h"
+#include "d_event.h"
 
 #include "g_game.h"
 #include "g_type.h"
@@ -516,7 +516,7 @@ void GameInfo::SV_ResetScripting()
 /// Sets up network interface
 void InitNetwork()
 {
-  CONS_Printf("Initializing network...");
+  CONS_Printf("Initializing the network interface.\n");
 
   bool ipx = M_CheckParm("-ipx");
   TransportProtocol ptc = ipx ? IPXProtocol : IPProtocol;
@@ -563,8 +563,6 @@ void InitNetwork()
 	  COM.AppendText("connect any\n");
         }
     }
-
-  CONS_Printf("done.\n");
 }
 
 
@@ -636,7 +634,7 @@ void HU_HackChatmacros();
 /// This is needed by both servers and clients
 void SV_Init()
 {
-  CONS_Printf("SV_Init\n");
+  CONS_Printf("\n============ SV_Init ============\n");
 
   // register commands
 
@@ -730,8 +728,8 @@ void SV_Init()
   cv_teamplay.Reg();
   cv_teamdamage.Reg();
   cv_hiddenplayers.Reg();
-  cv_exitmode.Reg();
   cv_intermission.Reg();
+  cv_exitmode.Reg();
   cv_fraglimit.Reg();
   cv_timelimit.Reg();
 

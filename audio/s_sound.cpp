@@ -350,6 +350,8 @@ SoundSystem::SoundSystem()
 // allocates channel buffer, sets S_sfx lookup.
 void SoundSystem::Startup()
 {
+  CONS_Printf("Initializing the sound module...\n");
+
   cv_soundvolume.Reg();
   cv_musicvolume.Reg();
   cd_volume.Reg();

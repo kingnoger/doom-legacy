@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -48,6 +48,10 @@ enum dirtype_t
 
 void   P_NoiseAlert(class Actor *target, Actor *emitter);
 float  P_BulletSlope(class PlayerPawn *p);
+
+int  P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
+void P_MinotaurSlam(Actor *source, Actor *target);
+bool P_TouchWhirlwind(Actor *target);
 
 void   A_FaceTarget(class DActor *actor);
 void   A_Chase(DActor *actor);

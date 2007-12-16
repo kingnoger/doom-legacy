@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2003 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,16 +24,16 @@
 extern  int     myargc;
 extern  char**  myargv;
 
-// in d_main.h
 void D_DoomLoop();
-void D_DoomMain();
+bool D_DoomMain();
 
 int main(int argc, char **argv)
 { 
   myargc = argc; 
   myargv = argv; 
  
-  D_DoomMain(); 
-  D_DoomLoop();
+  if (D_DoomMain())
+    D_DoomLoop();
+
   return 0;
 } 

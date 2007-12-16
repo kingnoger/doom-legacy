@@ -39,7 +39,6 @@
 
 #include "d_event.h"
 #include "d_items.h"
-#include "d_main.h"
 
 #include "p_saveg.h"
 

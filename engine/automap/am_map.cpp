@@ -310,6 +310,9 @@ AutoMap::AutoMap()
 
 void AutoMap::Startup()
 {
+  if (devparm)
+    CONS_Printf("Starting up the automap.\n");
+
   mapback = (fc.FindNumForName("AUTOPAGE") >= 0) ? materials.Get("AUTOPAGE") : NULL;
 }
 

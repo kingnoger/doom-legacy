@@ -96,7 +96,7 @@ const char *FileCache::Access(const char *f)
 // Also adds GWA files if they exist.
 bool FileCache::InitMultipleFiles(const char *const*filenames)
 {
-  CONS_Printf("W_Init: Init WADfiles.\n");
+  CONS_Printf("Loading resource files...\n");
   bool result = true;
 
   for ( ; *filenames != NULL; filenames++)
@@ -115,12 +115,12 @@ bool FileCache::InitMultipleFiles(const char *const*filenames)
 	  gwafile.replace(gwafile.length()-3, 3, "GWA");
 	  if (AddFile(gwafile.c_str(), true) == -1)
 	    {
-	      // CONS_Printf("No GL information for file %s.\n", curfile);
+	      // CONS_Printf(" No GL information for file %s.\n", curfile);
 	      continue; // not found
 	    }
 	}
 
-      CONS_Printf("Added GL information from file %s.\n", gwafile.c_str());
+      CONS_Printf(" Added GL information from file %s.\n", gwafile.c_str());
     }
 
   if (vfiles.size() == 0)
@@ -143,7 +143,7 @@ int FileCache::AddFile(const char *fname, bool silent)
   
   if (nfiles >= MAX_WADFILES)
     {
-      CONS_Printf("Maximum number of resource files reached\n");
+      CONS_Printf(" Maximum number of resource files reached\n");
       return -1;
     }
 
@@ -151,7 +151,7 @@ int FileCache::AddFile(const char *fname, bool silent)
 
   if (!name && !silent)
     {
-      CONS_Printf("FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
+      CONS_Printf(" FileCache::AddFile: Can't access file %s (path %s)\n", fname, datapath.c_str());
       return -1;
     }
 
@@ -223,7 +223,7 @@ int FileCache::AddFile(const char *fname, bool silent)
 	}
       else
 	{
-	  CONS_Printf("FileCache::AddFile: Unknown file signature %4c\n", magic);
+	  CONS_Printf(" FileCache::AddFile: Unknown file signature '%4c'\n", magic);
 	  fclose(str);
 	  return -1;
 	}

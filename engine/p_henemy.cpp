@@ -40,6 +40,44 @@
 
 void A_AddPlayerCorpse(DActor *actor) {}
 
+
+void P_MinotaurSlam(Actor *source, Actor *target)
+{
+  angle_t angle = R_PointToAngle2(source->pos, target->pos);
+  fixed_t thrust = 16 + P_FRandom(6);
+  target->vel.x += thrust * Cos(angle);
+  target->vel.y += thrust * Sin(angle);
+  target->Damage(NULL, NULL, HITDICE(6)); // FIXME Hexen minotaur HITDICE(4)
+
+  //if(target->player)
+  target->reactiontime = 14 + (P_Random()&7);
+  source->args[0] = 0; // Stop charging
+}
+
+
+bool P_TouchWhirlwind(Actor *target)
+{
+  target->yaw += P_SignedRandom()<<20;
+  target->vel.x += P_SignedFRandom(6);
+  target->vel.y += P_SignedFRandom(6);
+  if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
+    {
+      fixed_t randVal = P_Random();
+      if (randVal > 160)
+	randVal = 160;
+
+      target->vel.z += randVal >> 6;
+      if (target->vel.z > 12)
+	target->vel.z = 12;
+    }
+
+  if (!(target->mp->maptic & 7))
+    return target->Damage(NULL, NULL, 3);
+
+  return false;
+}
+
+
 //----------------------------------------------------------------------------
 //
 // PROC A_DripBlood

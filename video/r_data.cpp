@@ -1532,6 +1532,9 @@ const char *R_ColormapNameForNum(const fadetable_t *p)
 /// Called in R_Init, prepares the lightlevel colormaps and Boom extra colormaps.
 void R_InitColormaps()
 {
+  if (devparm)
+    CONS_Printf(" Loading colormaps.\n");
+
   // build the colormap lumplists (which record the locations of C_START and C_END in each wad)
   numcolormaplumps = 0;
   colormaplumps = NULL;
@@ -1912,6 +1915,9 @@ static int R_TransmapNumForName(const char *name)
 
 void R_InitTranslucencyTables()
 {
+  if (devparm)
+    CONS_Printf(" Loading translucency tables.\n");
+
   // NOTE: the translation tables MUST BE aligned on 64k for the asm optimised code
   //       (in other words, transtables pointer low word is 0)
   int i;

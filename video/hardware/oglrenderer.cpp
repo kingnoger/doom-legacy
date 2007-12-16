@@ -269,13 +269,13 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   // Check that we get hicolor.
   int cbpp = SDL_VideoModeOK(w, h, 24, surfaceflags);
   if(cbpp < mindepth) {
-    CONS_Printf("Hicolor OpenGL mode not available.\n");
+    CONS_Printf(" Hicolor OpenGL mode not available.\n");
     return false;
   }
 
   screen = SDL_SetVideoMode(w, h, cbpp, surfaceflags);
   if(!screen) {
-    CONS_Printf("Could not obtain requested resolution.\n");
+    CONS_Printf(" Could not obtain requested resolution.\n");
     return false;
   }
 
@@ -283,33 +283,33 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   // context is not guaranteed to exist until the call to
   // SDL_SetVideoMode.
   if(first_init) {
-    CONS_Printf("OpenGL vendor:   %s\n", glGetString(GL_VENDOR));
-    CONS_Printf("OpenGL renderer: %s\n", glGetString(GL_RENDERER));
+    CONS_Printf(" OpenGL vendor:   %s\n", glGetString(GL_VENDOR));
+    CONS_Printf(" OpenGL renderer: %s\n", glGetString(GL_RENDERER));
     const char *str = reinterpret_cast<const char*>(glGetString(GL_VERSION));
     glversion = str ? strtof(str, NULL) : 0;
-    CONS_Printf("OpenGL version:  %s\n", str);
+    CONS_Printf(" OpenGL version:  %s\n", str);
   }
 
-  CONS_Printf("Color depth in bits: ");
+  CONS_Printf(" Color depth in bits: ");
   SDL_GL_GetAttribute(SDL_GL_RED_SIZE, &temp);
-  CONS_Printf("R %d, ", temp);
+  CONS_Printf("R%d ", temp);
   SDL_GL_GetAttribute(SDL_GL_GREEN_SIZE, &temp);
-  CONS_Printf("G %d, ", temp);
+  CONS_Printf("G%d ", temp);
   SDL_GL_GetAttribute(SDL_GL_BLUE_SIZE, &temp);
-  CONS_Printf("B %d.\n", temp);
+  CONS_Printf("B%d.\n", temp);
   SDL_GL_GetAttribute(SDL_GL_ALPHA_SIZE, &temp);
-  CONS_Printf("Alpha buffer depth %d bits.\n", temp);
+  CONS_Printf(" Alpha buffer depth %d bits.\n", temp);
   SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &temp);
-  CONS_Printf("Depth buffer depth %d bits.\n", temp);
+  CONS_Printf(" Depth buffer depth %d bits.\n", temp);
 
   SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &temp);
   if(temp)
-    CONS_Printf("OpenGL mode is double buffered.\n");
+    CONS_Printf(" OpenGL mode is double buffered.\n");
   else
-    CONS_Printf("OpenGL mode is NOT double buffered.\n");
+    CONS_Printf(" OpenGL mode is NOT double buffered.\n");
 
   // Print state and debug info.
-  CONS_Printf("Set OpenGL video mode %dx%dx%d", w, h, cbpp);
+  CONS_Printf(" Set OpenGL video mode %dx%dx%d", w, h, cbpp);
   CONS_Printf(fullscreen ? " (fullscreen)\n" : " (windowed)\n");
 
   // Calculate the screen's aspect ratio. Assumes square pixels.
@@ -322,8 +322,8 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
   else
     screenar = GLfloat(w)/h;
 
-  CONS_Printf("Screen aspect ratio %.2f.\n", screenar);
-  CONS_Printf("HUD aspect ratio %.2f.\n", hudar);
+  CONS_Printf(" Screen aspect ratio %.2f.\n", screenar);
+  CONS_Printf(" HUD aspect ratio %.2f.\n", hudar);
 
   workinggl = true;
 
@@ -337,14 +337,14 @@ bool OGLRenderer::InitVideoMode(const int w, const int h, const bool fullscreen)
     ;
 
   if(GLExtAvailable("GL_ARB_multitexture"))
-    CONS_Printf("GL multitexturing supported.\n");
+    CONS_Printf(" GL multitexturing supported.\n");
   else
-    CONS_Printf("GL multitexturing not supported. Expect trouble.\n");
+    CONS_Printf(" GL multitexturing not supported. Expect trouble.\n");
 
   if(GLExtAvailable("GL_ARB_texture_non_power_of_two"))
-    CONS_Printf("Non power of two textures supported.\n");
+    CONS_Printf(" Non power of two textures supported.\n");
   else
-    CONS_Printf("Only power of two textures supported.\n");
+    CONS_Printf(" Only power of two textures supported.\n");
 
   return true;
 }

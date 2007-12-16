@@ -66,7 +66,6 @@
 #include "g_map.h"
 #include "g_decorate.h"
 
-#include "d_main.h"
 #include "g_game.h"
 #include "hud.h"
 

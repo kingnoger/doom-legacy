@@ -197,6 +197,9 @@ void R_RecalcFuzzOffsets()
 //
 void R_InitTranslationTables()
 {
+  if (devparm)
+    CONS_Printf(" Creating translation tables.\n");
+
   int i, j;
 
   // player color translation (now static)

@@ -59,7 +59,6 @@
 
 #include "d_event.h"
 #include "d_ticcmd.h"
-#include "d_main.h"
 #include "m_misc.h"
 
 #include "i_video.h"
@@ -540,43 +539,49 @@ void I_Sleep(unsigned int ms)
 /// initialize SDL
 void I_SysInit()
 {
+  CONS_Printf("Initializing SDL...\n");
+
   // Initialize Audio as well, otherwise DirectX can not use audio
   if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0)
     {
-      CONS_Printf("Couldn't initialize SDL: %s\n", SDL_GetError());
+      CONS_Printf(" Couldn't initialize SDL: %s\n", SDL_GetError());
       I_Quit();
     }
 
   // Window title
   SDL_WM_SetCaption(LEGACY_VERSION_BANNER, "Doom Legacy");
+
+  // Initialize the joystick subsystem.
+  I_JoystickInit();
 }
 
 
 /// Initialize joysticks and print information.
 void I_JoystickInit()
 {
-  int numjoysticks, i;
-  SDL_Joystick *joy;
-
   // Joystick subsystem was initialized at the same time as video,
   // because otherwise it won't work. (don't know why, though ...)
 
-  numjoysticks = SDL_NumJoysticks();
-  CONS_Printf("%d joystick(s) found.\n", numjoysticks);
+  int numjoysticks = SDL_NumJoysticks();
+  CONS_Printf(" %d joystick(s) found.\n", numjoysticks);
 
   // Start receiving joystick events.
   SDL_JoystickEventState(SDL_ENABLE);
 
-  for(i=0; i<numjoysticks; i++) {
-    joy = SDL_JoystickOpen(i);
-    joysticks.push_back(joy);
-    CONS_Printf("Properties of joystick %d:\n", i);
-    CONS_Printf("    %s.\n", SDL_JoystickName(i));
-    CONS_Printf("    %d axes.\n", SDL_JoystickNumAxes(joy));
-    CONS_Printf("    %d buttons.\n", SDL_JoystickNumButtons(joy));
-    CONS_Printf("    %d hats.\n", SDL_JoystickNumHats(joy));
-    CONS_Printf("    %d trackballs.\n", SDL_JoystickNumBalls(joy));
-  }
+  for (int i=0; i<numjoysticks; i++)
+    {
+      SDL_Joystick *joy = SDL_JoystickOpen(i);
+      joysticks.push_back(joy);
+      if (devparm)
+	{
+	  CONS_Printf(" Properties of joystick %d:\n", i);
+	  CONS_Printf("    %s.\n", SDL_JoystickName(i));
+	  CONS_Printf("    %d axes.\n", SDL_JoystickNumAxes(joy));
+	  CONS_Printf("    %d buttons.\n", SDL_JoystickNumButtons(joy));
+	  CONS_Printf("    %d hats.\n", SDL_JoystickNumHats(joy));
+	  CONS_Printf("    %d trackballs.\n", SDL_JoystickNumBalls(joy));
+	}
+    }
 }
 
 

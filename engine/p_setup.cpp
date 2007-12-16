@@ -1523,19 +1523,19 @@ void Map::LoadGLVis(const int lump)
 
   // glVIS is not always present. Check for it.
   if (lname == NULL || !strcmp(lname, "GL_VIS"))
-    CONS_Printf("Map does not have GL_VIS data.\n");
+    CONS_Printf(" Map does not have GL_VIS data.\n");
   else if (vissize == 0)
-    CONS_Printf("Map has empty GL_VIS data.\n");
+    CONS_Printf(" Map has empty GL_VIS data.\n");
   else
     {
       // At this point we know that GL_VIS exists, and that it is
       // nonempty. Load it.
       glvis = static_cast<byte*>(fc.CacheLumpNum(lump, PU_STATIC));
-      CONS_Printf("Loaded %d bytes of glVIS data.\n", vissize);
+      CONS_Printf(" Loaded %d bytes of glVIS data.\n", vissize);
     }
 
   if (!glvis && rendermode == render_opengl)
-    CONS_Printf("Automap will not work until you run glvis on this file.\n");
+    CONS_Printf(" Automap will not work until you run glvis on this file.\n");
 }
 
 
@@ -1600,7 +1600,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   const char *acslumpname = fc.FindNameForNum(lumpnum + LUMP_BEHAVIOR);
   if (acslumpname && !strncmp(acslumpname, "BEHAVIOR", 8))
     {
-      CONS_Printf("Map in Hexen format!\n");
+      CONS_Printf(" Hexen format.\n");
       hexen_format = true;
     }
   else
@@ -1632,14 +1632,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (gllump != -1 && gllump > lumpnum)
     {
       gl_version = LoadGLVertexes(gllump+LUMP_GL_VERTEXES);
-      CONS_Printf("Map has v%d GL nodes.\n", gl_version);
+      CONS_Printf(" Map has v%d GL nodes.\n", gl_version);
 
       if (gl_version < 0)
 	I_Error("Can not handle GL nodes that are not v2 or v5.");
     }
   else
     {
-      CONS_Printf("Map has no GL nodes.\n");
+      CONS_Printf(" Map has no GL nodes.\n");
       gllump = -1;
     }
 
@@ -1738,7 +1738,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
       else if (seg->linedef->flags & ML_TWOSIDED)
 	botnodes2++;
     }
-  CONS_Printf("%d vertices, %d subsectors, %d segs, %d + %d botnodes\n",numvertexes,numsubsectors, numsegs, minisegs, botnodes2);
+  CONS_Printf(" %d vertices, %d subsectors, %d segs, %d + %d botnodes\n", numvertexes, numsubsectors, numsegs, minisegs, botnodes2);
 
   return true;
 }

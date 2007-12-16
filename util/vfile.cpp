@@ -209,11 +209,11 @@ bool VDir::Open(const char *fname)
     }
 
   // set up caching
-  cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
+  cache = static_cast<lumpcache_t*>(Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL));
   memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   //ListItems();
-
+  CONS_Printf(" Added directory %s (%i lumps)\n", fname, numitems);
   return true;
 }
 

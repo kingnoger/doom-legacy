@@ -98,7 +98,7 @@ command_buffer_t::command_buffer_t()
 //  Initialise command buffer and add basic commands
 void command_buffer_t::Init()
 {
-  CONS_Printf("COM_Init: Init the command buffer\n");
+  CONS_Printf("Initializing the command buffer.\n");
 
 #define COM_BUF_SIZE    8192   // command buffer size
 

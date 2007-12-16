@@ -50,7 +50,6 @@
 #include "w_wad.h"
 
 #include "am_map.h"
-#include "d_main.h"
 
 #include "hardware/oglrenderer.hpp"
 
@@ -104,6 +103,9 @@ HUD::HUD()
 
 void HUD::Startup()
 {
+  if (devparm)
+    CONS_Printf("Starting up the Heads Up Display.\n");
+
   // client hud
   cv_stbaroverlay.Reg();
 

@@ -1,7 +1,7 @@
 // Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
-// $Id:$
+// $Id$
 //
 // Copyright (C) 2003-2007 by DooM Legacy Team.
 //
@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Texture animation, parser for ANIMDEFS and ANIMATED lumps
+/// \brief Texture animation, parser for ANIMDEFS and ANIMATED lumps.
 
 #include <string>
 
@@ -100,7 +100,7 @@ static ANIMATED_t HereticAnims[] =
 #define MAX_FRAME_DEFS 20
 
 
-/// \brief Metaclass for animated Materials
+/// \brief Class for keeping track of animated Materials
 class AnimatedMaterial
 {
 public:
@@ -234,20 +234,22 @@ int R_Read_ANIMATED(int lump)
 
       if (!first)
 	{
-	  CONS_Printf(" ANIMATED: Unknown material %s", a->startname);
+	  if (lump >= 0)
+	    CONS_Printf(" Unknown material '%s'\n", a->startname);
 	  continue;
 	}
 
       if (!last)
 	{
-	  CONS_Printf(" ANIMATED: Unknown material %s", a->endname);
+	  if (lump >= 0)
+	    CONS_Printf(" Unknown material '%s'\n", a->endname);
 	  continue;
 	}
 
       int n = last->id_number - first->id_number + 1; // number of frames
       if (n < 2 || n > MAX_FRAME_DEFS)
 	{
-	  CONS_Printf(" ANIMATED: Bad/too long cycle from %s to %s", a->startname, a->endname);
+	  CONS_Printf(" Bad cycle from %s to %s\n", a->startname, a->endname);
 	  continue;
 	}
 
@@ -272,7 +274,7 @@ int R_Read_ANIMATED(int lump)
   if (lump >= 0)
     {
       Z_Free(anims);
-      CONS_Printf(" %d animations found.\n", count);
+      CONS_Printf(" ...done. %d animations found.\n", count);
     }
 
   return count;
@@ -410,6 +412,6 @@ int R_Read_ANIMDEFS(int lump)
   if (count >= MAX_ANIM_DEFS)
     I_Error("Too many AnimDefs.");
 
-  CONS_Printf(" %d animations found.\n", count);
+  CONS_Printf(" ...done. %d animations found.\n", count);
   return count;
 }

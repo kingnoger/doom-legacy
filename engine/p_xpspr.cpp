@@ -42,7 +42,6 @@
 
 
 void A_UnHideThing(DActor *actor);
-int P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 
 
 void Pawn::AdjustPlayerAngle(Actor *t)

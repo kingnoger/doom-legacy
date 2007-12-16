@@ -159,7 +159,6 @@ export engine_objects = \
 	$(objdir)/p_sight.o \
 	$(objdir)/p_hsight.o \
 	$(objdir)/p_telept.o \
-	$(objdir)/p_heretic.o \
 	$(objdir)/p_camera.o \
 	$(objdir)/p_user.o \
 	$(objdir)/p_inter.o \

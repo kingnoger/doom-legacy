@@ -3144,6 +3144,9 @@ void Menu::SetupNextMenu(Menu *m)
 
 void Menu::Startup()
 {
+  if (devparm)
+    CONS_Printf("Starting up the menu system.\n");
+
   // "menu only"-consvars
   cv_menu_skill.Reg();
   cv_menu_startmap.Reg();

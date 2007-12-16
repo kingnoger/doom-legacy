@@ -289,6 +289,9 @@ void R_InitTextureMapping()
 
 void R_InitLightTables()
 {
+  if (devparm)
+    CONS_Printf(" Creating light tables.\n");
+
   // Calculate the light levels to use
   //  for each level / distance combination.
   for (int i=0 ; i< LIGHTLEVELS ; i++)
@@ -563,15 +566,14 @@ Material* crosshair[HU_CROSSHAIRS]; // crosshair graphics
 void R_ServerInit()
 {
   // server needs to know the texture names and dimensions
-  CONS_Printf("InitTextures...\n");
+  CONS_Printf("Creating textures...\n");
   materials.Clear();
   materials.SetDefaultItem("DEF_TEX");
   materials.ReadTextures();
-
   //materials.Inventory();
 
   // set the default items for sprite and model caches
-  CONS_Printf("InitSprites...\n");
+  CONS_Printf("Initializing sprites and models...\n");
   R_InitSprites(sprnames);
 }
 
@@ -580,6 +582,7 @@ void R_ServerInit()
 /// The server part has already been initialized in R_ServerInit.
 void R_Init()
 {
+  CONS_Printf("Initializing the renderer...\n");
   //TestAnims();
 
   // Read texture animations, insert them into the cache, replacing the originals.
@@ -593,23 +596,15 @@ void R_Init()
   R_SetViewSize();
 
   // load lightlevel colormaps and Boom extra colormaps
-  if (devparm)
-    CONS_Printf("InitColormaps...\n");
   R_InitColormaps();
 
   // initialize sw renderer lightlevel tables (colormaps...)
-  if (devparm)
-    CONS_Printf("InitLightTables...\n");
   R_InitLightTables();
 
   // load playercolor translation colormaps
-  if (devparm)
-    CONS_Printf("InitTranslationTables...\n");
   R_InitTranslationTables();
 
   // load or create translucency tables
-  if (devparm)
-    CONS_Printf("InitTranslucencyTables...\n");
   R_InitTranslucencyTables();
 
   R_InitDrawNodes();

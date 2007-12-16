@@ -64,4 +64,8 @@ bool F_Responder(event_t* ev);
 // cheat
 bool cht_Responder(event_t* ev);
 
+/// Called by IO functions when input is detected.
+void D_PostEvent(const event_t* ev);
+void D_ProcessEvents();
+
 #endif

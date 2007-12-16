@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,9 +39,9 @@
 #include "g_pawn.h"
 #include "g_decorate.h"
 
+#include "p_enemy.h"
 #include "p_maputl.h"
 #include "p_spec.h"
-#include "p_heretic.h"
 #include "sounds.h"
 #include "r_presentation.h"
 #include "tables.h"

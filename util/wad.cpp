@@ -127,7 +127,7 @@ bool Wad::Create(const char *fname, const char *lumpname)
   memset(cache, 0, numitems * sizeof(lumpcache_t));
 
   LoadDehackedLumps();
-  CONS_Printf("Added single-lump file %s\n", filename.c_str());
+  CONS_Printf(" Added single-lump file %s\n", filename.c_str());
   return true;
 }
 
@@ -173,7 +173,7 @@ bool Wad::Open(const char *fname)
   Z_Free(temp);
 
   h.numentries = 0; // what a great hack!
-  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
+  CONS_Printf(" Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
   LoadDehackedLumps();
   return true;
 }
@@ -275,7 +275,7 @@ void Wad::LoadDehackedLumps()
       clump = FindNumForName("DEHACKED", clump);
       if (clump == -1)
 	break;
-      CONS_Printf("Loading DEHACKED lump %d from %s\n", clump, filename.c_str());
+      CONS_Printf(" Loading DEHACKED lump %d from %s\n", clump, filename.c_str());
 
       DEH.LoadDehackedLump(clump);
       clump++;
@@ -356,7 +356,7 @@ bool Wad3::Open(const char *fname)
     
   h.numentries = 0; // what a great hack!
 
-  CONS_Printf("Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
+  CONS_Printf(" Added %s file %s (%i lumps)\n", h.magic, filename.c_str(), numitems);
   return true;
 }
 
@@ -494,7 +494,7 @@ bool Pak::Open(const char *fname)
       imap.insert(pair<const char *, int>(p->name, i)); // fill the name map
     }
     
-  CONS_Printf("Added PACK file %s (%i lumps)\n", filename.c_str(), numitems);
+  CONS_Printf(" Added PACK file %s (%i lumps)\n", filename.c_str(), numitems);
   return true;
 }
 
@@ -780,7 +780,7 @@ bool ZipFile::Open(const char *fname)
   cache = (lumpcache_t *)Z_Malloc(numitems * sizeof(lumpcache_t), PU_STATIC, NULL);
   memset(cache, 0, numitems * sizeof(lumpcache_t));
     
-  CONS_Printf("Added ZIP file %s (%i lumps)\n", filename.c_str(), numitems);
+  CONS_Printf(" Added ZIP file %s (%i lumps)\n", filename.c_str(), numitems);
   return true;
 }
 

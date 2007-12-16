@@ -245,6 +245,8 @@ void Video::Startup()
   if (game.dedicated)
     return;
 
+  CONS_Printf("Initializing the video module...\n");
+
   I_StartupGraphics();
 
   modenum = 0; // not exactly true, but doesn't matter here.

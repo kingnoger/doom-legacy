@@ -157,34 +157,29 @@ void Command_Player_f()
 void CL_Init()
 {
   // contains only stuff that a _dedicated_ server does _not_ need
-  CONS_Printf("CL_Init\n");
+  CONS_Printf("\n============ CL_Init ============\n");
 
   // set the video mode, graphics scaling properties, load palette
-  CONS_Printf("V_Init: Init the video module.\n");
   vid.Startup();
 
   // init renderer
-  CONS_Printf("R_Init: Init DOOM refresh daemon.\n");
   R_Init();
 
   font_t::Init();
 
   // we need the HUD font for the console
   // HUD font, crosshairs, say commands
-  CONS_Printf("HU_Init: Init the Heads Up Display\n");
   hud.Startup();
 
   // startup console
   con.Init(); //-------------------------------------- CONSOLE is on
 
   // setup menu
-  CONS_Printf("M_Init: Init menu.\n");
   Menu::Startup();
 
   automap.Startup();
 
   // set up sound and music
-  CONS_Printf("S_Init: Init sound module.\n");
   S.Startup();
 
   // read the basic legacy.wad sound script lumps
@@ -255,6 +250,8 @@ void CL_Init()
   extern void OGL_AddCommands();
   if (rendermode != render_soft)
     OGL_AddCommands();
+
+  CONS_Printf("\n");
 }
 
 

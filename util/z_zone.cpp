@@ -42,7 +42,7 @@ static unsigned int mem_usage[PU_NUMTAGS];
 
 void Z_Init()
 {
-  CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
+  //CONS_Printf("Z_Init: Init zone memory allocation daemon.\n");
   for (int i=0; i<PU_NUMTAGS; i++)
     mem_usage[i] = 0;
 }

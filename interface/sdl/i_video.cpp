@@ -320,12 +320,12 @@ bool I_StartupGraphics()
 
   if (modeList == NULL)
     {
-      CONS_Printf("No video modes present!\n");
+      CONS_Printf(" No video modes present!\n");
       return false;
     }
   else if (modeList == reinterpret_cast<SDL_Rect**>(-1))
     {
-      CONS_Printf("Unexpected: any video resolution is available in fullscreen mode.\n");
+      CONS_Printf(" Unexpected: any video resolution is available in fullscreen mode.\n");
       return false;
     }
 
@@ -346,10 +346,10 @@ bool I_StartupGraphics()
       n++;
     }
 
-  CONS_Printf("Found %d video modes.\n", fullscrModes.size());
+  CONS_Printf(" Found %d video modes.\n", fullscrModes.size());
   if (fullscrModes.empty())
     {
-      CONS_Printf("No suitable video modes found!\n");
+      CONS_Printf(" No suitable video modes found!\n");
       return false;
     }
 

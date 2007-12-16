@@ -979,9 +979,8 @@ void Actor::ZMovement()
 // Gives the actor a velocity impulse along a given angle.
 void Actor::Thrust(angle_t angle, fixed_t move)
 {
-  angle >>= ANGLETOFINESHIFT;
-  vel.x += move * finecosine[angle];
-  vel.y += move * finesine[angle];
+  vel.x += move * Cos(angle);
+  vel.y += move * Sin(angle);
 }
 
 
@@ -1508,7 +1507,8 @@ void DActor::NightmareRespawn()
 
 
 
-// send a missile towards another Actor
+
+/// Send a missile towards another Actor
 DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type, fixed_t h)
 {
 #ifdef PARANOIA
@@ -1551,7 +1551,26 @@ DActor *DActor::SpawnMissile(Actor *dest, mobjtype_t type, fixed_t h)
 
 
 
-// Moves the missile forward a bit and possibly explodes it right there.
+/// Send a missile towards the given angle
+DActor *DActor::SpawnMissileAngle(mobjtype_t t, angle_t angle, fixed_t h, fixed_t vz)
+{
+  h += Feet() -floorclip;
+    
+  DActor *mo = mp->SpawnDActor(pos.x, pos.y, h, t);
+  if (mo->info->seesound)
+    S_StartSound(mo, mo->info->seesound);
+
+  mo->owner = this; // Originator
+  mo->yaw = angle;
+  mo->vel.x = mo->info->speed * Cos(angle);
+  mo->vel.y = mo->info->speed * Sin(angle);
+  mo->vel.z = vz;
+  return mo->CheckMissileSpawn() ? mo : NULL;
+}
+
+
+
+/// Moves the missile forward a bit and possibly explodes it right there.
 bool DActor::CheckMissileSpawn()
 {
   if (game.mode < gm_heretic)
@@ -1574,6 +1593,49 @@ bool DActor::CheckMissileSpawn()
   return true;
 }
 
+
+
+/// Guides a seeker missile towards its target. Returns true if succesful, false if not.
+bool DActor::SeekerMissile(angle_t thresh, angle_t turnMax)
+{
+  Actor *t = target;
+
+  if (t == NULL)
+    return false;
+   
+  if (!(t->flags & MF_SHOOTABLE))
+    { // Target died
+      target = NULL;
+      return false;
+    }
+
+  angle_t delta;
+  int dir = P_FaceMobj(this, t, &delta);
+  if (delta > thresh)
+    {
+      delta >>= 1;
+      if (delta > turnMax)
+	delta = turnMax;
+    }
+
+  if (dir) // positive direction
+    yaw += delta;
+  else // negative direction
+    yaw -= delta;
+
+  vel.x = info->speed * Cos(yaw);
+  vel.y = info->speed * Sin(yaw);
+
+  if (Top() < t->Feet() || t->Top() < Feet())
+    { // Need to seek vertically
+      int dist = (P_XYdist(t->pos, pos) / info->speed).floor();
+      if (dist < 1)
+	dist = 1;
+      vel.z = (t->Center() - Center()) / dist;
+    }
+
+  return true;
+}
 
 
 // kaboom.

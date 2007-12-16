@@ -569,14 +569,15 @@ void ConvertMobjInfo()
   int i;
   ActorInfo *ai;
 
-#if 1
-  printf("Named DECORATE classes:\n");
-  for (i=0; i<NUMMOBJTYPES; i++)
+  if (devparm)
     {
-      if (mobjinfo[i].classname)
-	printf(" +%s\n", mobjinfo[i].classname);
+      printf("Named DECORATE classes:\n");
+      for (i=0; i<NUMMOBJTYPES; i++)
+	{
+	  if (mobjinfo[i].classname)
+	    printf(" %s\n", mobjinfo[i].classname);
+	}
     }
-#endif
 
   for (i = MT_LEGACY; i <= MT_LEGACY_S_END; i++)
     {

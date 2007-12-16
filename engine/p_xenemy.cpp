@@ -42,8 +42,25 @@
 #include "tables.h"
 
 
-int  P_FaceMobj(Actor *source, Actor *target, angle_t *delta);
 void P_SpawnDirt(DActor *actor, fixed_t radius);
+
+
+// Returns 1 if source should turn in the positive direction, 0 if in the negative direction, by the amount 0 <= delta <= ANG180.
+int P_FaceMobj(Actor *source, Actor *target, angle_t *delta)
+{
+  angle_t diff = R_PointToAngle2(source->pos, target->pos) - source->yaw;
+
+  if (diff <= ANG180)
+    {
+      *delta = diff;
+      return 1;
+    }
+  else
+    {
+      *delta = -diff;
+      return 0;
+    }
+}
 
 
 //----------------------------------------------------------------------------

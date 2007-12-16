@@ -32,7 +32,7 @@
 
 #include "dstrings.h"
 #include "info.h"
-#include "p_heretic.h"
+#include "p_setup.h"
 
 #include "g_game.h"
 #include "d_event.h"
@@ -485,12 +485,83 @@ void D_SetPaths()
 }
 
 
+static void DoomPatchEngine()
+{
+  cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
+
+  // hacks: teleport fog, blood, gibs
+  mobjinfo[MT_TFOG].spawnstate = &states[S_TFOG];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_IFOG];
+  sprnames[SPR_BLUD] = "BLUD";
+  states[S_GIBS].sprite = SPR_POL5;
+
+  // linedef conversions
+  int lump = fc.GetNumForName("XDOOM");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
+}
+
+
+static void HereticPatchEngine()
+{
+  cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
+
+  // hacks
+  mobjinfo[MT_TFOG].spawnstate = &states[S_HTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_HTFOG1];
+  sprnames[SPR_BLUD] = "BLOD";
+  states[S_GIBS].sprite = SPR_BLOD;
+
+  int lump = fc.GetNumForName("XHERETIC");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
+
+  // Above, good. Below, bad.
+  text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
+
+  text[TXT_GOTBLUECARD] = "BLUE KEY";
+  text[TXT_GOTYELWCARD] = "YELLOW KEY";
+  text[TXT_GOTREDCARD] = "GREEN KEY";
+}
+
+
+static void HexenPatchEngine()
+{
+  cv_jumpspeed.Set("9.0");
+  cv_fallingdamage.Set("23");
+
+  // hacks
+  mobjinfo[MT_TFOG].spawnstate = &states[S_XTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_XTFOG1];
+  sprnames[SPR_BLUD] = "BLOD";
+  states[S_GIBS].sprite = SPR_GIBS;
+}
+
+
 
 //
 // D_DoomMain
 //
-void D_DoomMain()
+bool D_DoomMain()
 {
+  sprintf(LEGACY_VERSION_BANNER, "Doom Legacy %d.%d.%d %s", LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_REVISION, LEGACY_VERSIONSTRING);
+
+  if (M_CheckParm("--version"))
+    {
+      printf("%s\n", D_MakeTitleString(LEGACY_VERSION_BANNER));
+      return false;
+    }
+
+  // TODO: Better commandline help
+  if (M_CheckParm("--help") || M_CheckParm("-h"))
+    {
+      printf("%s\n", D_MakeTitleString(LEGACY_VERSION_BANNER));
+      printf("Usage: legacy [-opengl] [-iwad xxx.wad] [-file pwad.wad stuff.zip ...]\n");
+      return false;
+    }
+
   // we need to check for dedicated before initialization of some subsystems
   game.dedicated = M_CheckParm("-dedicated");
 
@@ -508,7 +579,6 @@ void D_DoomMain()
   setbuf(stdout, NULL);      // non-buffered output
 
   // start console output by the banner line
-  sprintf(LEGACY_VERSION_BANNER, "Doom Legacy %d.%d.%d %s", LEGACY_VERSION/100, LEGACY_VERSION%100, LEGACY_REVISION, LEGACY_VERSIONSTRING);
   CONS_Printf("%s\n", D_MakeTitleString(LEGACY_VERSION_BANNER));
 
   // get parameters from a response file (eg: legacy @parms.txt)
@@ -560,7 +630,7 @@ void D_DoomMain()
 
   //========================== start subsystem initializations ==========================
 
-  // zone memory management
+  // memory management
   Z_Init(); 
 
   // file cache
@@ -575,11 +645,7 @@ void D_DoomMain()
   COM.Init();
 
   // system-specific stuff
-  CONS_Printf("SYS_Init: Init system-specific stuff.\n");
   I_SysInit();
-
-  // Initialize the joystick subsystem.
-  I_JoystickInit();
 
   // generate a couple of lookup tables
   GenerateTables();
@@ -687,14 +753,5 @@ void D_DoomMain()
   // end of loading screen: CONS_Printf() will no more call FinishUpdate()
   con.refresh = false;
   vid.SetMode(); // change video mode if needed, recalculate...
+  return true;
 }
-
-// entry point for not C++ environments (C or Obj-C)
-extern "C" {
-  void D_RunDoom()
-  {
-    D_DoomMain();
-    D_DoomLoop();
-  }
-}
- 

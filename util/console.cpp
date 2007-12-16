@@ -299,6 +299,9 @@ Console::~Console()
 /// Client init (not executed on dedicated server!): Setup the console text buffer
 void Console::Init()
 {
+  if (devparm)
+    CONS_Printf("Starting up the console.\n");
+
   // set console full screen for game startup
   con_destheight = con_height = vid.height;
 
