@@ -463,7 +463,7 @@ void F_CastPrint(char* text)
 }
 
 
-void D_PageDrawer(char *lumpname);
+void D_PageDrawer(const char *lumpname);
 
 void F_CastDrawer(int dummy)
 {

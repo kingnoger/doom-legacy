@@ -134,7 +134,7 @@ void GameInfo::StartIntro()
 
 /// draws a fullscreen picture ("page"), fills the borders with a background
 /// pattern (a flat) if the page doesn't fill all the screen.
-void D_PageDrawer(char *lumpname)
+void D_PageDrawer(const char *lumpname)
 {
   // software mode which uses generally lower resolutions doesn't look
   // good when the pic is scaled, so it fills space around with a pattern,

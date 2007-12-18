@@ -111,7 +111,7 @@ public:
   // Intro sequences
   int   pagetic;    ///< how many tics left until demo is changed?
   int   demosequence;
-  char *pagename;
+  const char *pagename;
 
   int  screenwipe; ///< screen wipe progress: 0: inactive, 1: needed, 2: ongoing
   bool refresh_viewborder;
