@@ -38,7 +38,7 @@
 #include "w_wad.h"
 #include "hud.h"
 #include "i_system.h"
-
+#include "m_misc.h"
 
 
 //========================================================================
@@ -68,7 +68,7 @@ void Command_MapInfo_f()
   MapInfo *m;
   if (COM.Argc() > 1)
     {
-      m = game.FindMapInfo(strupr(COM.Argv(1)));
+      m = game.FindMapInfo(string_to_upper(COM.Argv(1)).c_str());
       if (!m)
 	{
 	  CONS_Printf("No such map.\n");
@@ -153,11 +153,11 @@ void Command_ConvertMap_f()
       return;
     }
 
-  const char *temp = strupr(COM.Argv(1));
-  int lump = fc.FindNumForName(temp);
+  string temp = string_to_upper(COM.Argv(1));
+  int lump = fc.FindNumForName(temp.c_str());
   if (lump == -1)
     {
-      CONS_Printf("Map %s cannot be found.\n", temp);
+      CONS_Printf("Map %s cannot be found.\n", temp.c_str());
       return;
     }
 
@@ -358,9 +358,9 @@ void Command_Save_f()
     }
 
   int slot = atoi(COM.Argv(1));
-  char *desc = COM.Argv(2);
+  string desc = string_to_upper(COM.Argv(2));
 
-  game.SaveGame(slot, desc);
+  game.SaveGame(slot, desc.c_str());
 }
 
 
@@ -567,7 +567,7 @@ void Command_Map_f()
       return;
     }
 
-  MapInfo *m = game.FindMapInfo(strupr(COM.Argv(1)));
+  MapInfo *m = game.FindMapInfo(string_to_upper(COM.Argv(1)).c_str());
   if (!m)
     {
       CONS_Printf("No such map.\n");
@@ -664,7 +664,7 @@ void Command_Kill_f()
   PlayerInfo *p;
   for (int i=1; i<COM.Argc(); i++)
     {
-      char *s = COM.Argv(i);
+      const char *s = COM.Argv(i);
       Actor *m = NULL;
 
       if (!strcasecmp(s, "me") && com_player)

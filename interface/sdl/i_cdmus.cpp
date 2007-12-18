@@ -116,7 +116,7 @@ static void I_EjectCD()
 
 static void Command_Cd_f()
 {
-  char *command;
+  const char *command;
   int   ret, n;
 
   if (!initialized)

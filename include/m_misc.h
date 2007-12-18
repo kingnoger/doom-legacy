@@ -60,4 +60,5 @@ void M_SaveConfig(char *filename);
 // s1=s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1,char *s2,char *s3);
 
+string string_to_upper(const char *c);
 #endif

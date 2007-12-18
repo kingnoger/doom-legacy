@@ -668,7 +668,7 @@ static keyname_t keynames[] =
   {KEY_JOY3BUT15, "Joy 3 btn 15"},
 };
 
-char *gamecontrolname[num_gamecontrols] =
+const char *gamecontrolname[num_gamecontrols] =
 {
   "nothing",        //a key/button mapped to gc_null has no effect
   "forward",
@@ -741,7 +741,7 @@ char *G_KeynumToString(int keynum)
 }
 
 
-int G_KeyStringtoNum(char *keystr)
+int G_KeyStringtoNum(const char *keystr)
 {
   //    strupr(keystr);
 
@@ -878,7 +878,7 @@ void Command_Setcontrol_f()
   int p = max(0, min(atoi(COM.Argv(1)), NUM_LOCALHUMANS-1));
   short (*gc)[2] = gamecontrol[p];
 
-  char *cname = COM.Argv(2);
+  const char *cname = COM.Argv(2);
 
   int i;
   for (i = 0; i < num_gamecontrols && strcasecmp(cname, gamecontrolname[i]); i++)

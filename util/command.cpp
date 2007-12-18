@@ -309,7 +309,7 @@ void command_buffer_t::AddCommand(const char *name, com_func_t func)
 
 //  Returns true if a command by the name given exists
 //
-bool command_buffer_t::Exists(char *com_name)
+bool command_buffer_t::Exists(const char *com_name)
 {
   for (xcommand_t *cmd = com_commands ; cmd ; cmd=cmd->next)
     {

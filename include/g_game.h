@@ -193,7 +193,7 @@ public:
   int  Serialize(class LArchive &a);
   int  Unserialize(LArchive &a);
   void LoadGame(int slot);
-  void SaveGame(int slot, char* description);
+  void SaveGame(int slot, const char* description);
 
   int  GetFrags(struct fragsort_t **fs, int type);
   bool CheckScoreLimit();

@@ -91,7 +91,7 @@ public:
   char *Args() { return com_args; }
 
   /// Returns string pointer for given argument number.
-  char *Argv(int arg)
+  const char *Argv(int arg)
   {
     if (arg >= com_argc || arg < 0)
       return "";
@@ -104,7 +104,7 @@ public:
   const char *CompleteCommand(char *partial, int skips);
 
   /// Checks if the named command exists.
-  bool Exists(char *com_name);
+  bool Exists(const char *com_name);
 
 };
 
@@ -136,7 +136,7 @@ enum cvflags_t
 struct CV_PossibleValue_t
 {
   int   value;
-  char *strvalue;
+  const char *strvalue;
 };
 
 extern CV_PossibleValue_t CV_OnOff[];
@@ -160,8 +160,8 @@ struct consvar_t
     CV_STRLEN = 64
   };
 
-  char      *name;
-  char      *defaultvalue;
+  const char*name;
+  const char*defaultvalue;
   int        flags;        ///< flags from cvflags_t
   CV_PossibleValue_t *PossibleValue;  ///< array of possible values
   void     (*func)();      ///< called on change, if CV_CALL is set

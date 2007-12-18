@@ -104,7 +104,7 @@ bool  G_MapEventsToControls(struct event_t *ev);
 
 // returns the name of a key
 char *G_KeynumToString(int keynum);
-int   G_KeyStringtoNum(char *keystr);
+int   G_KeyStringtoNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void  G_ClearControlKeys(short (*setupcontrols)[2], int control);

@@ -2159,7 +2159,7 @@ void GameInfo::LoadGame(int slot)
 }
 
 
-void GameInfo::SaveGame(int savegameslot, char *description)
+void GameInfo::SaveGame(int savegameslot, const char *description)
 {
   CONS_Printf("Saving the game...\n");
 

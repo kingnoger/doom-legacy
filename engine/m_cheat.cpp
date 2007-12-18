@@ -79,7 +79,7 @@ void Command_CheatGod_f()
 
 void Command_CheatGimme_f()
 {
-  char*     s;
+  const char*     s;
   int       i,j;
 
   if (!game.server || !com_player)
@@ -305,7 +305,7 @@ static byte CheatIDDQDSeq[] = {'i', 'd', 'd', 'q', 'd', 0xff, 0};
 // not yet a console command, but a cheat
 void CheatFlyFunc(PlayerPawn *p, const byte *arg)
 {
-  char *msg;
+  const char *msg;
 
   p->cheats ^= CF_FLYAROUND;
   if (p->cheats & CF_FLYAROUND)

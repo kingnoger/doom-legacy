@@ -41,6 +41,8 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "parser.h"
+
 #include "hardware/oglrenderer.hpp"
 
 
@@ -484,4 +486,25 @@ void strcatbf(char *s1,char *s2,char *s3)
   strcpy(s1,s2);
   strcat(s1,s3);
   strcat(s1,tmp);
+}
+
+string string_to_upper(const char *c) {
+  string result;
+  char *newc;
+  int len;
+
+  if(c == NULL)
+    return result;
+
+  len = strlen(c);
+  if(len == 0)
+    return result;
+
+  newc = new char[len];
+  strcpy(newc, c);
+  strupr(newc);
+  result = newc;
+  delete []newc;
+
+  return result;
 }
