@@ -686,7 +686,7 @@ bool D_DoomMain()
 
   // ------------- starting the game ----------------
 
-  char *m;
+  const char *m;
 
   if (fc.FindNumForName("MAPINFO") >= 0)
     m = "MAPINFO";

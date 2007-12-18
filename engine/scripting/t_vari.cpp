@@ -88,7 +88,7 @@ const char *stringvalue(svalue_t v)
 
 // find_variable checks through the current script, level script
 // and global script to try to find the variable of the name wanted
-svariable_t *find_variable(char *name)
+svariable_t *find_variable(const char *name)
 {
   svariable_t *var;
   script_t *current = current_script;
@@ -136,7 +136,7 @@ svariable_t *script_t::new_variable(const char *name, int vtype)
 
 // search a particular script for a variable, which
 // is returned if it exists
-svariable_t *script_t::variableforname(char *name)
+svariable_t *script_t::variableforname(const char *name)
 {
   svariable_t *current = variables[variable_hash(name)];
   
@@ -272,7 +272,7 @@ void svariable_t::setvalue(svalue_t newvalue)
 
 
 
-svariable_t *add_game_int(char *name, int *var)
+svariable_t *add_game_int(const char *name, int *var)
 {
   svariable_t* newvar = global_script.new_variable(name, svt_pInt);
   newvar->value.pI = var;
@@ -281,7 +281,7 @@ svariable_t *add_game_int(char *name, int *var)
 }
 
 
-svariable_t *add_game_fixed(char *name, fixed_t *fixed)
+svariable_t *add_game_fixed(const char *name, fixed_t *fixed)
 {
   svariable_t *newvar = global_script.new_variable(name, svt_pFixed);
   newvar->value.pFixed = fixed;

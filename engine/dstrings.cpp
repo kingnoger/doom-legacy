@@ -25,7 +25,7 @@
 
 #include "dstrings.h"
 
-char *text[NUMTEXT] =
+const char *text[NUMTEXT] =
 {
   "DOOM 2: Hell on Earth",
   "The Ultimate DOOM Startup",

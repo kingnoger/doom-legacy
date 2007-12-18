@@ -129,7 +129,7 @@ public:
   fs_section_t *find_section_end(char *brace);
   char *process_find_char(char *data, char find);
   svariable_t *new_variable(const char *name, int vtype);
-  svariable_t *variableforname(char *name);
+  svariable_t *variableforname(const char *name);
 
   /// Saving and loading
   int  Serialize(class LArchive &a);

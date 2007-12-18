@@ -899,8 +899,13 @@ void dehacked_t::Read_Text(int len1, int len2)
 		I_Error("Read_Text : Out of memory");
 	    }
 
-	  strncpy(text[i], s + len1, len2);
-	  text[i][len2] = '\0';
+	  // FIXME, JussiP: we should not change these strings, as
+	  // they are constants and new C standards specifically
+	  // prohibit it, but Dehacked needs to patch the binary on
+	  // the fly. Yes, it sucks and may break at any time in the
+	  // future.
+	  strncpy(const_cast<char*>(text[i]), s + len1, len2);
+	  const_cast<char*>(text[i])[len2] = '\0';
 	  return;
 	}
     }

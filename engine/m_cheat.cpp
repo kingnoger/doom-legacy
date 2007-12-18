@@ -329,7 +329,7 @@ void CheatMusFunc(PlayerPawn *p, const byte *arg)
 {
   // 'mus' cheat for changing music
   int  musnum;
-  char *msg;
+  const char *msg;
 
   msg = STSTR_MUS;
 
@@ -369,7 +369,7 @@ static void CheatAMFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatGodFunc(PlayerPawn *p, const byte *arg)
 {
-  char *msg;
+  const char *msg;
 
   p->cheats ^= CF_GODMODE;
 
@@ -440,7 +440,7 @@ static void CheatPowerup2Func(PlayerPawn *p, const byte *arg)
 
 static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
 {
-  char *msg;
+  const char *msg;
 
   p->cheats ^= CF_NOCLIP;
 
@@ -465,7 +465,7 @@ static void CheatNoClipFunc(PlayerPawn *p, const byte *arg)
 
 static void CheatWeaponsFunc(PlayerPawn *p, const byte *arg)
 {
-  char *msg;
+  const char *msg;
   int i;
 
   p->armorpoints[0] = DEH.idfa_armor;
@@ -567,7 +567,7 @@ static void CheatArtifact3Func(PlayerPawn *p, const byte *arg)
 static void CheatWarpFunc(PlayerPawn *p, const byte *arg)
 {
   int mapnum;
-  char *msg;
+  const char *msg;
 
   // "idclev" or "engage" change-level cheat
 

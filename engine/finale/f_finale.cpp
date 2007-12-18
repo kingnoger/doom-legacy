@@ -278,7 +278,7 @@ void F_TextWrite(int sx, int sy)
 //
 struct castinfo_t
 {
-  char       *name;
+  const char *name;
   mobjtype_t  type;
 };
 
@@ -457,7 +457,7 @@ bool F_CastResponder(event_t* ev)
 }
 
 
-void F_CastPrint(char* text)
+void F_CastPrint(const char* text)
 {
   hud_font->DrawString((BASEVIDWIDTH - hud_font->StringWidth(text)) / 2, 180, text, V_SCALE);
 }

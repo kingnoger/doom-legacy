@@ -114,7 +114,7 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
 	GivePower(pw_weaponlevel2);
     }
 
-  char *str = NULL;
+  const char *str = NULL;
 
   if (player == victim->player)
     {
@@ -1151,7 +1151,7 @@ void PlayerPawn::Die(Actor *inflictor, Actor *source, int dtype)
     {
       // environment kills
       int w = specialsector;
-      char *str = text[TXT_DEATHMSG_SPECUNKNOW];
+      const char *str = text[TXT_DEATHMSG_SPECUNKNOW];
 
       if (w & SS_DAMAGEMASK)
 	{

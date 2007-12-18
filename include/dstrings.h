@@ -29,7 +29,7 @@
 
 // QuitDOOM messages
 #define NUM_QUITMESSAGES   15
-extern char* endmsg[];
+extern const char* endmsg[];
 
 
 // languages
@@ -42,7 +42,7 @@ enum language_t
 
 // All important printed strings.
 // Language selection (message strings).
-extern char *text[];
+extern const char *text[];
 
 enum text_enum
 {
