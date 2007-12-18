@@ -861,17 +861,11 @@ int acs_t::SetLineTexture()
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
     {
       if (position == ACS_TEX_MIDDLE)
-	{
-	  line->sideptr[side]->midtexture = texture;
-	}
+	line->sideptr[side]->midtexture = texture;
       else if (position == ACS_TEX_LOWER)
-	{
-	  line->sideptr[side]->bottomtexture = texture;
-	}
-      else
-	{ // ACS_TEX_UPPER
-	  line->sideptr[side]->toptexture = texture;
-	}
+	line->sideptr[side]->bottomtexture = texture;
+      else // ACS_TEX_UPPER
+	line->sideptr[side]->toptexture = texture;
     }
 
   return ACS_CONTINUE;
@@ -885,9 +879,7 @@ int acs_t::SetLineBlocking()
   int lineid = Pop();
 
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
-    {
-      line->flags = (line->flags&~ML_BLOCKING) | blocking;
-    }
+    line->flags = (line->flags & ~ML_BLOCKING) | blocking;
 
   return ACS_CONTINUE;
 }
@@ -895,24 +887,19 @@ int acs_t::SetLineBlocking()
 int acs_t::SetLineSpecial()
 {
   line_t *line;
-  int arg1, arg2, arg3, arg4, arg5;
+  int args[5];
 
-  arg5 = Pop();
-  arg4 = Pop();
-  arg3 = Pop();
-  arg2 = Pop();
-  arg1 = Pop();
+  for (int i=4; i>=0; i--)
+    args[i] = Pop();
+
   int special = Pop();
   int lineid = Pop();
 
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
     {
       line->special = special;
-      line->args[0] = arg1;
-      line->args[1] = arg2;
-      line->args[2] = arg3;
-      line->args[3] = arg4;
-      line->args[4] = arg5;
+      for (int i=0; i<5; i--)
+	line->args[i] = args[i];
     }
 
   return ACS_CONTINUE;
@@ -927,10 +914,8 @@ int acs_t::ThingSound()
   int tid = Pop();
   int searcher = -1;
 
-  while((mobj = mp->FindFromTIDmap(tid, &searcher)) != NULL)
-    {
-      S_StartSound(mobj, sound, volume/127.0);
-    }
+  while ((mobj = mp->FindFromTIDmap(tid, &searcher)) != NULL)
+    S_StartSound(mobj, sound, volume/127.0);
 
   return ACS_CONTINUE;
 }
