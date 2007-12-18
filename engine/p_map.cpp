@@ -1702,7 +1702,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
       if (PuzzleItemType != line->args[0])
 	return false; // Item type doesn't match
 
-      PuzzleItemUser->mp->StartACS(line->args[1], &line->args[2], PuzzleItemUser, line, 0);
+      PuzzleItemUser->mp->ACS_StartScript(line->args[1], &line->args[2], PuzzleItemUser, line, 0);
       line->special = 0;
       PuzzleActivated = true;
       return false; // Stop searching
@@ -1716,7 +1716,7 @@ static bool PTR_PuzzleItemTraverse(intercept_t *in)
   if (PuzzleItemType != p->args[0])
     return true; // Item type doesn't match
 
-  PuzzleItemUser->mp->StartACS(p->args[1], &p->args[2], PuzzleItemUser, NULL, 0);
+  PuzzleItemUser->mp->ACS_StartScript(p->args[1], &p->args[2], PuzzleItemUser, NULL, 0);
   p->special = 0;
   PuzzleActivated = true;
   return false; // Stop searching

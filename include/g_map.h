@@ -137,13 +137,28 @@ public:
   struct runningscript_t *runningscripts; ///< linked list of currently active FS scripts
 
   // ACS
-#define MAX_ACS_MAP_VARS 32
-  byte   *ActionCodeBase;    ///< the raw BEHAVIOR lump, base for offsets
-  int     ACScriptCount;     ///< number of different AC scripts in this map
-  struct acsInfo_t *ACSInfo; ///< properties of the scripts
-  int     ACStringCount;     ///< number of ACS strings in this map
-  char  **ACStrings;         ///< array of the ACS strings
-  int     ACMapVars[MAX_ACS_MAP_VARS]; ///< ACS map variables
+  byte   *ACS_base; ///< the raw BEHAVIOR lump, base for offsets
+  map<unsigned, struct acs_script_t> ACS_scripts; ///< mapping from script numbers to script definitions
+  int     ACS_num_strings;     ///< number of ACS strings in this map
+  char  **ACS_strings;         ///< array of the ACS strings
+#define ACS_MAP_VARS 32
+  Sint32  ACS_map_vars[ACS_MAP_VARS]; ///< ACS map variables
+
+  typedef map<unsigned, acs_script_t>::iterator acs_script_iter_t;
+
+  void ACS_LoadScripts(int lump);
+  void ACS_StartOpenScript(acs_script_t *s);
+  bool ACS_StartScriptInMap(int mapnum, unsigned scriptnum, byte *args);
+  class acs_t *ACS_StartScript(unsigned number, byte *args, Actor *activator, line_t *line, int side);
+  void ACS_StartDeferredScripts();
+  bool ACS_Terminate(unsigned number);
+  bool ACS_Suspend(unsigned number);
+  void ACS_ScriptFinished(unsigned number);
+
+  acs_script_t *ACS_FindScript(unsigned number);
+
+  void TagFinished(unsigned tag);
+  void PolyobjFinished(unsigned po);
   //@}
 
 
@@ -283,7 +298,6 @@ public:
   void LoadSideDefs(int lump);
   void LoadSideDefs2(int lump);
   void LoadBlockMap(int lump);
-  void LoadACScripts(int lump);
   void GroupLines();
   void SetupSky();
   void GenerateBlockMap();
@@ -437,19 +451,6 @@ public:
   void ForceLightning();
   void LightningFlash();
 
-  // ACS scripting
-  void CheckACSStore();
-  void StartOpenACS(int number, int infoIndex, Sint32 *address);
-  bool StartACS(int number, byte *args, Actor *activator, line_t *line, int side);
-  bool StartLockedACS(line_t *line, byte *args, class PlayerPawn *p, int side);
-  bool TerminateACS(int number);
-  bool SuspendACS(int number);
-
-  int GetACSIndex(int number);
-
-  void TagFinished(unsigned tag);
-  void PolyobjFinished(int po);
-  void ScriptFinished(int number);
 
   // FS scripting
   void FS_ClearScripts();

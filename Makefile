@@ -137,7 +137,6 @@ export engine_objects = \
 	$(objdir)/p_lights.o \
 	$(objdir)/p_switch.o \
 	$(objdir)/p_poly.o \
-	$(objdir)/p_acs.o \
 	$(objdir)/a_action.o \
 	$(objdir)/p_pspr.o \
 	$(objdir)/p_hpspr.o \
@@ -147,6 +146,7 @@ export engine_objects = \
 	$(objdir)/p_xenemy.o \
 	$(objdir)/ai_mobjinfo.o \
 	$(objdir)/ai_states.o \
+	$(objdir)/acs.o \
 	$(objdir)/t_oper.o \
 	$(objdir)/t_parse.o \
 	$(objdir)/t_prepro.o \

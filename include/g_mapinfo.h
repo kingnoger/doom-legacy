@@ -31,7 +31,18 @@
 #include <vector>
 #include <map>
 
+#include "doomtype.h"
+
 using namespace std;
+
+
+/// \brief A deferred or "queued" ACS script in a currently inactive Map.
+struct acs_deferred_t
+{
+  unsigned script; ///< Script number (on target Map)
+  byte    args[4]; ///< 3 byte arguments, padded to 4 for alignment
+};
+
 
 /// \brief Stores all kinds of metadata for an associated Map.
 /// \ingroup g_central
@@ -60,6 +71,9 @@ class MapInfo
   friend class Map;
 
 public:
+  /// \name Status variables for the associated Map
+  /// 
+  //@{
   /// current state of the corresponding Map
   enum mapstate_e
     {
@@ -75,6 +89,9 @@ public:
   class Map   *me;    ///< the actual running Map instance corresponding to this MapInfo
   bool         found; ///< present in the resource pool (WAD files etc.)
 
+  vector<acs_deferred_t> ACS_deferred; ///< Deferred ACS scripts for this map. Will be started when the Map is launched.
+  //@}
+  
   string lumpname;   ///< map lump name ("MAP04")
   string nicename;   ///< map long nice name ("The Nuclear Plant")
   string savename;   ///< name of the file the map is currently saved in

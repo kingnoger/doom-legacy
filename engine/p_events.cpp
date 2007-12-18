@@ -29,7 +29,6 @@
 #include "g_pawn.h"
 
 #include "p_spec.h"
-#include "p_acs.h"
 #include "r_data.h"
 #include "r_sky.h" // TODO remove
 #include "sounds.h"
@@ -586,15 +585,15 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
     case 80: // ACS_Execute
       if (args[1] && args[1] != info->mapnumber)
-	success = P_AddToACSStore(args[1], args[0], &args[2]);
+	success = ACS_StartScriptInMap(args[1], args[0], &args[2]);
       else
-	success = StartACS(args[0], &args[2], mo, line, side);
+	success = ACS_StartScript(args[0], &args[2], mo, line, side);
       break;
     case 81: // ACS_Suspend
-      success = SuspendACS(args[0]);
+      success = ACS_Suspend(args[0]);
       break;
     case 82: // ACS_Terminate
-      success = TerminateACS(args[0]);
+      success = ACS_Terminate(args[0]);
       break;
     case 83: // ACS_LockedExecute
       lock = args[4];
@@ -602,9 +601,9 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
 	{
 	  args[4] = 0;
 	  if (args[1] && args[1] != info->mapnumber)
-	    success = P_AddToACSStore(args[1], args[0], &args[2]);
+	    success = ACS_StartScriptInMap(args[1], args[0], &args[2]);
 	  else
-	    success = StartACS(args[0], &args[2], mo, line, side);
+	    success = ACS_StartScript(args[0], &args[2], mo, line, side);
 	  args[4] = lock;
 	}
       break;

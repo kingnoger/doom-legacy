@@ -2758,7 +2758,7 @@ void A_SorcDeath(DActor *actor)
   // At this point the sorcerer death action is already executed.
   // special3 is the script number to execute, in current map, with zero args
   byte argh[7] = {actor->special3, 0, 0, 0, 0, 0, 0};
-  actor->mp->StartACS(argh[0], &argh[2], actor, NULL, 0);
+  actor->mp->ACS_StartScript(argh[0], &argh[2], actor, NULL, 0);
 }
 
 
@@ -3627,7 +3627,7 @@ void A_KoraxChase(DActor *actor)
 	  actor->Teleport(spot->pos, spot->yaw, false);
 	}
 
-      actor->mp->StartACS(249, args, actor, NULL, 0);
+      actor->mp->ACS_StartScript(249, args, actor, NULL, 0);
       actor->special2 = 1;	// Don't run again
 
       return;
@@ -3693,7 +3693,7 @@ void A_KoraxBonePop(DActor *actor)
   mo = actor->SpawnMissileAngle(MT_KORAX_SPIRIT6, ANGLE_60*5, 32, 5);
   if (mo) KSpiritInit(mo,actor);
 
-  actor->mp->StartACS(255, args, actor, NULL, 0);		// Death script
+  actor->mp->ACS_StartScript(255, args, actor, NULL, 0);		// Death script
 }
 
 void KSpiritInit(DActor *spirit, DActor *korax)
@@ -3814,19 +3814,19 @@ void A_KoraxCommand(DActor *actor)
   switch(P_Random() % numcommands)
     {
     case 0:
-      mp->StartACS(250, args, actor, NULL, 0);
+      mp->ACS_StartScript(250, args, actor, NULL, 0);
       break;
     case 1:
-      mp->StartACS(251, args, actor, NULL, 0);
+      mp->ACS_StartScript(251, args, actor, NULL, 0);
       break;
     case 2:
-      mp->StartACS(252, args, actor, NULL, 0);
+      mp->ACS_StartScript(252, args, actor, NULL, 0);
       break;
     case 3:
-      mp->StartACS(253, args, actor, NULL, 0);
+      mp->ACS_StartScript(253, args, actor, NULL, 0);
       break;
     case 4:
-      mp->StartACS(254, args, actor, NULL, 0);
+      mp->ACS_StartScript(254, args, actor, NULL, 0);
       break;
     }
 }

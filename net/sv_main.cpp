@@ -499,13 +499,6 @@ bool GameInfo::SV_StartGame(skill_t sk, int mapnumber, int ep)
 }
 
 
-/// Clears all global and hub scripting variables.
-void GameInfo::SV_ResetScripting()
-{
-  void P_ACSInitNewGame();
-  P_ACSInitNewGame(); // clear the ACS world vars etc. TODO FS too
-}
-
 
 
 //=========================================================================

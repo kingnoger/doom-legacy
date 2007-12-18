@@ -44,6 +44,8 @@
 #include "m_random.h"
 #include "wi_stuff.h"
 
+#include "t_acs.h"
+
 #include "sounds.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -90,10 +92,9 @@ Map::Map(MapInfo *i)
   levelscript = NULL;
   runningscripts = NULL;
 
-  ACScriptCount = 0;
-  ACSInfo = NULL;
-  ActionCodeBase = NULL;
-  ACStrings = NULL;
+  ACS_base = NULL;
+  ACS_num_strings = 0;
+  ACS_strings = NULL;
 
   mapthings = NULL;
   force_pointercheck = false;
@@ -142,14 +143,11 @@ Map::~Map()
   // FIXME free FS stuff
   FS_ClearRunningScripts();
 
-  if (ACSInfo)
-    {
-      Z_Free(ACSInfo);
-      Z_Free(ActionCodeBase);
-    }
+  if (ACS_base)
+    Z_Free(ACS_base);
 
-  if (ACStrings)
-    Z_Free(ACStrings);
+  if (ACS_strings)
+    Z_Free(ACS_strings);
 
   Z_Free(mapthings);
 

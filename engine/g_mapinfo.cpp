@@ -155,6 +155,9 @@ bool MapInfo::Activate(PlayerInfo *p)
 	  I_Error("Error during map setup.\n");
 	  return false;
 	}
+
+      if (game.server)
+	me->ACS_StartDeferredScripts(); // execute waiting scripts
       break;
 
     case MAP_RUNNING:
@@ -170,9 +173,6 @@ bool MapInfo::Activate(PlayerInfo *p)
       if (!HubLoad())
 	return false;
     }
-
-  if (game.server)
-    me->CheckACSStore(); // execute waiting scripts
 
   if (!p)
     return true; // map activated without players

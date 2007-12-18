@@ -1700,7 +1700,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   if (game.server)
     {
       if (hexen_format)
-	LoadACScripts(lumpnum + LUMP_BEHAVIOR);
+	ACS_LoadScripts(lumpnum + LUMP_BEHAVIOR);
 
       FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
     }

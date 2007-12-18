@@ -59,22 +59,22 @@ void A_StartWeaponFS(PlayerPawn *p, pspdef_t *psp)
 // action function for running ACS
 void A_StartACS(DActor *actor)
 {
-  int script = actor->tics;
+  unsigned script = actor->tics;
   byte args[5] = {0,0,0,0,0}; // TODO take args from sprite and frame fields
 
   actor->tics = 0; // takes no time
-  actor->mp->StartACS(script, args, actor, NULL, 0);
+  actor->mp->ACS_StartScript(script, args, actor, NULL, 0);
 }
 
 
 // weapon action function for running ACS
 void A_StartWeaponACS(PlayerPawn *p, pspdef_t *psp)
 {
-  int script = psp->tics;
+  unsigned script = psp->tics;
   byte args[5] = {0,0,0,0,0};
 
   psp->tics = 0; // takes no time
-  p->mp->StartACS(script, args, p, NULL, 0);
+  p->mp->ACS_StartScript(script, args, p, NULL, 0);
 }
 
 

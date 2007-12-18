@@ -44,10 +44,10 @@
 #include "p_spec.h"
 #include "r_poly.h"
 
-#include "p_acs.h"
 #include "r_data.h"
 #include "r_sprite.h"
 #include "hardware/md3.h"
+#include "t_acs.h"
 #include "t_vari.h"
 #include "t_script.h"
 #include "t_parse.h"
@@ -104,23 +104,24 @@ int acs_t::Marshal(LArchive &a)
   int temp;
   if (a.IsStoring())
     {
-      a << (temp = (reinterpret_cast<byte*>(ip) - mp->ActionCodeBase)); // byte offset
-      ST_PTR(line, mp->lines);
-      Thinker::Serialize(activator, a);
-      a.Write((byte *)stak, sizeof(stak));
+      a << def->number;
+      a << (temp = (reinterpret_cast<byte*>(ip) - mp->ACS_base)); // byte offset
+      a.Write((byte *)stack, sizeof(stack));
       a.Write((byte *)vars, sizeof(vars));
+      Thinker::Serialize(triggerer, a);
+      ST_PTR(line, mp->lines);
     }
   else
     {
-      a << temp;
-      ip = reinterpret_cast<int*>(&mp->ActionCodeBase[temp]);
-      RE_PTR(line, mp->lines);
-      activator = (Actor *)Thinker::Unserialize(a);
-      a.Read((byte *)stak, sizeof(stak));
+      a << temp; def = mp->ACS_FindScript(temp);
+      a << temp; ip = reinterpret_cast<Sint32*>(&mp->ACS_base[temp]);
+      a.Read((byte *)stack, sizeof(stack));
       a.Read((byte *)vars, sizeof(vars));
+      triggerer = reinterpret_cast<Actor *>(Thinker::Unserialize(a));
+      RE_PTR(line, mp->lines);
     }
 
-  a << side << number << infoIndex << delayCount << stackPtr;
+  a << sp << side << delay;
   return 0;
 }
 
@@ -1205,12 +1206,14 @@ int Map::Serialize(LArchive &a)
   // scripts
   a.Marker(MARK_SCRIPT);
 
-  for (i = 0; i < ACScriptCount; i++)
+  for (acs_script_iter_t i = ACS_scripts.begin(); i != ACS_scripts.end(); i++)
     {
-      a << (int &)ACSInfo[i].state;
-      a << ACSInfo[i].waitValue;
+      acs_script_t &s = i->second;
+      a << (int &)s.state;
+      a << s.wait_data;
     }
-  a.Write(reinterpret_cast<byte*>(ACMapVars), sizeof(ACMapVars));
+
+  a.Write(reinterpret_cast<byte*>(ACS_map_vars), sizeof(ACS_map_vars));
 
   // FS: levelscript contains the map global variables (everything else can be loaded from the WAD)
   levelscript->Serialize(a);
@@ -1454,12 +1457,15 @@ int Map::Unserialize(LArchive &a)
   if (!a.Marker(MARK_SCRIPT))
     return -3;
 
-  for (i = 0; i < ACScriptCount; i++)
+  for (acs_script_iter_t i = ACS_scripts.begin(); i != ACS_scripts.end(); i++)
     {
-      a << n; ACSInfo[i].state = acs_state_t(n);
-      a << ACSInfo[i].waitValue;
+      acs_script_t &s = i->second;
+      a << (int &)s.state;
+      //a << n; ACSInfo[i].state = acs_state_t(n);
+      a << s.wait_data;
     }
-  a.Read((byte *)ACMapVars, sizeof(ACMapVars));
+
+  a.Read((byte *)ACS_map_vars, sizeof(ACS_map_vars));
 
   // FS: restore levelscript
   levelscript->Unserialize(a);
@@ -1670,6 +1676,11 @@ int MapInfo::Serialize(LArchive &a)
   else
     a << (temp = 0);
 
+  // deferred scripts
+  a << (temp = ACS_deferred.size());
+  for (int i = 0; i < temp; i++)
+    a.Write((byte *)&ACS_deferred[i], sizeof(acs_deferred_t));
+
   return 0;
 }
 
@@ -1723,6 +1734,14 @@ int MapInfo::Unserialize(LArchive &a)
     }
   else
     me = NULL;
+
+  a << temp;
+  for (int i = 0; i < temp; i++)
+    {
+      acs_deferred_t d;
+      a.Read((byte *)&d, sizeof(acs_deferred_t));
+      ACS_deferred.push_back(d);
+    }
 
   return 0;
 }
@@ -1921,12 +1940,7 @@ int GameInfo::Serialize(LArchive &a)
   a.Marker(MARK_GROUP);
 
   // global script data
-  a.Write((byte *)WorldVars, sizeof(WorldVars));
-  acsstore_iter_t t;
-  a << (n = ACS_store.size());
-  for (t = ACS_store.begin(); t != ACS_store.end(); t++) 
-    a.Write((byte *)&t->second, sizeof(acsstore_t));
-
+  a.Write((byte *)ACS_world_vars, sizeof(ACS_world_vars));
   // TODO FS hub_script, global_script...
 
   a.Marker(MARK_GROUP);
@@ -2052,14 +2066,7 @@ int GameInfo::Unserialize(LArchive &a)
     return -1;
 
   // global script data
-  a.Read((byte *)WorldVars, sizeof(WorldVars));
-  a << n;
-  for (i = 0; i < n; i++)
-    {
-      acsstore_t temp;
-      a.Read((byte *)&temp, sizeof(acsstore_t));
-      ACS_store.insert(pair<const int, acsstore_t>(temp.tmap, temp));
-    }
+  a.Read((byte *)ACS_world_vars, sizeof(ACS_world_vars));
 
   if (!a.Marker(MARK_GROUP))
     return -1;
