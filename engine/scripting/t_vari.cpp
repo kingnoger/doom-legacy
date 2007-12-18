@@ -107,7 +107,7 @@ svariable_t *find_variable(char *name)
 
 // create a new variable in a particular script.
 // returns a pointer to the new variable.
-svariable_t *script_t::new_variable(char *name, int vtype)
+svariable_t *script_t::new_variable(const char *name, int vtype)
 {
   int tagtype = (this == &global_script || this == &hub_script) ? PU_STATIC : PU_LEVEL;
   
@@ -308,7 +308,7 @@ svariable_t *add_game_mobj(char *name, Actor **mo)
 
 
 // create a new function. returns the function number
-svariable_t *new_function(char *name, void (*handler)())
+svariable_t *new_function(const char *name, void (*handler)())
 {
   // create the new variable for the function
   // add to the global script

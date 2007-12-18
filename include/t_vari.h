@@ -134,7 +134,7 @@ svariable_t *add_game_string(char *name, char **var);
 svariable_t *add_game_mobj(char *name, Actor **mo);
 
 // functions
-svariable_t *new_function(char *name, void (*handler)() );
+svariable_t *new_function(const char *name, void (*handler)() );
 svalue_t evaluate_function(int start, int stop);   // actually run a function
 
 // arguments to handler functions

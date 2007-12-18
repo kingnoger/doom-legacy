@@ -826,7 +826,7 @@ int Map::SpawnSectorSpecial(int sp, sector_t *sec)
 // flat floortypes
 static struct
 {
-  char        *name;
+  const char        *name;
   floortype_t  type;
 }
 ftypes[] =

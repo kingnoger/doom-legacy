@@ -488,7 +488,7 @@ void run_statement()
 /***************** Evaluating Expressions ************************/
 
         // find a token, ignoring things in brackets        
-int find_operator(int start, int stop, char *value)
+int find_operator(int start, int stop, const char *value)
 {
   int i;
   int bracketlevel = 0;
@@ -512,7 +512,7 @@ int find_operator(int start, int stop, char *value)
 }
 
         // go through tokens the same as find_operator, but backwards
-int find_operator_backwards(int start, int stop, char *value)
+int find_operator_backwards(int start, int stop, const char *value)
 {
   int i;
   int bracketlevel = 0;
@@ -691,7 +691,7 @@ svalue_t evaluate_expression(int start, int stop)
 }
 
 
-void script_error(char *s, ...)
+void script_error(const char *s, ...)
 {
   va_list args;
   char tempstr[2048];

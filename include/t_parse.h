@@ -120,7 +120,7 @@ public:
   void continue_script(char *continue_point);
 
   // variables are hashed for speed. this is the hashkey.
-  inline static int variable_hash(char *n)
+  inline static int variable_hash(const char *n)
   {
     return ((n[0] + n[1] + (n[1] ? n[2] + (n[2] ? n[3] : 0) : 0)) % VARIABLESLOTS);
   }
@@ -128,7 +128,7 @@ public:
   fs_section_t *find_section_start(char *brace);
   fs_section_t *find_section_end(char *brace);
   char *process_find_char(char *data, char find);
-  svariable_t *new_variable(char *name, int vtype);
+  svariable_t *new_variable(const char *name, int vtype);
   svariable_t *variableforname(char *name);
 
   /// Saving and loading
@@ -143,7 +143,7 @@ public:
 /// \brief FS operator definition
 struct operator_t
 {
-  char *str;
+  const char *str;
   svalue_t (*handler)(int, int, int); // left, mid, right
   int direction;
 };
@@ -160,11 +160,11 @@ enum
 void parse_data(char *data, char *end);
 void parse_include(char *lumpname);
 void run_statement();
-void script_error(char *s, ...);
+void script_error(const char *s, ...);
 
 svalue_t evaluate_expression(int start, int stop);
-int find_operator(int start, int stop, char *value);
-int find_operator_backwards(int start, int stop, char *value);
+int find_operator(int start, int stop, const char *value);
+int find_operator_backwards(int start, int stop, const char *value);
 
 char *get_tokens(char *r);
 

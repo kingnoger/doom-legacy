@@ -6538,7 +6538,7 @@ struct mobjinfo_t
 
 extern state_t       states[NUMSTATES];
 extern weaponstate_t weaponstates[NUMWEAPONSTATES];
-extern char         *sprnames[NUMSPRITES+1];
+extern char          *sprnames[NUMSPRITES+1];
 extern mobjinfo_t    mobjinfo[NUMMOBJTYPES];
 
 

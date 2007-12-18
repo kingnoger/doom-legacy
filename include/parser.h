@@ -44,7 +44,7 @@ enum parseritem_t
 struct parsercmd_t
 {
   parseritem_t type;
-  char   *name;
+  const char *name;
   size_t  offset1, offset2;
 };
 
