@@ -33,16 +33,10 @@
 extern mobjtype_t TranslateThingType[];
 
 
-//==========================================================================
-//
-// was ActivateThing
-//
-//==========================================================================
-
 bool DActor::Activate()
 {
   if (flags & MF_MONSTER)
-    { // Monster
+    {
       if (flags2 & MF2_DORMANT)
 	{
 	  flags2 &= ~MF2_DORMANT;
@@ -52,27 +46,11 @@ bool DActor::Activate()
       return false;
     }
 
-  // TODO this could probably be replaced with
-  // SetState(attackstate/spawnstate) and corresponding StartSound()
-  // i.e. store this functionality in the mobjinfo struct...
+  // NOTE: for non-MF_MONSTERs, meleestate (attacksound) is the active state (sound), seestate (seesound) are the deactivated ones.
+  // TODO spikes, bell
+
   switch (type)
     {
-    case MT_ZTWINEDTORCH:
-    case MT_ZTWINEDTORCH_UNLIT:
-      SetState(S_ZTWINEDTORCH_1);
-      S_StartSound(this, SFX_IGNITE);
-      break;
-    case MT_ZWALLTORCH:
-    case MT_ZWALLTORCH_UNLIT:
-      SetState(S_ZWALLTORCH1);
-      S_StartSound(this, SFX_IGNITE);
-      break;
-    case MT_ZGEMPEDESTAL:
-      SetState(S_ZGEMPEDESTAL2);
-      break;
-    case MT_ZWINGEDSTATUENOSKULL:
-      SetState(S_ZWINGEDSTATUENOSKULL2);
-      break;
     case MT_THRUSTFLOOR_UP:
     case MT_THRUSTFLOOR_DOWN:
       if (args[0]==0)
@@ -85,48 +63,32 @@ bool DActor::Activate()
 	    SetState(S_THRUSTRAISE1);
 	}
       break;
-    case MT_ZFIREBULL:
-    case MT_ZFIREBULL_UNLIT:
-      SetState(S_ZFIREBULL_BIRTH);
-      S_StartSound(this, SFX_IGNITE);
-      break;
+
     case MT_ZBELL:
       if (health > 0)
 	Damage(NULL, NULL, 10); // 'ring' the bell
       break;
-    case MT_ZCAULDRON:
-    case MT_ZCAULDRON_UNLIT:
-      SetState(S_ZCAULDRON1);
-      S_StartSound(this, SFX_IGNITE);
-      break;
-    case MT_FLAME_SMALL:
-      S_StartSound(this, SFX_IGNITE);
-      SetState(S_FLAME_SMALL1);
-      break;
-    case MT_FLAME_LARGE:
-      S_StartSound(this, SFX_IGNITE);
-      SetState(S_FLAME_LARGE1);
-      break;
-    case MT_BAT_SPAWNER:
-      SetState(S_SPAWNBATS1);
-      break;
+
     default:
-      return false;
+      if (info->attacksound)
+	S_StartSound(this, info->attacksound);
+
+      if (info->meleestate)
+	SetState(info->meleestate);
+      else
+	return false;
+
       break;
     }
   return true;
 }
 
-//==========================================================================
-//
-// was DeactivateThing
-//
-//==========================================================================
+
 
 bool DActor::Deactivate()
 {
   if (flags & MF_MONSTER)
-    { // Monster
+    {
       if(!(flags2 & MF2_DORMANT))
 	{
 	  flags2 |= MF2_DORMANT;
@@ -135,16 +97,9 @@ bool DActor::Deactivate()
 	}
       return false;
     }
+
   switch (type)
     {
-    case MT_ZTWINEDTORCH:
-    case MT_ZTWINEDTORCH_UNLIT:
-      SetState(S_ZTWINEDTORCH_UNLIT);
-      break;
-    case MT_ZWALLTORCH:
-    case MT_ZWALLTORCH_UNLIT:
-      SetState(S_ZWALLTORCH_U);
-      break;
     case MT_THRUSTFLOOR_UP:
     case MT_THRUSTFLOOR_DOWN:
       if (args[0]==1)
@@ -156,25 +111,16 @@ bool DActor::Deactivate()
 	    SetState(S_THRUSTLOWER);
 	}
       break;
-    case MT_ZFIREBULL:
-    case MT_ZFIREBULL_UNLIT:
-      SetState(S_ZFIREBULL_DEATH);
-      break;
-    case MT_ZCAULDRON:
-    case MT_ZCAULDRON_UNLIT:
-      SetState(S_ZCAULDRON_U);
-      break;
-    case MT_FLAME_SMALL:
-      SetState(S_FLAME_SDORM1);
-      break;
-    case MT_FLAME_LARGE:
-      SetState(S_FLAME_LDORM1);
-      break;
-    case MT_BAT_SPAWNER:
-      SetState(S_SPAWNBATS_OFF);
-      break;
+
     default:
-      return false;
+      //if (info->seesound)
+      //  S_StartSound(this, info->seesound);
+
+      if (info->seestate)
+	SetState(info->seestate);
+      else
+	return false;
+
       break;
     }
   return true;

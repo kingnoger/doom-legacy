@@ -73,13 +73,15 @@ void HudNumber::Draw()
 {
   int lnum = oldn = *n; // the number to be drawn
   float w = nums[0]->worldwidth;
-  float h = nums[0]->worldheight;
-  float dx = x - digits * w; // drawing x coord (right-aligned field!)
 
-  // clear the area (right aligned field)
-  // dont clear background in overlay
+  // clear the area (right aligned field), don't clear background in overlay
   if (!hud.overlay_on && rendermode == render_soft)
-    V_CopyRect(dx, y, BG, w*digits, h, dx, y, fgbuffer);
+    {
+      float dx = x - digits * w; // drawing x coord (right-aligned field!)
+      float dy = y - nums[0]->topoffs;
+      float h = nums[0]->worldheight;
+      V_CopyRect(dx, dy, BG, w*digits, h, dx, dy, fgbuffer);
+    }
 
   // if non-number, do not draw it
   if (lnum == 1994)
@@ -98,7 +100,7 @@ void HudNumber::Draw()
 	lnum = -lnum;
     }
 
-  dx = x;
+  float dx = x;
 
   // in the special case of 0, you draw 0
   if (lnum == 0)

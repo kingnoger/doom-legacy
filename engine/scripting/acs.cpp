@@ -497,7 +497,7 @@ bool IT_TypeCount(Thinker *th)
 
 void acs_t::CountThings(int type, int tid)
 {
-  if (!(type + tid))
+  if (!type && !tid)
     {
       Push(0); // Nothing to count (we need to Push something or the stack gets messed up)
       return; 
@@ -508,12 +508,11 @@ void acs_t::CountThings(int type, int tid)
   thingCount = 0;
 
   CONS_Printf("Looking for tid %d, type %d...", tid, type);
-  int searcher = -1;
   if (tid)
     {
       // Count TID things
       Actor *mobj;
-      while ((mobj = mp->FindFromTIDmap(tid, &searcher)) != NULL)
+      for (int s = -1; (mobj = mp->FindFromTIDmap(tid, &s)) != NULL; )
 	{
 	  if (type == 0)	    
 	    thingCount++; // Just count TIDs
@@ -567,13 +566,12 @@ int acs_t::PolyWaitImm()
 int acs_t::ChangeFloor()
 {
   const char *texname = mp->ACS_strings[Pop()];
-  Material *flat = materials.Get(texname, TEX_floor);
+  Material *m = materials.Get(texname, TEX_floor);
   int tag = Pop();
-  int sectorIndex = -1;
-  while((sectorIndex = mp->FindSectorFromTag(tag, sectorIndex)) >= 0)
+  for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
     {
-      mp->sectors[sectorIndex].floorpic = flat;
-      mp->sectors[sectorIndex].SetFloorType(texname);
+      mp->sectors[i].floorpic = m;
+      mp->sectors[i].SetFloorType(texname);
     }
 
   return ACS_CONTINUE;
@@ -583,12 +581,12 @@ int acs_t::ChangeFloorImm()
 {
   int tag = *ip++;
   const char *texname = mp->ACS_strings[*ip++];
-  Material *flat = materials.Get(texname, TEX_floor);
-  int sectorIndex = -1;
-  while((sectorIndex = mp->FindSectorFromTag(tag, sectorIndex)) >= 0)
+  Material *m = materials.Get(texname, TEX_floor);
+  
+  for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
     {
-      mp->sectors[sectorIndex].floorpic = flat;
-      mp->sectors[sectorIndex].SetFloorType(texname);
+      mp->sectors[i].floorpic = m;
+      mp->sectors[i].SetFloorType(texname);
     }
 
   return ACS_CONTINUE;
@@ -596,11 +594,11 @@ int acs_t::ChangeFloorImm()
 
 int acs_t::ChangeCeiling()
 {
-  Material *flat = materials.Get(mp->ACS_strings[Pop()], TEX_floor);
+  Material *m = materials.Get(mp->ACS_strings[Pop()], TEX_floor);
   int tag = Pop();
-  int sectorIndex = -1;
-  while((sectorIndex = mp->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    mp->sectors[sectorIndex].ceilingpic = flat;
+
+  for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
+    mp->sectors[i].ceilingpic = m;
 
   return ACS_CONTINUE;
 }
@@ -608,10 +606,10 @@ int acs_t::ChangeCeiling()
 int acs_t::ChangeCeilingImm()
 {
   int tag = *ip++;
-  Material *flat = materials.Get(mp->ACS_strings[*ip++], TEX_floor);
-  int sectorIndex = -1;
-  while((sectorIndex = mp->FindSectorFromTag(tag, sectorIndex)) >= 0)
-    mp->sectors[sectorIndex].ceilingpic = flat;
+  Material *m = materials.Get(mp->ACS_strings[*ip++], TEX_floor);
+  
+  for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
+    mp->sectors[i].ceilingpic = m;
 
   return ACS_CONTINUE;
 }
@@ -779,9 +777,7 @@ int acs_t::PrintChar()
 
 int acs_t::NumPlayers()
 {
-  int count = mp->players.size();
-
-  Push(count);
+  Push(mp->players.size());
   return ACS_CONTINUE;
 }
 
@@ -873,11 +869,9 @@ int acs_t::SetLineTexture()
 
 int acs_t::SetLineBlocking()
 {
-  line_t *line;
-
   int blocking = Pop() ? ML_BLOCKING : 0;
   int lineid = Pop();
-
+  line_t *line;
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
     line->flags = (line->flags & ~ML_BLOCKING) | blocking;
 
@@ -886,15 +880,14 @@ int acs_t::SetLineBlocking()
 
 int acs_t::SetLineSpecial()
 {
-  line_t *line;
   int args[5];
-
   for (int i=4; i>=0; i--)
     args[i] = Pop();
 
   int special = Pop();
   int lineid = Pop();
 
+  line_t *line;
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
     {
       line->special = special;
@@ -907,14 +900,11 @@ int acs_t::SetLineSpecial()
 
 int acs_t::ThingSound()
 {
-  Actor *mobj;
-
   int volume = Pop();
   int sound = S_GetSoundID(mp->ACS_strings[Pop()]);
   int tid = Pop();
-  int searcher = -1;
-
-  while ((mobj = mp->FindFromTIDmap(tid, &searcher)) != NULL)
+  Actor *mobj;
+  for (int s = -1; (mobj = mp->FindFromTIDmap(tid, &s)) != NULL; )
     S_StartSound(mobj, sound, volume/127.0);
 
   return ACS_CONTINUE;

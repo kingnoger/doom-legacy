@@ -2942,7 +2942,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     -1, 1000, 8, 0, 9, 8, 14, 100, 4,
     FLAGS_missile,
     FLAGS2_missile,
-    0, sfx_None, sfx_None, 0, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, sfx_mumhed,
     &states[S_MUMMYFX1_1], NULL, NULL, NULL, NULL,
     &states[S_MUMMYFXI1_1], NULL, NULL, NULL,
     NULL
@@ -3217,7 +3217,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     -1, 1000, 8, 0, 9, 10, 8, 100, 2 | dt_cutting,
     FLAGS_missile,
     MF2_WINDTHRUST | FLAGS2_missile | MF2_THRUGHOST,
-    0, sfx_None, sfx_None, sfx_hrnhit, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_hrnhit, sfx_kgtatk,
     &states[S_SPINAXE1], NULL, NULL, NULL, NULL,
     &states[S_SPINAXEX1], NULL, NULL, NULL,
     NULL
@@ -3533,7 +3533,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     42, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP | MF_NOSECTOR,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, sfx_wind,
     &states[S_SND_WIND], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
@@ -3544,7 +3544,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     41, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP | MF_NOSECTOR,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, sfx_waterfall,
     &states[S_SND_WATERFALL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
@@ -3682,8 +3682,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     10501, 1000, 8, 0, 0, 20, 16, 100, 0,
     0,
     MF2_NOTELEPORT|MF2_DONTDRAW,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_FLAME_SMALL1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_FLAME_SMALL1], &states[S_FLAME_SDORM1], &states[S_FLAME_SMALL1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -3693,8 +3693,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     10503, 1000, 8, 0, 0, 20, 16, 100, 0,
     0,
     MF2_NOTELEPORT|MF2_DONTDRAW,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_FLAME_LARGE1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_FLAME_LARGE1], &states[S_FLAME_LDORM1], &states[S_FLAME_LARGE1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -4012,7 +4012,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     -1, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOSECTOR,
     MF2_DONTDRAW,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, sfx_quake,
     &states[S_QUAKE_ACTIVE1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
@@ -4167,7 +4167,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     MF_SOLID,
     0,
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZWINGEDSTATUENOSKULL], NULL, NULL, NULL, NULL,
+    &states[S_ZWINGEDSTATUENOSKULL], NULL, &states[S_ZWINGEDSTATUENOSKULL2], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -4178,7 +4178,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     MF_SOLID,
     0,
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZGEMPEDESTAL1], NULL, NULL, NULL, NULL,
+    &states[S_ZGEMPEDESTAL1], NULL, &states[S_ZGEMPEDESTAL2], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5585,8 +5585,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     116, 1000, 8, 0, 0, 10, 64, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZTWINEDTORCH_1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZTWINEDTORCH_1], &states[S_ZTWINEDTORCH_UNLIT], &states[S_ZTWINEDTORCH_1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5596,8 +5596,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     117, 1000, 8, 0, 0, 10, 64, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZTWINEDTORCH_UNLIT], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZTWINEDTORCH_UNLIT], &states[S_ZTWINEDTORCH_UNLIT], &states[S_ZTWINEDTORCH_1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5629,8 +5629,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     54, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOGRAVITY,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZWALLTORCH1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZWALLTORCH1], &states[S_ZWALLTORCH_U], &states[S_ZWALLTORCH1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5640,8 +5640,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     55, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOGRAVITY,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZWALLTORCH_U], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZWALLTORCH_U], &states[S_ZWALLTORCH_U], &states[S_ZWALLTORCH1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5706,8 +5706,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     8042, 1000, 8, 0, 0, 20, 80, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZFIREBULL1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZFIREBULL1], &states[S_ZFIREBULL_DEATH], &states[S_ZFIREBULL_BIRTH], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5717,8 +5717,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     8043, 1000, 8, 0, 0, 20, 80, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZFIREBULL_U], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZFIREBULL_U], &states[S_ZFIREBULL_DEATH], &states[S_ZFIREBULL_BIRTH], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5816,8 +5816,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     8069, 1000, 8, 0, 0, 12, 26, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZCAULDRON1], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZCAULDRON1], &states[S_ZCAULDRON_U], &states[S_ZCAULDRON1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -5827,8 +5827,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     8070, 1000, 8, 0, 0, 12, 26, 100, 0,
     MF_SOLID,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_ZCAULDRON_U], NULL, NULL, NULL, NULL,
+    sfx_None, SFX_IGNITE, sfx_None, sfx_None, sfx_None,
+    &states[S_ZCAULDRON_U], &states[S_ZCAULDRON_U], &states[S_ZCAULDRON1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
   },
@@ -6124,7 +6124,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     -1, 1000, 8, 0, 25, 14, 20, 100, 10 | dt_heat,
     FLAGS_missile,
     FLAGS2_missile,
-    sfx_None, sfx_None, sfx_None, SFX_FIGHTER_HAMMER_EXPLODE, sfx_None,
+    sfx_None, sfx_None, sfx_None, SFX_FIGHTER_HAMMER_EXPLODE, SFX_FIGHTER_HAMMER_CONTINUOUS,
     &states[S_HAMMER_MISSILE_1], NULL, NULL, NULL, NULL,
     &states[S_HAMMER_MISSILE_X1], NULL, NULL, NULL,
     NULL
@@ -7082,7 +7082,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     -1, 1000, 8, 0, 15, 8, 10, 100, 4,
     FLAGS_missile,
     FLAGS2_missile,
-    0, sfx_None, sfx_None, SFX_SERPENTFX_HIT, sfx_None,
+    sfx_None, sfx_None, sfx_None, SFX_SERPENTFX_HIT, SFX_SERPENTFX_CONTINUOUS,
     &states[S_SERPENT_FX1], NULL, NULL, NULL, NULL,
     &states[S_SERPENT_FX_X1], NULL, NULL, NULL,
     NULL,
@@ -7430,12 +7430,12 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     NULL
   },
 
-  // MT_SOUNDWIND
+  // MT_XSOUNDWIND
   {
     1410, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOSECTOR,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, SFX_WIND,
     &states[S_SND_WIND1], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
@@ -7446,7 +7446,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     41, 1000, 8, 0, 0, 20, 16, 100, 0,
     MF_NOBLOCKMAP|MF_NOSECTOR,
     0,
-    sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
+    sfx_None, sfx_None, sfx_None, sfx_None, SFX_WATER_MOVE,
     &states[S_XSND_WATERFALL], NULL, NULL, NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL
@@ -8002,7 +8002,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
     MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY,
     MF2_DONTDRAW,
     sfx_None, sfx_None, sfx_None, sfx_None, sfx_None,
-    &states[S_SPAWNBATS1], NULL, NULL, NULL, NULL,
+    &states[S_SPAWNBATS1], &states[S_SPAWNBATS_OFF], &states[S_SPAWNBATS1], NULL, NULL,
     NULL, NULL, NULL, NULL,
     NULL,
     "BatSpawner"

@@ -43,6 +43,7 @@
 #include "g_decorate.h"
 
 #include "p_setup.h"
+#include "p_effects.h"
 #include "p_spec.h"
 #include "p_camera.h"
 #include "m_bbox.h"
@@ -1705,7 +1706,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
       FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
     }
 
-  InitLightning(); // Hexen lightning effect
+  effects = new MapEffect(this); // Hexen lightning effect
 
   if (precache)
     PrecacheMap();

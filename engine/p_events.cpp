@@ -28,177 +28,14 @@
 #include "g_actor.h"
 #include "g_pawn.h"
 
+#include "p_effects.h"
 #include "p_spec.h"
-#include "r_data.h"
-#include "r_sky.h" // TODO remove
-#include "sounds.h"
-
-#include "m_random.h"
-#include "z_zone.h"
 
 
 bool P_CheckKeys(Actor *mo, int lock);
 static int ZDoom_GenFloor(int target, int flags);
 static int ZDoom_GenCeiling(int target, int flags);
 static int ZDoom_GenLift(int target);
-
-
-
-void Map::UpdateSpecials()
-{
-  //  LEVEL TIMER
-  if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
-    ExitMap(NULL, 0);
-
-  LightningFlash();
-}
-
-
-//========================================================
-//  Hexen lightning effect
-//========================================================
-
-void Map::InitLightning()
-{
-  Flashcount = 0;
-
-  if (!info->lightning)
-    return;
-
-  int count = 0;
-  for (int i = 0; i < numsectors; i++)
-    {
-      if (sectors[i].SkyCeiling()
-	 || sectors[i].special == SS_IndoorLightning1
-	 || sectors[i].special == SS_IndoorLightning2)
-	count++;
-    }
-
-  if (!count)
-    {
-      info->lightning = false; // no way to see the flashes
-      return;
-    }
-
-  LightningLightLevels = (int *)Z_Malloc(count * sizeof(int), PU_LEVEL, NULL);
-  NextLightningFlash = ((P_Random() & 15) + 5) * 35; // don't flash at level start
-}
-
-
-
-void Map::ForceLightning()
-{
-  NextLightningFlash = 0;
-}
-
-
-
-void Map::LightningFlash()
-{
-  int i;
-  sector_t *s;
-  int *lite;
-
-  if (!info->lightning)
-    return;
-
-  NextLightningFlash--;
-
-  if (Flashcount-- > 0)
-    {
-      if (Flashcount > 0)
-	{
-	  // still flashing
-	  lite = LightningLightLevels;
-	  s = sectors;
-	  for (i = 0; i < numsectors; i++, s++)
-	    {
-	      if (s->SkyCeiling()
-		  || s->special == SS_IndoorLightning1
-		  || s->special == SS_IndoorLightning2)
-		{
-		  if (*lite < s->lightlevel - 4)
-		    s->lightlevel -= 4;
-
-		  lite++;
-		}
-	    }
-	}					
-      else
-	{
-	  // flash ends
-	  lite = LightningLightLevels;
-	  s = sectors;
-	  for (i = 0; i < numsectors; i++, s++)
-	    {
-	      if (s->SkyCeiling()
-		  || s->special == SS_IndoorLightning1
-		  || s->special == SS_IndoorLightning2)
-		{
-		  s->lightlevel = *lite;
-		  lite++;
-		}
-	    }
-	  skytexture = materials.Get(info->sky1.c_str(), TEX_wall); // set default sky
-	}
-      return;
-    }
-
-
-  if (NextLightningFlash > 0)
-    return;
-
-  // new flash
-  Flashcount = (P_Random() & 7) + 8;
-  int flashlight = 200 + (P_Random() & 31);
-  s = sectors;
-  lite = LightningLightLevels;
-
-  for (i = 0; i < numsectors; i++, s++)
-    {
-      if (s->SkyCeiling()
-	  || s->special == SS_IndoorLightning1
-	  || s->special == SS_IndoorLightning2)
-	{
-	  *lite = s->lightlevel;
-	  if (s->special == SS_IndoorLightning1)
-	    { 
-	      s->lightlevel += 64;
-	      if (s->lightlevel > flashlight)
-		s->lightlevel = flashlight;
-	    }
-	  else if (s->special == SS_IndoorLightning2)
-	    {
-	      s->lightlevel += 32;
-	      if (s->lightlevel > flashlight)
-		s->lightlevel = flashlight;
-	    }
-	  else
-	    s->lightlevel = flashlight;
-
-	  if (s->lightlevel < *lite)
-	    s->lightlevel = *lite;
-
-	  lite++;
-	}
-    }
-
-  skytexture = materials.Get(info->sky2.c_str(), TEX_wall); // set alternate sky
-  S_StartAmbSound(NULL, SFX_THUNDER_CRASH);
-
-  // Calculate the next lighting flash
-  if (P_Random() < 50)
-    NextLightningFlash = (P_Random()&15) + 16; // Immediate Quick flash
-  else
-    {
-      if (P_Random() < 128 && !(maptic & 32))
-	NextLightningFlash = ((P_Random()&7) + 2) * 35;
-      else
-	NextLightningFlash = ((P_Random()&15) + 5) * 35;
-    }
-}
-
-
 
 
 //============================================================================
@@ -630,8 +467,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoElevator(tag, elevator_t::RelHeight, SPEED(args[1]), HEIGHT(args[2]));
       break;
     case 109: // Force Lightning
-      success = true;
-      ForceLightning();
+      success = effects->Force();
       break;
     case 110: // Light Raise by Value
       success = EV_SpawnLight(tag, lightfx_t::RelChange, args[1]);

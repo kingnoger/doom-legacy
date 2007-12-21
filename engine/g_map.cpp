@@ -34,6 +34,7 @@
 
 #include "b_path.h"
 
+#include "p_effects.h"
 #include "p_spec.h"
 #include "p_hacks.h"
 #include "r_poly.h"
@@ -103,6 +104,7 @@ Map::Map(MapInfo *i)
 
   braintargeton = 0;
 
+  effects = NULL;
   botnodes = NULL;
 };
 
@@ -151,6 +153,9 @@ Map::~Map()
 
   Z_Free(mapthings);
 
+  if (effects)
+    delete effects;
+
   if (botnodes)
     delete botnodes;
 
@@ -165,10 +170,7 @@ Map::~Map()
   for (int i=0; i<n; i++)
     delete DeletionList[i];
 
-  // TODO levelflats? anims? sound sequences?
-
-  // Some things may well be left undeleted, because their memory will be freed
-  // during the next cluster change using Z_FreeTags...
+  // TODO anims? sound sequences?
 
   // clear the splats from deleted map
   R_ClearLevelSplats(); // FIXME find a better way
@@ -1173,6 +1175,17 @@ void Map::ExitMap(Actor *activator, int next, int ep)
     default:
       break;
     }
+}
+
+
+void Map::UpdateSpecials()
+{
+  //  LEVEL TIMER
+  if (cv_timelimit.value && maptic > unsigned(cv_timelimit.value))
+    ExitMap(NULL, 0);
+
+  if (info->lightning)
+    effects->LightningFlash();
 }
 
 

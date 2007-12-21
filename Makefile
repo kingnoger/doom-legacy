@@ -126,6 +126,7 @@ export engine_objects = \
 	$(objdir)/p_tick.o \
 	$(objdir)/p_setup.o \
 	$(objdir)/p_saveg.o \
+	$(objdir)/p_effects.o \
 	$(objdir)/p_spec.o \
 	$(objdir)/p_events.o \
 	$(objdir)/p_floor.o \

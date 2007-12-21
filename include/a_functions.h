@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004 by DooM Legacy Team.
+// Copyright (C) 2004-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -14,7 +14,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -41,6 +40,7 @@ WEAPON(StartWeaponFS)
 WEAPON(StartWeaponACS)
 DACTOR(StartFS)
 DACTOR(StartACS)
+DACTOR(ActiveSound)
 
 //=============================================
 //  Doom actions
@@ -207,7 +207,7 @@ DACTOR(BeastAttack)
 DACTOR(SpawnTeleGlitter)
 DACTOR(SpawnTeleGlitter2)
 DACTOR(Feathers)
-DACTOR(ContMobjSound)
+  //DACTOR(ContMobjSound)
 DACTOR(ChicAttack)
 DACTOR(ChicPain)
 DACTOR(CheckSkullDone)
@@ -217,7 +217,7 @@ DACTOR(HeadFireGrow)
 DACTOR(SkullRodPL2Seek)
 DACTOR(BoltSpark)
 DACTOR(FloatPuff)
-DACTOR(ESound)
+  //DACTOR(ESound)
 DACTOR(FlameSnd)
 DACTOR(FlameEnd)
 DACTOR(PhoenixPuff)
@@ -289,7 +289,6 @@ DACTOR(CheckTeleRing)
 DACTOR(FogSpawn)
 DACTOR(FogMove)
 DACTOR(Quake)
-DACTOR(ContMobjSound)
 DACTOR(Scream)
 DACTOR(Explode)
 DACTOR(PoisonBagInit)

@@ -205,14 +205,8 @@ public:
   //@}
 
 
-  //------------ Misc. ambiance -------------
-
-  int NextLightningFlash; // tics until next flash
-  int Flashcount;         // ongoing flash?
-  int *LightningLightLevels; // storage for original light levels
-
-
   //-----------------------------------
+  class MapEffect *effects; ///< Hexen lightning effect
   class BotNodes *botnodes; // TEST
 
   //------------------------------------
@@ -446,12 +440,6 @@ public:
   bool EV_ThingRemove(int tid);
   bool EV_ThingDestroy(int tid);
 
-  // p_anim.cpp
-  void InitLightning();
-  void ForceLightning();
-  void LightningFlash();
-
-
   // FS scripting
   void FS_ClearScripts();
   void FS_ClearRunningScripts();
@@ -462,7 +450,6 @@ public:
 protected:
   bool FS_wait_finished(runningscript_t *script);
 };
-
 
 
 #endif

@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -75,6 +75,14 @@ void A_StartWeaponACS(PlayerPawn *p, pspdef_t *psp)
 
   psp->tics = 0; // takes no time
   p->mp->ACS_StartScript(script, args, p, NULL, 0);
+}
+
+
+// Plays the activesound, if there is one. Replaces A_ContMobjSound and A_ESound.
+void A_ActiveSound(DActor *actor)
+{
+  if (actor->info->activesound)
+    S_StartSound(actor, actor->info->activesound);
 }
 
 
@@ -213,6 +221,11 @@ void P_SetTranslucencies()
     //Fab: lava/slime damage smoke test
     {S_SMOK1      , S_SMOK5     , tr_transmed},
     {S_SPLASH1    , S_SPLASH3   , tr_transmor},
+
+    // Heretic TODO rest
+    {S_BLASTERFX1_1, S_BLASTERFXI1_7, tr_transmed},
+    {S_BLASTERPUFF1_1, S_BLASTERPUFF2_7, tr_transmed},
+    {S_HRODFX1_1, S_HRODFXI2_8, tr_transmed},
 
     // Hexen TODO rest
     {S_AXEPUFF_GLOW1, S_AXEPUFF_GLOW7, tr_transmed},
