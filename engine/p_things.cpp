@@ -3,7 +3,6 @@
 //
 // $Id$
 //
-// Copyright (C) 1996 by Raven Software, Corp.
 // Copyright (C) 2003-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
@@ -19,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Mapthing-related event functions
+/// \brief Mapthing-related event functions.
 
 #include "command.h"
 #include "cvars.h"
@@ -29,8 +28,6 @@
 
 #include "sounds.h"
 #include "tables.h"
-
-extern mobjtype_t TranslateThingType[];
 
 
 bool DActor::Activate()
@@ -127,199 +124,125 @@ bool DActor::Deactivate()
 }
 
 
-
-//==========================================================================
-//
-// EV_ThingProjectile
-//
-//==========================================================================
-
-bool Map::EV_ThingProjectile(byte *args, bool gravity)
+/// Shoot a projectile from all mapthings with the given TID
+bool Map::EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspeed, fixed_t vspeed, bool gravity)
 {
-  Actor *mobj;
-
-  bool success = false;
-  int searcher = -1;
-  int tid = args[0];
-  mobjtype_t moType = TranslateThingType[args[1]];
-  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_MONSTER))   
+  if (cv_nomonsters.value && (aid[mt]->flags & MF_MONSTER))   
     return false;
-    
-  angle_t angle = int(args[2] << 24);
-  int fineAngle = angle >> ANGLETOFINESHIFT;
-  fixed_t speed = args[3]/8.0f;
-  fixed_t vspeed = args[4]/8.0f;
-  while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
-    {
-      DActor *newMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z, moType);
-      if (newMobj->info->seesound)
-	S_StartSound(newMobj, newMobj->info->seesound);
 
-      newMobj->owner = mobj; // Originator
-      newMobj->yaw   = angle;
-      newMobj->vel.x = speed * finecosine[fineAngle];
-      newMobj->vel.y = speed * finesine[fineAngle];
-      newMobj->vel.z = vspeed;
-      newMobj->flags |= MF_DROPPED; // Don't respawn
+  // projectile velocity
+  vec_t<fixed_t> pvel(Cos(angle)*hspeed, Sin(angle)*hspeed, vspeed);
+
+  bool ret = false;
+  Actor *mobj;
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+    {
+      DActor *p = SpawnDActor(mobj->pos, mt);
+      if (p->info->seesound)
+	S_StartSound(p, p->info->seesound);
+
+      p->owner = mobj;
+      p->yaw   = angle;
+      p->vel = pvel;
+      p->flags |= MF_DROPPED; // no respawning
       if (gravity)
 	{
-	  newMobj->flags &= ~MF_NOGRAVITY;
-	  newMobj->flags2 |= MF2_LOGRAV;
+	  p->flags &= ~MF_NOGRAVITY;
+	  p->flags2 |= MF2_LOGRAV;
 	}
 
-      if (newMobj->CheckMissileSpawn())
-	success = true;
+      if (p->CheckMissileSpawn())
+	ret = true;
     }
-  return success;
+  return ret;
 }
 
-//==========================================================================
-//
-// EV_ThingSpawn
-//
-//==========================================================================
 
-bool Map::EV_ThingSpawn(byte *args, bool fog)
+/// Spawn a mapthing from a limited selection of types.
+bool Map::EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog)
 {
-  Actor *mobj;
-
-  bool success = false;
-  int searcher = -1;
-  int tid = args[0];
-  mobjtype_t moType = TranslateThingType[args[1]];
-  if (cv_nomonsters.value && (mobjinfo[moType].flags & MF_MONSTER))
+  if (cv_nomonsters.value && (aid[mt]->flags & MF_MONSTER))
     return false;
 
-  angle_t angle = int(args[2] << 24);
-  while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
+  bool ret = false;
+  Actor *mobj;
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
     {
-      DActor *newMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z, moType);
+      DActor *a = SpawnDActor(mobj->pos, mt);
 
-      if (!newMobj->TestLocation())
-	newMobj->Remove(); // Didn't fit
+      if (!a->TestLocation())
+	a->Remove(); // Didn't fit
       else
 	{
-	  newMobj->yaw = angle;
+	  a->yaw = angle;
 	  if (fog)
 	    {	      
-	      DActor *fogMobj = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z + TELEFOGHEIGHT, MT_TFOG);
-	      S_StartSound(fogMobj, sfx_teleport);
+	      DActor *f = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z + TELEFOGHEIGHT, MT_TFOG);
+	      S_StartSound(f, sfx_teleport);
 	    }
 
-	  newMobj->flags |= MF_DROPPED; // Don't respawn
-	  if (newMobj->flags2 & MF2_FLOATBOB)
-	    newMobj->special1 = (newMobj->pos.z - newMobj->floorz).floor();
+	  a->flags |= MF_DROPPED; // no respawning
+	  if (a->flags2 & MF2_FLOATBOB)
+	    a->special1 = (a->pos.z - a->floorz).floor(); // floating height
 
-	  success = true;
+	  ret = true;
 	}
     }
-  return success;
+  return ret;
 }
 
-//==========================================================================
-//
-// EV_ThingActivate
-//
-//==========================================================================
 
 bool Map::EV_ThingActivate(int tid)
 {
+  bool ret = false;
   Actor *mobj;
-  bool success = false;
-  int searcher = -1;
-  while((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
     {
       if (mobj->IsOf(DActor::_type))
 	if (((DActor *)mobj)->Activate())
-	  success = true;
+	  ret = true;
     }
-  return success;
+  return ret;
 }
 
-//==========================================================================
-//
-// EV_ThingDeactivate
-//
-//==========================================================================
 
 bool Map::EV_ThingDeactivate(int tid)
 {
+  bool ret = false;
   Actor *mobj;
-  bool success = false;
-  int searcher = -1;
-  while((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
     {
       if (mobj->IsOf(DActor::_type))
 	if (((DActor *)mobj)->Deactivate())
-	  success = true;
+	  ret = true;
     }
-  return success;
+  return ret;
 }
 
-//==========================================================================
-//
-// EV_ThingRemove
-//
-//==========================================================================
 
 bool Map::EV_ThingRemove(int tid)
 {
+  bool ret = false;
   Actor *mobj;
-  bool success = false;
-  int searcher = -1;
-  while ((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
     {
-      /*
-	// unnecessary now
-      if (mobj->type == MT_BRIDGE)
-	{
-	  A_BridgeRemove(mobj);
-	  return true;
-	}
-      */
       mobj->Remove();
-      success = true;
+      ret = true;
     }
-  return success;
+  return ret;
 }
 
-//==========================================================================
-//
-// EV_ThingDestroy
-//
-//==========================================================================
 
 bool Map::EV_ThingDestroy(int tid)
 {
+  bool ret = false;
   Actor *mobj;
-  bool success = false;
-  int searcher = -1;
-  while((mobj = FindFromTIDmap(tid, &searcher)) != NULL)
-    {
-      if (mobj->flags & MF_SHOOTABLE)
-	{
-	  mobj->Damage(NULL, NULL, 10000, dt_always);
-	  success = true;
-	}
-    }
-  return success;
+  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+    if (mobj->flags & MF_SHOOTABLE)
+      {
+	mobj->Damage(NULL, NULL, 10000, dt_always);
+	ret = true;
+      }
+
+  return ret;
 }
-
-//==========================================================================
-//
-// EV_ThingMove
-//
-// arg[0] = tid
-// arg[1] = speed
-// arg[2] = angle (255 = use mobj angle)
-// arg[3] = distance (pixels>>2)
-//
-//==========================================================================
-
-/*
-bool EV_ThingMove(byte *args)
-{
-	return false;
-}
-*/
-

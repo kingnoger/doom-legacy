@@ -32,6 +32,9 @@
 #include "p_spec.h"
 
 
+extern mobjtype_t TranslateThingType[];
+
+
 bool P_CheckKeys(Actor *mo, int lock);
 static int ZDoom_GenFloor(int target, int flags);
 static int ZDoom_GenCeiling(int target, int flags);
@@ -208,11 +211,11 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 // 
 // Hexen linedefs
 //
-#define SPEED(a)  (fixed_t(a)/8)
-#define HEIGHT(a) (fixed_t(a))
-#define TICS(a)   (((a)*TICRATE)/35)
-#define OCTICS(a) (((a)*TICRATE)/8)
-#define ANGLE(a)  angle_t((a) << 24) // angle_t is 32-bit int, Hexen angle is a 8-bit byte
+static inline fixed_t SPEED(byte a)  { return fixed_t(a)/8; }
+static inline fixed_t HEIGHT(byte a) { return fixed_t(a); }
+static inline int TICS(byte a)   { return (a * TICRATE)/35; }
+static inline int OCTICS(byte a) { return (a * TICRATE)/8; }
+static inline angle_t ANGLE(byte a) { return angle_t(a) << 24; } // angle_t is Uint32, Hexen angle is a 8-bit byte
 
 bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int side, Actor *mo)
 {
@@ -357,10 +360,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_DoPlat(tag, line, plat_t::RelHeight, SPEED(args[1]), TICS(args[2]), 8*HEIGHT(args[3]));
       break;
     case 66: // Floor Lower Instant * 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, -SPEED(16000), 0, -8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, -16000, 0, -8*HEIGHT(args[2]));
       break;
     case 67: // Floor Raise Instant * 8
-      success = EV_DoFloor(tag, line, floor_t::RelHeight, SPEED(16000), 0, 8*HEIGHT(args[2]));
+      success = EV_DoFloor(tag, line, floor_t::RelHeight, 16000, 0, 8*HEIGHT(args[2]));
       break;
     case 68: // Floor Move to Value * 8
       success = EV_DoFloor(tag, line, floor_t::AbsHeight, SPEED(args[1]), 0,
@@ -509,16 +512,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_ThingDestroy(args[0]);
       break;
     case 134: // Thing_Projectile
-      success = EV_ThingProjectile(args, 0);
+      success = EV_ThingProjectile(args[0], TranslateThingType[args[1]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), false);
       break;
     case 135: // Thing_Spawn
-      success = EV_ThingSpawn(args, 1);
+      success = EV_ThingSpawn(args[0], TranslateThingType[args[1]], ANGLE(args[2]), true);
       break;
     case 136: // Thing_ProjectileGravity
-      success = EV_ThingProjectile(args, 1);
+      success = EV_ThingProjectile(args[0], TranslateThingType[args[1]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), true);
       break;
     case 137: // Thing_SpawnNoFog
-      success = EV_ThingSpawn(args, 0);
+      success = EV_ThingSpawn(args[0], TranslateThingType[args[1]], ANGLE(args[2]), false);
       break;
     case 138: // Floor_Waggle
       success = EV_DoFloorWaggle(tag, HEIGHT(args[1]) >> 3, angle_t(args[2] << 20), ANGLE(args[3]) << 2, args[4]*35);

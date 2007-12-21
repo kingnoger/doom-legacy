@@ -433,8 +433,8 @@ public:
   bool EV_OpenPolyDoor(byte *args, int type);
 
   // in p_things.cpp
-  bool EV_ThingProjectile(byte *args, bool gravity);
-  bool EV_ThingSpawn(byte *args, bool fog);
+  bool EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspeed, fixed_t vspeed, bool gravity);
+  bool EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog);
   bool EV_ThingActivate(int tid);
   bool EV_ThingDeactivate(int tid);
   bool EV_ThingRemove(int tid);
