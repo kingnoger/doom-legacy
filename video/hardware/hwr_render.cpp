@@ -24,7 +24,7 @@
 /// driver DLL for Doom Legacy
 
 #include <string.h>
-#include <SDL/SDL.h>
+#include "SDL.h"
 
 #include "doomdef.h"
 #include "command.h"

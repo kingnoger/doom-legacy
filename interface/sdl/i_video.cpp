@@ -24,11 +24,7 @@
 #include <string.h>
 #include <vector>
 
-#ifdef FREEBSD
-# include <SDL.h>
-#else
-# include <SDL/SDL.h>
-#endif
+#include "SDL.h"
 
 #include "doomdef.h"
 #include "command.h"

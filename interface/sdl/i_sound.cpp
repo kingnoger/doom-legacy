@@ -24,17 +24,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-
-#if defined(FREEBSD) || defined(__APPLE_CC__) || defined(__MACOS__)
-# include <SDL.h>
-# ifndef NO_MIXER
-#  include <SDL_mixer.h>
-# endif
-#else
-# include <SDL/SDL.h>
-# ifndef NO_MIXER
-#  include <SDL/SDL_mixer.h>
-# endif
+#include "SDL.h"
+#ifndef NO_MIXER
+# include "SDL_mixer.h"
 #endif
 
 #include "doomdef.h"

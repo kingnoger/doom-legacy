@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "SDL.h"
+
 #include "doomdef.h"
 #include "command.h"
 #include "cvars.h"
@@ -39,8 +41,6 @@
 #include "i_video.h"
 
 #include "tables.h"
-
-#include <SDL/SDL.h>
 
 extern vector<SDL_Joystick*> joysticks;
 vector<joybinding_t> joybindings;

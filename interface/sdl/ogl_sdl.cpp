@@ -20,11 +20,7 @@
 /// \file
 /// \brief SDL specific part of the OpenGL API for Doom Legacy
 
-#ifdef FREEBSD
-# include <SDL.h>
-#else
-# include <SDL/SDL.h>
-#endif
+#include "SDL.h"
 
 #include "screen.h"
 #include "v_video.h"

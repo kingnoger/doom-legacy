@@ -271,7 +271,7 @@ float rasterfont_t::StringWidth(const char *str, int n)
 //======================================================================
 
 #ifndef NO_TTF
-#include <SDL/SDL_ttf.h>
+#include "SDL_ttf.h"
 
 /// \brief TrueType font
 class ttfont_t : public font_t

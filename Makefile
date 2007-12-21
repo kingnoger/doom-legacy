@@ -43,12 +43,11 @@ ifdef LINUX
  RM = rm
 # compiler
  platform  = -DLINUX
- interface = -DSDL #-DNO_MIXER
+ interface = -DSDL $(shell sdl-config --cflags)
 # linker
- LIBS	= -lSDLmain -lSDL -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt
+ LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt
  OPENGLLIBS = -lGL -lGLU
-# CF += -m32
- LDFLAGS = -Wall #-m32
+ LDFLAGS = -Wall
 # executable
  exename = Legacy
 
@@ -58,10 +57,10 @@ else # assume WIN32 is defined
  RM = rm
 # compiler
  platform  = -D__WIN32__
- interface = -DSDL -DNO_MIXER
+ interface = -DSDL -DNO_MIXER $(shell sdl-config --cflags)
  CF += -mwindows
 # linker
- LIBS	= -lmingw32 -lSDLmain -lSDL SDL_mixer.lib -lpng -jpeg -lz -L. -ltnl -ltomcrypt -lwsock32
+ LIBS	= -lmingw32 $(shell sdl-config --libs) SDL_mixer.lib -lpng -jpeg -lz -L. -ltnl -ltomcrypt -lwsock32
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable

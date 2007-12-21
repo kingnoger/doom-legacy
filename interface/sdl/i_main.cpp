@@ -15,10 +15,10 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
-//
-// DESCRIPTION:
-//    Main program, simply calls D_DoomMain high level loop.
 //-----------------------------------------------------------------------------
+
+/// \file
+/// \brief Main program, simply calls D_DoomMain and the main game loop D_DoomLoop.
 
 // in m_argv.h
 extern  int     myargc;

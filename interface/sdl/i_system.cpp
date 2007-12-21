@@ -27,12 +27,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#ifdef FREEBSD
-# include <SDL.h>
-#else
-# include <SDL/SDL.h>
-#endif
-
 #ifdef LINUX
 # ifndef FREEBSD
 #  include <sys/vfs.h>
@@ -52,6 +46,8 @@
 #ifdef LMOUSE2
 #include <termios.h>
 #endif
+
+#include "SDL.h"
 
 #include "doomdef.h"
 #include "command.h"
