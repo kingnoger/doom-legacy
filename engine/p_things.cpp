@@ -134,14 +134,14 @@ bool Map::EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspe
   vec_t<fixed_t> pvel(Cos(angle)*hspeed, Sin(angle)*hspeed, vspeed);
 
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      DActor *p = SpawnDActor(mobj->pos, mt);
+      DActor *p = SpawnDActor(m->pos, mt);
       if (p->info->seesound)
 	S_StartSound(p, p->info->seesound);
 
-      p->owner = mobj;
+      p->owner = m;
       p->yaw   = angle;
       p->vel = pvel;
       p->flags |= MF_DROPPED; // no respawning
@@ -165,10 +165,10 @@ bool Map::EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog)
     return false;
 
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      DActor *a = SpawnDActor(mobj->pos, mt);
+      DActor *a = SpawnDActor(m->pos, mt);
 
       if (!a->TestLocation())
 	a->Remove(); // Didn't fit
@@ -177,7 +177,7 @@ bool Map::EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog)
 	  a->yaw = angle;
 	  if (fog)
 	    {	      
-	      DActor *f = SpawnDActor(mobj->pos.x, mobj->pos.y, mobj->pos.z + TELEFOGHEIGHT, MT_TFOG);
+	      DActor *f = SpawnDActor(m->pos.x, m->pos.y, m->pos.z + TELEFOGHEIGHT, MT_TFOG);
 	      S_StartSound(f, sfx_teleport);
 	    }
 
@@ -195,11 +195,11 @@ bool Map::EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog)
 bool Map::EV_ThingActivate(int tid)
 {
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      if (mobj->IsOf(DActor::_type))
-	if (((DActor *)mobj)->Activate())
+      if (m->IsOf(DActor::_type))
+	if (((DActor *)m)->Activate())
 	  ret = true;
     }
   return ret;
@@ -209,11 +209,11 @@ bool Map::EV_ThingActivate(int tid)
 bool Map::EV_ThingDeactivate(int tid)
 {
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      if (mobj->IsOf(DActor::_type))
-	if (((DActor *)mobj)->Deactivate())
+      if (m->IsOf(DActor::_type))
+	if (((DActor *)m)->Deactivate())
 	  ret = true;
     }
   return ret;
@@ -223,10 +223,10 @@ bool Map::EV_ThingDeactivate(int tid)
 bool Map::EV_ThingRemove(int tid)
 {
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      mobj->Remove();
+      m->Remove();
       ret = true;
     }
   return ret;
@@ -236,11 +236,11 @@ bool Map::EV_ThingRemove(int tid)
 bool Map::EV_ThingDestroy(int tid)
 {
   bool ret = false;
-  Actor *mobj;
-  for (int s = -1; (mobj = FindFromTIDmap(tid, &s)) != NULL; )
-    if (mobj->flags & MF_SHOOTABLE)
+  Iterate_TID iter(this, tid);
+  for (Actor *m = iter.Next(); m; m = iter.Next())
+    if (m->flags & MF_SHOOTABLE)
       {
-	mobj->Damage(NULL, NULL, 10000, dt_always);
+	m->Damage(NULL, NULL, 10000, dt_always);
 	ret = true;
       }
 

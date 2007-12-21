@@ -178,7 +178,8 @@ public:
   static const unsigned BODYQUESIZE = 32;
   deque<Actor *> bodyqueue; ///< queue for player corpses
 
-  multimap<short, Actor *> TIDmap; ///< Thing ID, a system for grouping things.
+  multimap<short, Actor *> TID_map; ///< Thing ID, a system for grouping things.
+  typedef multimap<short, Actor *>::iterator TID_map_iter_t;
 
   /// Currently active dynamic geometry elements, based on BOOM code.
   list<class ceiling_t *> activeceilings;
@@ -272,7 +273,6 @@ public:
 
   void InsertIntoTIDmap(Actor *p, int tid);
   void RemoveFromTIDmap(Actor *p);
-  Actor *FindFromTIDmap(int tid, int *pos);
 
   // in p_map.cpp
   bool CheckSector(sector_t* sector, int crunch);
@@ -449,6 +449,26 @@ public:
   void FS_AddRunningScript(runningscript_t *s);
 protected:
   bool FS_wait_finished(runningscript_t *script);
+
+public:
+  /// Class for iterating through the TID map.
+  class Iterate_TID
+  {
+  protected:
+    Map::TID_map_iter_t low, high;
+    int count;
+
+  public:
+    Iterate_TID(Map *m, int tid)
+    { 
+      low = m->TID_map.lower_bound(tid);
+      high = m->TID_map.upper_bound(tid);
+      count = m->TID_map.count(tid);
+    }
+
+    inline int   Count() const { return count; }
+    inline Actor *Next() { return (low == high) ? NULL : (low++)->second; }
+  };
 };
 
 

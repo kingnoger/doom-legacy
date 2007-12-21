@@ -1640,44 +1640,43 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 	}
     }
 
-  int search;
   if (dist < 4)
     { // Hit the target thing
       if (actor->target && P_Random() < 200)
 	{
-	  int bestArg = -1;
+	  int best = -1;
 	  angle_t bestAngle = ANGLE_MAX;
-	  angle_t angleToSpot;
 	  angle_t angleToTarget = R_PointToAngle2(actor->pos, actor->target->pos);
+	  Actor *node[5];
 	  for (i = 0; i < 5; i++)
 	    {
-	      if (!t->args[i])
+	      if (!t->args[i] ||
+		  !(node[i] = Map::Iterate_TID(actor->mp, t->args[i]).Next()))
 		continue;
 
-	      search = -1;
-
-	      Actor *mo = actor->mp->FindFromTIDmap(t->args[i], &search);
-	      angleToSpot = R_PointToAngle2(actor->pos, mo->pos);
+	      angle_t angleToSpot = R_PointToAngle2(actor->pos, node[i]->pos);
 	      if (Abs(angleToSpot-angleToTarget) < bestAngle)
 		{
 		  bestAngle = Abs(angleToSpot-angleToTarget);
-		  bestArg = i;
+		  best = i;
 		}
 	    }
-	  if (bestArg != -1)
-	    {
-	      search = -1;
-	      actor->owner = actor->mp->FindFromTIDmap(t->args[bestArg], &search);
-	    }
+
+	  if (best != -1)
+	    actor->owner = node[best];
 	}
       else
 	{
-	  do
+	  vector<int> temp;
+	  for (i = 0; i < 5; i++)
+	    if (t->args[i])
+	      temp.push_back(t->args[i]);
+	      
+	  if (temp.size())
 	    {
-	      i = (P_Random()>>2)%5;
-	    } while(!t->args[i]);
-	  search = -1;
-	  actor->owner = actor->mp->FindFromTIDmap(t->args[i], &search);
+	      i = P_Random() % temp.size();
+	      actor->owner = Map::Iterate_TID(actor->mp, temp[i]).Next();
+	    }
 	}
     }
 }
@@ -1691,17 +1690,17 @@ static void DragonSeek(DActor *actor, angle_t thresh, angle_t turnMax)
 void A_DragonInitFlight(DActor *actor)
 {
   // sets guidance to first tid identical to dragon's, removes dragon from tidmap.
-  int search = -1;
-  do
-    { // find the first tid identical to the dragon's tid
-      actor->owner = actor->mp->FindFromTIDmap(actor->tid, &search);
-      if (search == -1)
-	{
-	  actor->SetState(actor->info->spawnstate);
-	  return;
-	}
-    } while (actor->owner == actor);
+  int tid = actor->tid;
   actor->mp->RemoveFromTIDmap(actor);
+
+  // find the first tid identical to the dragon's tid
+  Map::Iterate_TID iter(actor->mp, tid);
+  actor->owner = iter.Next();
+  if (!actor->owner)
+    {
+      actor->SetState(actor->info->spawnstate);
+      return; // none found
+    }
 }
 
 //============================================================================
@@ -3614,18 +3613,15 @@ void KSpiritInit(DActor *spirit, DActor *korax);
 void A_KoraxChase(DActor *actor)
 {
   Actor *spot;
-  int lastfound;
   byte args[3]={0,0,0};
 
   if ((!actor->special2) &&
       (actor->health <= (actor->info->spawnhealth/2)))
     {
-      lastfound = -1;
-      spot = actor->mp->FindFromTIDmap(KORAX_FIRST_TELEPORT_TID, &lastfound);
+      Map::Iterate_TID iter(actor->mp, KORAX_FIRST_TELEPORT_TID);
+      spot = iter.Next();
       if (spot)
-	{
-	  actor->Teleport(spot->pos, spot->yaw, false);
-	}
+	actor->Teleport(spot->pos, spot->yaw, false);
 
       actor->mp->ACS_StartScript(249, args, actor, NULL, 0);
       actor->special2 = 1;	// Don't run again
@@ -3648,13 +3644,20 @@ void A_KoraxChase(DActor *actor)
     {
       if (P_Random()<10)
 	{
-	  lastfound = actor->special1-1;
-	  spot = actor->mp->FindFromTIDmap(KORAX_TELEPORT_TID, &lastfound);
-	  actor->special1 = lastfound+1;
+	  int i = actor->special1; // we'll skip this many locations
+
+	  Map::Iterate_TID iter(actor->mp, KORAX_TELEPORT_TID);
+	  for ( ; i > 0; i--)
+	    iter.Next(); // skip i things
+
+	  spot = iter.Next();
 	  if (spot)
 	    {
+	      actor->special1++; // next time use a different location
 	      actor->Teleport(spot->pos, spot->yaw, false);
 	    }
+	  else
+	    actor->special1 = 0; // back to first one
 	}
     }
 }

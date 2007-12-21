@@ -1823,9 +1823,8 @@ void Map::SpawnPusher(line_t *l, unsigned tag, int type)
 	  }
       else
 	{
-	  int tid = l->args[1];
-	  Actor *m;
-	  for (s = -1; (m = FindFromTIDmap(tid, &s)) != NULL; )
+	  Iterate_TID iter(this, l->args[1]);
+	  for (Actor *m = iter.Next(); m; m = iter.Next())
 	    if (m->IsOf(DActor::_type))
 	      new pusher_t(this, m->subsector->sector, pusher_t::p_point, dx, dy, reinterpret_cast<DActor*>(m));
 	}

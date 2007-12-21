@@ -123,11 +123,16 @@ bool Map::EV_Teleport(unsigned tag, line_t *line, Actor *thing, int type, int fl
 
   if (type == TP_toTID) // go to thing with correct TID (Hexen system)
     {
-      i = TIDmap.count(tag);
+      Iterate_TID iter(this, tag);
+      i = iter.Count();
       if (i > 0)
 	{
-	  i = (P_Random() % i) - 1;
-	  m = FindFromTIDmap(tag, &i);
+	  i = P_Random() % i;
+
+	  for ( ; i > 0; i--)
+	    iter.Next(); // skip i things
+
+	  m = iter.Next();
 	  if (!m)
 	    I_Error("Can't find teleport mapspot\n");
 

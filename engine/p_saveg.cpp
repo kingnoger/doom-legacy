@@ -1303,10 +1303,10 @@ int Map::Serialize(LArchive &a)
 
   //----------------------------------------------
   // the rest
-  multimap<short, Actor *>::iterator t;
-  n = TIDmap.size();
+
+  n = TID_map.size();
   a << n;
-  for (t = TIDmap.begin(); t != TIDmap.end(); t++)
+  for (TID_map_iter_t t = TID_map.begin(); t != TID_map.end(); t++)
     {
       stemp = t->first;
       a << stemp;
@@ -1548,14 +1548,14 @@ int Map::Unserialize(LArchive &a)
 
   //----------------------------------------------
   // the rest
-  TIDmap.clear();
+  TID_map.clear();
   a << n;
   for (i=0; i<n; i++)
     {
       Actor *p = NULL;
       a << stemp << temp;
       if (a.GetPtr((int &)temp, (void * &)p))
-	TIDmap.insert(pair<const short, Actor*>(stemp, p));
+	TID_map.insert(pair<const short, Actor*>(stemp, p));
       else
 	I_Error("Crap in TIDmap!\n");
     }

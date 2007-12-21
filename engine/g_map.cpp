@@ -1196,11 +1196,11 @@ void Map::UpdateSpecials()
 
 void Map::InsertIntoTIDmap(Actor *p, int tid)
 {
-  if (TIDmap.size() >= 300)
+  if (TID_map.size() >= 300)
     I_Error("Map::InsertIntoTIDmap: MAX_TID_COUNT (%d) exceeded.", 300);
 
   // TODO multiple inserts possible
-  TIDmap.insert(pair<const short, Actor*>(tid, p));
+  TID_map.insert(pair<const short, Actor*>(tid, p));
 }
 
 void Map::RemoveFromTIDmap(Actor *p)
@@ -1212,48 +1212,17 @@ void Map::RemoveFromTIDmap(Actor *p)
   p->tid = 0;
 
   multimap<short, Actor*>::iterator i, j;
-  i = TIDmap.lower_bound(tid);
-  if (i == TIDmap.end())
+  i = TID_map.lower_bound(tid);
+  if (i == TID_map.end())
     return; // not found (early out)
 
-  j = TIDmap.upper_bound(tid);
+  j = TID_map.upper_bound(tid);
 
   for ( ; i != j; ++i)
     if (i->second == p)
       {
-	TIDmap.erase(i);
+	TID_map.erase(i);
 	return;
       }
   // not found
-}
-
-
-Actor *Map::FindFromTIDmap(int tid, int *pos)
-{
-  multimap<short, Actor*>::iterator i, j;
-  i = TIDmap.lower_bound(tid);
-  j = TIDmap.upper_bound(tid);
-
-  ++(*pos); // this is how many entries we must pass
-
-  for (int k = 0; k < *pos; k++)
-    {
-      if (i == j)
-	{
-	  // ran out of entries
-	  *pos = -1;
-	  return NULL;
-	}
-      i++; // pass it
-    }
-
-  // do we have anything left?
-  if (i == j)
-    {
-      // not found
-      *pos = -1; // this is needed too (TODO damn old code)
-      return NULL;
-    }
-
-  return i->second;
 }

@@ -795,14 +795,13 @@ void A_CheckThrowBomb(DActor *actor)
 
 bool Map::EV_LocalQuake(byte *args)
 {
-  int lastfound = -1; // FIXME was 0, but shouldn't it be -1?
   bool success = false;
 
   // Find all quake foci
-  Actor *target;
-  while ((target = FindFromTIDmap(args[4], &lastfound)) != NULL)
+  Iterate_TID iter(this, args[4]); // NOTE: originally had a bug, skipped the first thing in the TID array
+  for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      Actor *focus = SpawnDActor(target->pos, MT_QUAKE_FOCUS);
+      Actor *focus = SpawnDActor(m->pos, MT_QUAKE_FOCUS);
       if (focus)
 	{
 	  focus->args[0] = args[0];

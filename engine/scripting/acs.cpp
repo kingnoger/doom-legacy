@@ -511,17 +511,17 @@ void acs_t::CountThings(int type, int tid)
   if (tid)
     {
       // Count TID things
-      Actor *mobj;
-      for (int s = -1; (mobj = mp->FindFromTIDmap(tid, &s)) != NULL; )
+      Map::Iterate_TID iter(mp, tid);
+      for (Actor *a = iter.Next(); a; a = iter.Next())
 	{
 	  if (type == 0)	    
 	    thingCount++; // Just count TIDs
-	  else if (mobj->IsOf(DActor::_type))
+	  else if (a->IsOf(DActor::_type))
 	    {
-	      DActor *da = reinterpret_cast<DActor *>(mobj);
+	      DActor *da = reinterpret_cast<DActor *>(a);
 	      if (moType == da->type)
 		{
-		  if (mobj->flags & MF_CORPSE) // NOTE: && mobj->flags & MF_COUNTKILL, but why?
+		  if (a->flags & MF_CORPSE) // NOTE: && a->flags & MF_COUNTKILL, but why?
 		    continue; // Don't count dead monsters or corpses
 		  thingCount++;
 		}
@@ -903,9 +903,10 @@ int acs_t::ThingSound()
   int volume = Pop();
   int sound = S_GetSoundID(mp->ACS_strings[Pop()]);
   int tid = Pop();
-  Actor *mobj;
-  for (int s = -1; (mobj = mp->FindFromTIDmap(tid, &s)) != NULL; )
-    S_StartSound(mobj, sound, volume/127.0);
+
+  Map::Iterate_TID iter(mp, tid);
+  for (Actor *a = iter.Next(); a; a = iter.Next())
+    S_StartSound(a, sound, volume/127.0);
 
   return ACS_CONTINUE;
 }

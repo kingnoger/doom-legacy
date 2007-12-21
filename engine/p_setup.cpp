@@ -305,7 +305,7 @@ void Map::LoadNodes(int lump)
 
 void Map::LoadThings(int lump, bool heed_spawnflags)
 {
-  TIDmap.clear();
+  TID_map.clear();
 
   if (hexen_format)
     nummapthings = fc.LumpLength(lump)/sizeof(hex_mapthing_t);
