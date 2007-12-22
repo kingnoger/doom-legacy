@@ -106,10 +106,10 @@ int FIL_ReadFile(const char *name, byte **buffer)
 //
 // checks if needed, and add default extension to filename
 //
-void FIL_DefaultExtension(char *path, char *extension)
+void FIL_DefaultExtension(char *path, const char *extension)
 {
   // search for '.' from end to begin, add .EXT only when not found
-  char *src = path + strlen(path) - 1;
+  const char *src = path + strlen(path) - 1;
 
   while (*src != '/' && src != path)
     {

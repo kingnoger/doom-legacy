@@ -32,7 +32,7 @@
 
 bool  FIL_WriteFile(const char *name, void *source, int length);
 int   FIL_ReadFile(const char *name, byte **buffer);
-void  FIL_DefaultExtension(char *path, char *extension);
+void  FIL_DefaultExtension(char *path, const char *extension);
 void  FIL_ExtractFileBase(char *path, char *dest);
 bool  FIL_CheckExtension(const char *in);
 const char *FIL_StripPath(const char *s);

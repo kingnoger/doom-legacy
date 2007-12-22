@@ -344,7 +344,7 @@ void I_StartupMouse()
 
 
 
-void I_OutputMsg(char *fmt, ...) 
+void I_OutputMsg(const char *fmt, ...) 
 {
   va_list     argptr;
 
@@ -758,7 +758,7 @@ int I_mkdir(const char *dirname, int unixright)
 
 
 /// returns the path to the default wadfile location (usually the current working directory)
-char *I_GetWadPath()
+const char *I_GetWadPath()
 {
   static char temp[256];
 

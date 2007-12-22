@@ -42,7 +42,7 @@ void I_Sleep(unsigned int ms);
 void I_Quit();
 
 /// writes a message to stdout
-void I_OutputMsg(char *error, ...);
+void I_OutputMsg(const char *error, ...);
 
 /// creates a new directory
 int  I_mkdir(const char *dirname, int unixright);
@@ -73,7 +73,7 @@ void I_OsPolling ();
 char *I_GetUserName();
 
 /// returns the path to the default wadfile location (usually the current working directory)
-char *I_GetWadPath();
+const char *I_GetWadPath();
 
 
 

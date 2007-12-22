@@ -136,7 +136,7 @@ void LNetInterface::SL_Update()
 //     Network Interface
 //===================================================================
 
-static char *ConnectionState[] =
+static const char *ConnectionState[] =
 {
   "Not connected",               ///< Initial state of a NetConnection instance - not connected.
   "Awaiting challenge response", ///< We've sent a challenge request, awaiting the response.

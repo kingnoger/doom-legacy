@@ -434,7 +434,7 @@ static void D_CheckWadVersion()
 // set up correct paths to wads, configfiles and saves
 void D_SetPaths()
 {
-  char *wadpath = getenv("DOOMWADDIR");
+  const char *wadpath = getenv("DOOMWADDIR");
   if (!wadpath)
     wadpath = I_GetWadPath();
 
