@@ -156,7 +156,7 @@ void InitLumLut()
 /// Tells whether the spesified extension is supported by the current
 /// OpenGL implementation.
 
-bool GLExtAvailable(char *extension)
+bool GLExtAvailable(const char *extension)
 {
     const GLubyte *start;
     GLubyte *where, *terminator;

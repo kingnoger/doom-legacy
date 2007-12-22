@@ -61,7 +61,7 @@ extern viewportdef_t gl_viewports[MAX_GLVIEWPORTS][MAX_GLVIEWPORTS];
 
 byte LightLevelToLum(int l, int extralight=0);
 void InitLumLut();
-bool GLExtAvailable(char *extension);
+bool GLExtAvailable(const char *extension);
 
 void GeometryUnitTests();
 

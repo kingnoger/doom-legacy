@@ -1127,8 +1127,8 @@ Menu ClassDef(NULL, "Choose class:", &SinglePlayerDef, ITEMS(Class_MI), 66, 66,
 
 void Menu::DrawClass()
 {
-  static char *boxLumpName[3] = {"M_FBOX", "M_CBOX", "M_MBOX"};
-  static char *walkLumpName[3] = {"M_FWALK1", "M_CWALK1", "M_MWALK1"};
+  static const char *boxLumpName[3] = {"M_FBOX", "M_CBOX", "M_MBOX"};
+  static const char *walkLumpName[3] = {"M_FWALK1", "M_CWALK1", "M_MWALK1"};
 
   int cl = itemOn;
   int p = fc.GetNumForName(walkLumpName[cl]) + ((NowTic/5)& 3);

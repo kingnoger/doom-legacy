@@ -394,7 +394,7 @@ static const char *D_MakeTitleString(const char *s)
   for (i = (80 - strlen(s)) / 2; *s; )
     banner[i++] = *s++;
 
-  char *u = __DATE__;
+  const char *u = __DATE__;
   for (i = 0; i < 11; i++)
     banner[i + 1] = u[i]; 
 

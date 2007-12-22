@@ -35,7 +35,7 @@
 #include "m_random.h"
 
 // to be read from an XML config-file...
-static char *botnames[] =
+static const char *botnames[] =
 {
   "Frag-God",
   "Thresh",

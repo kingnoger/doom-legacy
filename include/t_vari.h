@@ -131,7 +131,7 @@ svariable_t *find_variable(const char *name);
 // creating global variables
 svariable_t *add_game_int(const char *name, int *var);
 svariable_t *add_game_string(char *name, char **var);
-svariable_t *add_game_mobj(char *name, Actor **mo);
+svariable_t *add_game_mobj(const char *name, Actor **mo);
 
 // functions
 svariable_t *new_function(const char *name, void (*handler)() );

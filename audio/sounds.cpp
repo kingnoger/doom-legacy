@@ -38,7 +38,7 @@
 // Doom/Heretic music names corresponding to musicenum_t
 // NOTE: padded with \0 to stringlen=8, to allow dehacked patching
 
-char* MusicNames[NUMMUSIC] =
+const char* MusicNames[NUMMUSIC] =
 {
     NULL,
     // Doom

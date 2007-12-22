@@ -298,7 +298,7 @@ svariable_t *add_game_string(char *name, char **var)
 }
 
 
-svariable_t *add_game_mobj(char *name, Actor **mo)
+svariable_t *add_game_mobj(const char *name, Actor **mo)
 {
   svariable_t* newvar = global_script.new_variable(name, svt_pActor);
   newvar->value.pMobj = mo;

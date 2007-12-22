@@ -49,7 +49,7 @@ extern weapon_mnemonic_t BEX_WeaponMnemonics[];
 /// BEX/DECORATE Actor flag mnemonics.
 struct flag_mnemonic_t
 {
-  char *name;
+  const char *name;
   int   flag;
   int   flagword;
 };
@@ -70,7 +70,7 @@ extern old_flag_t OriginalFlags[26];
 /// BEX/DECORATE game string mnemonics
 struct string_mnemonic_t
 {
-  char *name;
+  const char *name;
   int   num;
 };
 
