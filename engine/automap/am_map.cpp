@@ -1392,7 +1392,7 @@ void AutoMap::Drawer()
   drawMarks();
 
   if(rendermode == render_opengl)
-    oglrenderer->ClearDrawColor();
+    oglrenderer->ClearDrawColorAndLights();
 
   // mapname
   {

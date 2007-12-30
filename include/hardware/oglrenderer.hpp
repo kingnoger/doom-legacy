@@ -104,7 +104,7 @@ public:
   void InitGLState();
   void StartFrame();
   void FinishFrame();
-  void ClearDrawColor();
+  void ClearDrawColorAndLights();
   bool WriteScreenshot(const char *fname = NULL);
 
   bool ReadyToDraw() const { return workinggl; } // Console tries to draw to screen before video is initialized.

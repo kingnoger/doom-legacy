@@ -153,7 +153,7 @@ void OGLRenderer::InitGLState()
 void OGLRenderer::StartFrame()
 {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  ClearDrawColor();
+  ClearDrawColorAndLights();
 }
 
 
@@ -163,9 +163,13 @@ void OGLRenderer::FinishFrame()
   SDL_GL_SwapBuffers(); // Double buffered OpenGL goodness.
 }
 
+// Set default material colors and lights to bright white with full
+// intensity.
 
-void OGLRenderer::ClearDrawColor()
+void OGLRenderer::ClearDrawColorAndLights()
 {
+  GLfloat lmodel_ambient[] = { 1.0, 1.0, 1.0, 1.0 };
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, lmodel_ambient);
   glColor4f(1.0, 1.0, 1.0, 1.0);
 }
 
@@ -383,7 +387,7 @@ void OGLRenderer::Setup2DMode()
 {
   GLfloat extraoffx, extraoffy, extrascalex, extrascaley;
   consolemode = true;
-  ClearDrawColor();
+  ClearDrawColorAndLights();
 
   glDisable(GL_LIGHTING);
   glDisable(GL_DEPTH_TEST);
@@ -418,7 +422,7 @@ void OGLRenderer::Setup2DMode()
 void OGLRenderer::Setup3DMode()
 {
   consolemode = false;
-  ClearDrawColor();
+  ClearDrawColorAndLights();
 
   glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
