@@ -105,8 +105,8 @@ polymover_t::polymover_t() {}
 polymover_t::polymover_t(polyobj_t *p, float sp, angle_t ang, float d)
   : polyobject_t(p), speed(sp), angle(ang), dist(d)
 {
-  xs = speed * finecosine[angle];
-  ys = speed * finesine[angle];
+  xs = speed * Cos(angle);
+  ys = speed * Sin(angle);
 }
 
 
@@ -291,76 +291,64 @@ void polydoor_slide_t::Think()
 
 bool Map::EV_ActivatePolyobj(unsigned id, int type, float speed, angle_t angle, float dist, int delay, bool override)
 {
-  // max. angular velocity +-pi/4 per tic, min 4 fineangleunits/tic!
-
   polyobj_t *p = PO_FindPolyobj(id);
+
   if (!p)
     {
       I_Error("EV_ActivatePolyobj: Unknown polyobj %d\n", id);
       return false;
     }
 
-  if (p->thinker && !override)
-    return false; // already moving, ignore action
-
-  polyobject_t *obj;
-  switch (type)
+  // max. angular velocity +-pi/4 per tic, min 4 fineangleunits/tic!
+  if (type == polyobject_t::po_rotate)
     {
-    case polyobject_t::po_rotate:
+      // Tales from the cryptic, again
       if (angle == 0)
 	dist = (ANGLE_MAX >> ANGLETOFINESHIFT) + 1; // full turn
       else if ((angle >> 24) == 255)
 	dist = -1; // special case, perpetual rotator
       else
 	dist = angle >> ANGLETOFINESHIFT;
-
-      obj = new polyrotator_t(p, speed / (1 << 19), dist); // HACK, to fineangle
-      break;
-    case polyobject_t::po_move:
-      obj = new polymover_t(p, speed, angle, dist);
-      break;
-    case polyobject_t::po_door_swing:
-      obj = new polydoor_swing_t(p, speed / (1 << 19), angle >> ANGLETOFINESHIFT, delay);
-      break;
-    case polyobject_t::po_door_slide:
-      obj = new polydoor_slide_t(p, speed, angle, dist, delay);
-      break;
     }
 
-  AddThinker(obj);
-  p->thinker = obj;
-  SN_StartSequence(&p->origin, SEQ_DOOR + p->sound_seq);
+  bool ret = false;
 
-  while ((p = PO_FindPolyobj(p->mirror_id)))
+  do
     {
       if (p->thinker && !override)
-	break; // TODO continue would be more logical
+	return ret; // already moving, ignore action TODO continue would be more logical
 
+      polyobject_t *obj;
       switch (type)
 	{
 	case polyobject_t::po_rotate:
+	  obj = new polyrotator_t(p, speed / (1 << 19), dist); // HACK, to fineangle
 	  speed = -speed;
-	  obj = new polyrotator_t(p, speed, dist);
 	  break;
 	case polyobject_t::po_move:
-	  angle += ANG180;
 	  obj = new polymover_t(p, speed, angle, dist);
+	  angle += ANG180;
 	  break;
 	case polyobject_t::po_door_swing:
+	  obj = new polydoor_swing_t(p, speed / (1 << 19), angle >> ANGLETOFINESHIFT, delay);
 	  speed = -speed;
-	  obj = new polydoor_swing_t(p, speed, angle >> ANGLETOFINESHIFT, delay);
 	  break;
 	case polyobject_t::po_door_slide:
-	  angle += ANG180;
 	  obj = new polydoor_slide_t(p, speed, angle, dist, delay);
+	  angle += ANG180;
 	  break;
 	}
 
+      ret = true;
       AddThinker(obj);
       p->thinker = obj;
       SN_StartSequence(&p->origin, SEQ_DOOR + p->sound_seq);
+
+      p = PO_FindPolyobj(p->mirror_id);
     }
-  return true;
+  while (p);
+
+  return ret;
 }
 
 
@@ -411,7 +399,7 @@ bool polyobj_t::Move(fixed_t dx, fixed_t dy)
       current_points[i]->y += dy;
     }
 
-  if (!mp->blockmap->PO_ClipActors(this))
+  if (mp->blockmap->PO_ClipActors(this))
     {
       // collided with something, undo move
       for (int i = 0; i < n_lines; i++)
@@ -435,6 +423,11 @@ bool polyobj_t::Move(fixed_t dx, fixed_t dy)
 
   mp->blockmap->PO_Unlink(this);
   mp->blockmap->PO_Link(this);
+
+  subsector_t *sub = mp->GetSubsector(center.x, center.y);
+  if (sub->poly && sub->poly != this)
+    CONS_Printf("Multiple polyobjs (%d, %d) in subsector %d!\n", id, sub->poly->id, sub - mp->subsectors);
+  sub->poly = this;
   return true;
 }
 
@@ -467,7 +460,7 @@ bool polyobj_t::Rotate(angle_t da)
     lines[i]->SetDims();
 
   // check collisions
-  if (!mp->blockmap->PO_ClipActors(this))
+  if (mp->blockmap->PO_ClipActors(this))
     {
       // collided with something, undo move
       for (int i = 0; i < num_points; i++)
@@ -490,6 +483,7 @@ bool polyobj_t::Rotate(angle_t da)
 
   mp->blockmap->PO_Unlink(this);
   mp->blockmap->PO_Link(this);
+  // Rotate can move center, so TODO subsector re-link
   return true;
 }
 
@@ -517,6 +511,7 @@ bool polyobj_t::Build()
 
   // TEST Generate new segs, one per line to make things easy. TODO what about old ones? rendered or not? in BSP?
   segs = static_cast<seg_t *>(Z_Malloc(n_lines * sizeof(seg_t), PU_LEVEL, 0));
+  memset(segs, 0, n_lines * sizeof(seg_t)); // basic initialization to zero
   for (int k=0; k<n_lines; k++)
     {
       seg_t *s = &segs[k];
@@ -526,9 +521,7 @@ bool polyobj_t::Build()
       s->v2 = l->v2;
       s->linedef = l;
       s->side = 0; // TODO check if ok
-      s->partner_seg = NULL;
       s->sidedef = l->sideptr[0];
-      s->offset = 0;
 
       float dx = (s->v2->x - s->v1->x).Float();
       float dy = (s->v2->y - s->v1->y).Float();
@@ -543,22 +536,21 @@ bool polyobj_t::Build()
       s->backsector = l->backsector;
     }
 
+  // Now store unique vertices, and calculate center (initialized to zero).
   num_points = points.size();
   base_points    = static_cast<vertex_t *>(Z_Malloc(num_points * sizeof(vertex_t), PU_LEVEL, 0));
   current_points = static_cast<vertex_t **>(Z_Malloc(num_points * sizeof(vertex_t *), PU_LEVEL, 0));
 
-  // origin and center are initialized to zero by the memset
-
-  vertex_t orig = {anchor->x, anchor->y};
+  vertex_t orig = {origin.x, origin.y}; // TODO stupid mappoint_t
   set<vertex_t *>::iterator i = points.begin();
   for (int k = 0; k < num_points; k++, i++)
     {
       // make a copy of the unique vertices, using the anchor as origin
       base_points[k] = *(*i);
       base_points[k] -= orig;
-      center += base_points[k]; // calculate the average of the vertex coords
 
       current_points[k] = *i; // TODO if not spawned?
+      center += *current_points[k]; // calculate the average of the vertex coords
     }
 
   center.x /= num_points;
@@ -793,7 +785,10 @@ void Map::PO_Init()
       polyobj_t *p = &polyobjs[i];
       p->mp = this;
       p->id = id;
-      p->anchor = mt;
+      //p->anchor = mt;
+      p->origin.x = mt->x;
+      p->origin.y = mt->y;
+
       PO_map[id] = p; // insert it into the map
     }
 
@@ -902,14 +897,11 @@ void Map::PO_Init()
 	}
 
       p->damage = (mt->height == EN_PO_SPAWNCRUSH) ? 3 : 0;
-      p->Move(mt->x, mt->y);
-
-      subsector_t *sub = GetSubsector(p->center.x, p->center.y);
-
-      if (sub->poly)
-	CONS_Printf("Multiple polyobjs (%d, %d) in a single subsector %d!\n", p->id, sub->poly->id, sub - subsectors);
-
-      sub->poly = p;
+      if (!p->Move(mt->x - p->origin.x, mt->y - p->origin.y))
+	{
+	  p->bad = true;
+	  CONS_Printf("Error: Polyobj %d: Spawnspot blocked by Actor(s)!\n", id);
+	}
     }
 
   // clean up for next level

@@ -241,10 +241,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 1: // Poly Start Line
       break;
     case 2: // Poly Rotate Left
-      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, float(ANGLE(args[1]))/8.0f, ANGLE(args[2]), 0, 0, false);
       break;
     case 3: // Poly Rotate Right
-      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -(ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -float(ANGLE(args[1]))/8.0f, ANGLE(args[2]), 0, 0, false);
       break;
     case 4: // Poly Move
       success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), args[3], 0, false);
@@ -255,7 +255,7 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), 8*args[3], 0, false);
       break;
     case 7: // Poly Door Swing
-      success = EV_ActivatePolyobj(args[0], polyobject_t::po_door_swing, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, args[3], false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_door_swing, float(ANGLE(args[1]))/8.0f, ANGLE(args[2]), 0, args[3], false);
       break;
     case 8: // Poly Door Slide
       success = EV_ActivatePolyobj(args[0], polyobject_t::po_door_slide, SPEED(args[1]), ANGLE(args[2]), args[3], args[4], false);
@@ -450,10 +450,10 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
 
     case 90: // Poly Rotate Left Override
-      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, float(ANGLE(args[1]))/8.0f, ANGLE(args[2]), 0, 0, true);
       break;
     case 91: // Poly Rotate Right Override
-      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -(ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -float(ANGLE(args[1]))/8.0f, ANGLE(args[2]), 0, 0, true);
       break;
     case 92: // Poly Move Override
       success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), args[3], 0, true);

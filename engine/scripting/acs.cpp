@@ -887,7 +887,7 @@ int acs_t::SetLineSpecial()
   for (int s = -1; (line = mp->FindLineFromID(lineid, &s)) != NULL; )
     {
       line->special = special;
-      for (int i=0; i<5; i--)
+      for (int i=0; i<5; i++)
 	line->args[i] = args[i];
     }
 

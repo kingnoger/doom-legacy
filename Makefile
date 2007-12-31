@@ -136,7 +136,7 @@ export engine_objects = \
 	$(objdir)/p_things.o \
 	$(objdir)/p_lights.o \
 	$(objdir)/p_switch.o \
-	$(objdir)/p_poly.o \
+	$(objdir)/p_polyobj.o \
 	$(objdir)/a_action.o \
 	$(objdir)/p_pspr.o \
 	$(objdir)/p_hpspr.o \

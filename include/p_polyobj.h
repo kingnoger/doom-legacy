@@ -37,7 +37,6 @@
 struct polyobj_t
 {
   Map *mp;            ///< Map to which the polyobj belongs
-  mapthing_t *anchor; ///< anchor node
   unsigned id;        ///< polyobj number (should be nonzero)
   unsigned mirror_id; ///< polyobj mirroring this one, or zero
   unsigned sound_seq; ///< sound sequence
@@ -50,9 +49,9 @@ struct polyobj_t
   seg_t *segs; ///< segs generated from the lines
 
   int num_points;            ///< number of unique vertices in the polyobj
-  vertex_t *base_points;     ///< copies of the vertices relative to the origin
+  vertex_t *base_points;     ///< copies of the unrotated vertices relative to the origin
   vertex_t **current_points; ///< current vertices
-  vertex_t center;           ///< average of the vertices, the "location" of the polyobj
+  vertex_t center;           ///< average of the current vertices, the "location" of the polyobj
   int      bbox[4];          ///< bounding box in blockmap coordinates
 
   class polyobject_t *thinker; ///< pointer to a Thinker, if the polyobj is moving
