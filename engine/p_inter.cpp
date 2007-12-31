@@ -127,9 +127,9 @@ void PlayerPawn::Killed(PlayerPawn *victim, Actor *inflictor)
   else
     {
       int w = -1;
-      if (inflictor && (inflictor->IsOf(DActor::_type)))
+      DActor *inf;
+      if (inflictor && (inf = inflictor->Inherits<DActor>()))
 	{
-	  DActor *inf = (DActor *)inflictor;
 	  switch (inf->type)
 	    {
 	    case MT_BARREL:
@@ -321,7 +321,7 @@ bool DActor::Touch(Actor *p)
 	{
 	  yaw = R_PointToAngle2(p->pos, pos);
 
-	  DActor *t = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p) : NULL;
+	  DActor *t = p->Inherits<DActor>();
 	  mobjtype_t temp = t ? t->type : MT_NONE;
 
 	  // Change angle for deflection/reflection
@@ -371,11 +371,12 @@ bool DActor::Touch(Actor *p)
 	}
 
       // Don't damage the same species as the originator.
-      if (owner && owner->IsOf(DActor::_type) && p->IsOf(DActor::_type))
+      if (owner)
 	{
-	  DActor *ow = (DActor *)owner;
-	  DActor *t = (DActor *)p;
+	  DActor *ow = owner->Inherits<DActor>();
+	  DActor *t = p->Inherits<DActor>();
 
+	  if (ow && t)
 	  if (ow->type == t->type ||
 	      (ow->type == MT_KNIGHT  && t->type == MT_BRUISER) ||
 	      (ow->type == MT_BRUISER && t->type == MT_KNIGHT)) // damn complicated!
@@ -473,11 +474,10 @@ bool PlayerPawn::Touch(Actor *p)
       if (flags & MF_PICKUP)
         {
 	  // can remove thing
-	  if (p->IsOf(DActor::_type))
-	    {
-	      DActor *dp = (DActor *)p;
-	      TouchSpecialThing(dp); // this also Removes() the item
-	    }
+	  DActor *dp = p->Inherits<DActor>();
+	  if (dp)
+	    TouchSpecialThing(dp); // this also Removes() the item
+
 	  return false; // no collision, just possible pickup
         }
     }
@@ -641,9 +641,9 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 
 
   // Special damage types
-  if (inflictor && (inflictor->IsOf(DActor::_type)))
+  DActor *inf;
+  if (inflictor && (inf = inflictor->Inherits<DActor>()))
     {
-      DActor *inf = (DActor *)inflictor;
       switch (inf->type)
         {
         case MT_EGGFX:
@@ -773,10 +773,9 @@ bool DActor::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  (cv_infighting.value == 0 || source->flags2 & MF2_NOTARGET))
 	return true;
 
-      if (source->IsOf(DActor::_type))
+      DActor *ds = source->Inherits<DActor>();
+      if (ds)
 	{
-	  DActor *ds = (DActor *)source;
-	  
 	  // let's not get angry, after all
 	  if ((ds->type == MT_WIZARD && type == MT_SORCERER2) ||
 	      (ds->type == MT_MINOTAUR && type == MT_MINOTAUR))
@@ -817,9 +816,9 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
     }
 
   // TODO this is nastily duplicated in DActor::Damage, but...
-  if (inflictor && inflictor->IsOf(DActor::_type))
+  DActor *d;
+  if (inflictor && (d = inflictor->Inherits<DActor>()))
     {
-      DActor *d = (DActor *)inflictor;
       switch (d->type)
 	{
 	case MT_MACEFX4: // Death ball
@@ -949,9 +948,7 @@ bool PlayerPawn::Damage(Actor *inflictor, Actor *source, int damage, int dtype)
 	  damage -= saved;
 	}      
 
-      PlayerPawn *s = NULL;
-      if (source && source->IsOf(PlayerPawn::_type))
-	s = (PlayerPawn *)source;
+      PlayerPawn *s = source ? source->Inherits<PlayerPawn>() : NULL;
 
       // added teamplay and teamdamage
       if (s && (s->player->team == player->team) && !cv_teamdamage.value && (s != this))
@@ -1056,9 +1053,9 @@ void Actor::Die(Actor *inflictor, Actor *source, int dtype)
   // if a player killed a monster, update kills
   if (flags & MF_COUNTKILL)
     {
-      if (source && source->IsOf(PlayerPawn::_type))
+      PlayerPawn *s;
+      if (source && (s = source->Inherits<PlayerPawn>()))
 	{
-	  PlayerPawn *s = (PlayerPawn *)source;
 	  // count for intermission
 	  s->player->kills++;    
 	}

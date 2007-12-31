@@ -66,7 +66,7 @@ SearchNode_t::SearchNode_t(int nx, int ny, fixed_t x, fixed_t y)
   pprevious = NULL;
 
   //CONS_Printf("Created node at x:%d, y:%d.\n", (x>>FRACBITS), (y>>FRACBITS));
-  // newnode->mo = P_SpawnMobj(posX2x(newnode->x), posY2y(newnode->y), R_PointInSubsector(posX2x(newnode->x), posY2y(newnode->y))->sector->floorheight, MT_MISC49);
+  // newnode->mo = P_SpawnMobj(posX2x(newnode->x), posY2y(newnode->y), GetSubsector(posX2x(newnode->x), posY2y(newnode->y))->sector->floorheight, MT_MISC49);
 }
 
 
@@ -307,7 +307,7 @@ bool BotNodes::DirectlyReachable(Actor *mo, fixed_t x, fixed_t y, fixed_t destx,
     { 
       botteledestx = destx;
       botteledesty = desty;
-      last_sector = mp->R_PointInSubsector(x, y)->sector;
+      last_sector = mp->GetSubsector(x, y)->sector;
 
       if (mo)
 	{
@@ -616,7 +616,7 @@ void BotNodes::BuildNodes(SearchNode_t *node)
 
 	      node->dir[angle] = temp;
 
-	      sector_t *sector = mp->R_PointInSubsector(temp->mx, temp->my)->sector;
+	      sector_t *sector = mp->GetSubsector(temp->mx, temp->my)->sector;
 
 	      if (sector->floortype == FLOOR_LAVA)
 		cost += 50000;

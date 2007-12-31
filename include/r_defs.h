@@ -44,7 +44,9 @@ struct vertex_t
 {
   fixed_t  x, y;
 
-  inline bool operator==(const vertex_t& v) const { return (x == v.x) && (y == v.y); }
+  inline bool      operator==(const vertex_t& v) const { return (x == v.x) && (y == v.y); }
+  inline vertex_t& operator+=(const vertex_t& a) { x += a.x; y += a.y; return *this; }
+  inline vertex_t& operator-=(const vertex_t& a) { x -= a.x; y -= a.y; return *this; }
 };
 
 
@@ -176,7 +178,7 @@ struct line_t
   vertex_t *v1, *v2;
 
   /// Precalculated v2 - v1 for side checking.
-  fixed_t   dx, dy;
+  fixed_t dx, dy;
 
   short flags;   ///< bit flags
   short special; ///< linedef type or special action
@@ -187,11 +189,11 @@ struct line_t
   /// hexen args
   byte args[5];
 
-  /// To aid move clipping.
-  byte slopetype;
-
   /// Visual appearance: SideDefs. sideptr[1] will be NULL if one-sided.
   side_t *sideptr[2];
+
+  /// To aid move clipping.
+  byte slopetype;
 
   /// Neat. Another bounding box, for the extent of the LineDef.
   bbox_t bbox;
@@ -216,6 +218,8 @@ struct line_t
 
   /// Adds a splat decal on the line.
   void AddWallSplat(const char *name, int side, fixed_t top, fixed_t wallfrac, int flags);
+  /// Sets dx, dy, bounding box and slopetype according to the current vertex coords.
+  void SetDims();
 };
 
 

@@ -88,9 +88,12 @@ public:
     return NULL; // off the blockmap
   }
 
-  void PO_UnLink(polyobj_t *po);
-  void PO_Link(polyobj_t *po);
-  bool PO_CheckBlockingActors(seg_t *seg, polyobj_t *po);
+  /// Remove the polyobj from the blockmap.
+  void PO_Unlink(polyobj_t *p);
+  /// Add the polyobj to the blockmap.
+  void PO_Link(polyobj_t *p);
+  /// Check if the polyobj collides with any Actors, push and damage the Actors accordingly.
+  bool PO_ClipActors(polyobj_t *p);
 
   bool IterateLinesRadius(fixed_t x, fixed_t y, fixed_t radius, line_iterator_t func);
   bool IterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing_iterator_t func);

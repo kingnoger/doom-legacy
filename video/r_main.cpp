@@ -619,56 +619,6 @@ void R_Init()
 
 
 //
-// was R_PointInSubsector
-//
-subsector_t *Map::R_PointInSubsector(fixed_t x, fixed_t y)
-{
-  // single subsector is a special case
-  if (!numnodes)
-    return subsectors;
-
-  int nodenum = numnodes-1;
-
-  while (! (nodenum & NF_SUBSECTOR) )
-    {
-      node_t *node = &nodes[nodenum];
-      int side = node->PointOnSide(x, y);
-      nodenum = node->children[side];
-    }
-
-  return &subsectors[nodenum & ~NF_SUBSECTOR];
-}
-
-//
-// was R_IsPointInSubsector, same of above but return 0 if not in subsector
-//
-subsector_t* Map::R_IsPointInSubsector(fixed_t x, fixed_t y)
-{
-  // single subsector is a special case
-  if (!numnodes)
-    return subsectors;
-
-  int nodenum = numnodes-1;
-
-  while (! (nodenum & NF_SUBSECTOR) )
-    {
-      node_t *node = &nodes[nodenum];
-      int side = node->PointOnSide(x, y);
-      nodenum = node->children[side];
-    }
-
-  subsector_t *ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-  for (unsigned i=0; i<ret->num_segs; i++)
-    {
-      if (divline_t(&segs[ret->first_seg + i]).PointOnSide(x, y))
-	return 0;
-    }
-
-  return ret;
-}
-
-
-//
 // R_SetupFrame
 //
 bool drawPsprites; // FIXME HACK

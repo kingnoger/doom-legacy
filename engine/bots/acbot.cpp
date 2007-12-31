@@ -404,12 +404,12 @@ void ACBot::LookForThings()
 
   for (Thinker *th = mp->thinkercap.Next(); th != &mp->thinkercap; th = th->Next())
     {
-      if (!th->IsOf(Actor::_type))
+      Actor *actor = th->Inherits<Actor>();
+      if (!actor)
 	continue; // keep looking
 
-      Actor *actor = (Actor *)th;
-
-      mobjtype_t type = actor->IsOf(DActor::_type) ? ((DActor *)actor)->type : MT_NONE;
+      DActor *da = actor->Inherits<DActor>();
+      mobjtype_t type = da ? da->type : MT_NONE;
       fixed_t dist = P_XYdist(pawn->pos, actor->pos);
       bool enemyFound = false;
       SearchNode_t *node;
@@ -844,7 +844,7 @@ void ACBot::AimWeapon()
           //} while (!mp->CheckSight2(pawn, dest, nx, ny, nz) && (t > 0));
 	    } while (false); // FIXME
 
-	  subsector_t *sec = mp->R_PointInSubsector(temp.x, temp.y);
+	  subsector_t *sec = mp->GetSubsector(temp.x, temp.y);
 	  if (!sec)
 	    sec = dest->subsector;
 
@@ -917,7 +917,7 @@ void ACBot::AimWeapon()
 		tempRocket->z = pawn->z + 1835008;
 		tempRocket->radius = info->radius;
 		tempRocket->height = info->height;
-		if  (B_ReachablePoint(p, R_PointInSubsector(nx, ny)->sector, nx, ny))
+		if  (B_ReachablePoint(p, GetSubsector(nx, ny)->sector, nx, ny))
 		cmd->buttons |= ticcmd_t::BT_ATTACK;
  
 		//B_ChangeWeapon(p);
@@ -1014,7 +1014,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	  if (ai_weapon_data[w].dangerdist > 50 && dist < 400)
 	    forwardmove = -botforwardmove[botspeed];
 
-	  PlayerPawn *pp = cEnemy.a->IsOf(PlayerPawn::_type) ? (PlayerPawn *)cEnemy.a : NULL;
+	  PlayerPawn *pp = cEnemy.a->Inherits<PlayerPawn>();
 
 	  // if we are at close range or player enemy has a long range weapon, better strafe
 	  // skill setting determines when bot will start strafing

@@ -287,7 +287,7 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
   if (isInitialUpdate())
     {
-      PlayerPawn *p = IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(this) : NULL;
+      PlayerPawn *p = Inherits<PlayerPawn>();
 
       if (p)
 	CONS_Printf("ssss");
@@ -592,7 +592,7 @@ void Actor::XYMovement()
 		{
 		  // Struck a wall
 		  BounceWall(ptryx, ptryy);
-		  DActor *t = IsOf(DActor::_type) ? reinterpret_cast<DActor*>(this) : NULL;
+		  DActor *t = Inherits<DActor>();
 		  if (t)
 		    switch (t->type)
 		      {
@@ -1478,7 +1478,7 @@ void DActor::NightmareRespawn()
   S_StartSound(mo, sfx_teleport);
 
   // spawn a teleport fog at the new spot
-  subsector_t *ss = mp->R_PointInSubsector(p.x, p.y);
+  subsector_t *ss = mp->GetSubsector(p.x, p.y);
 
   mo = mp->SpawnDActor(p.x, p.y, ss->sector->floorheight +
 		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);

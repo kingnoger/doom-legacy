@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2002-2006 by DooM Legacy Team.
+// Copyright (C) 2002-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,7 +18,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Definitions of the TypeInfo and Thinker classes
+/// \brief Definitions of the TypeInfo and Thinker classes.
 
 #ifndef g_think_h
 #define g_think_h 1
@@ -99,36 +99,27 @@ public:
   // could contain even more info about the class
 
   TypeInfo(const char *n, thinker_factory_t f, TypeInfo *par);
-
-  inline bool IsDescendantOf(const TypeInfo *p) const
-  {
-    return (p == this) || (parent && parent->IsDescendantOf(p));
-  }
-
   static TypeInfo *Find(unsigned code); ///< Searches the ID map for 'code'
 };
 
 
 class LArchive;
 
-/// macro used in declaring Thinker classes (defines the TypeInfo/serialization related members)
+/// Macro used in declaring Thinker classes (defines the TypeInfo/serialization related members).
 #define DECLARE_CLASS(cls) \
 protected: \
   static inline Thinker *Create() { return new (cls); } \
 public: \
   static  TypeInfo _type; \
   virtual TypeInfo *Type() const { return &_type; } \
-  virtual bool IsOf(const TypeInfo &t) const { return _type.IsDescendantOf(&t); } \
   cls(); \
   virtual int Marshal(LArchive &a);
 
 
 
-
-/// this macro implements the stuff declared in DECLARE_CLASS
+/// This macro implements the stuff declared in DECLARE_CLASS.
 #define IMPLEMENT_CLASS(c,par) \
 TypeInfo c::_type(#c, c::Create, &par::_type);
-
 
 
 //==========================================================
@@ -154,18 +145,21 @@ private:
   Thinker  *next;
 
 public:
-  /// RTTI helper function
-  inline bool IsDescendantOf(const TypeInfo &ancestor) const
+  /// RTTI helper function. If the Thinker descendant in question descends from T, returns (T *)this, otherwise NULL.
+  /// Usage: XXX *p = thing->Inherits<XXX>();
+  template<typename T>
+  inline T *Inherits()
   {
     TypeInfo *p = Type();
     while (p)
       {
-	if (p == &ancestor)
-	  return true;
+	if (p == &T::_type)
+	  return reinterpret_cast<T *>(this);
 	p = p->parent;
       }
-    return false;
+    return NULL;
   }
+
 
   /// the map where the Thinker is situated
   class Map *mp;

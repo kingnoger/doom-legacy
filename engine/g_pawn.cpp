@@ -1005,7 +1005,7 @@ DActor *PlayerPawn::SPMAngle(mobjtype_t type, angle_t ang)
 // checks if the player has the correct key for 'lock'
 bool P_CheckKeys(Actor *mo, int lock)
 {
-  PlayerPawn *p = mo->IsOf(PlayerPawn::_type) ? (PlayerPawn *)mo : NULL;
+  PlayerPawn *p = mo->Inherits<PlayerPawn>();
 
   if (!p)
     return false;

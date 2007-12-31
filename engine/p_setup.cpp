@@ -73,7 +73,8 @@ void ConvertLineDef(line_t *ld);
 
 static Material *skyflat_mat;
 
-extern vector<mapthing_t *> polyspawn; // for spawning polyobjects
+extern vector<mapthing_t *> polyspawn;  // for spawning polyobjects
+extern vector<mapthing_t *> polyanchor; // for spawning polyobjects
 
 
 /// Editor numbers for certain special mapthings
@@ -443,9 +444,11 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
       if (ednum == EN_PO_ANCHOR || ednum == EN_PO_SPAWN || ednum == EN_PO_SPAWNCRUSH)
 	{
 	  t->height = ednum; // HACK, internally we use the same numbers
-	  polyspawn.push_back(t);
-	  if (ednum != EN_PO_ANCHOR)
-	    NumPolyobjs++; // a polyobj spawn spot
+	  if (ednum == EN_PO_ANCHOR)
+	    polyanchor.push_back(t);
+	  else
+	    polyspawn.push_back(t);
+
 	  continue;
 	}
 
@@ -489,9 +492,11 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           if (ednum == EN_HEXEN_PO_ANCHOR || ednum == EN_HEXEN_PO_SPAWN || ednum == EN_HEXEN_PO_SPAWNCRUSH)
             {
               t->height = ednum - EN_HEXEN_PO_ANCHOR + EN_PO_ANCHOR; // HACK
-              polyspawn.push_back(t);
-              if (ednum != EN_HEXEN_PO_ANCHOR)
-                NumPolyobjs++; // a polyobj spawn spot
+              if (ednum == EN_HEXEN_PO_ANCHOR)
+		polyanchor.push_back(t);
+	      else
+		polyspawn.push_back(t);
+
               continue;
             }
 
@@ -506,7 +511,7 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
           // sector sound sequences
           if (ednum >= EN_HEXEN_SNDSEQ1 && ednum <= EN_HEXEN_SNDSEQ10)
             {
-              R_PointInSubsector(t->x, t->y)->sector->seqType = ednum - EN_HEXEN_SNDSEQ1;
+              GetSubsector(t->x, t->y)->sector->seqType = ednum - EN_HEXEN_SNDSEQ1;
               continue;
             }
         }
@@ -540,6 +545,43 @@ void Map::LoadThings(int lump, bool heed_spawnflags)
     }
 
   Z_Free(data);
+}
+
+
+
+void line_t::SetDims()
+{
+  dx = v2->x - v1->x;
+  dy = v2->y - v1->y;
+
+  slopetype = !dx ? ST_VERTICAL :
+    !dy ? ST_HORIZONTAL :
+    (dy / dx > 0) ? ST_POSITIVE : ST_NEGATIVE;
+
+  //bbox.Add(v1->x, v1->y);
+  //bbox.Add(v2->x, v2->y);
+
+  if (v1->x < v2->x)
+    {
+      bbox.box[BOXLEFT] = v1->x;
+      bbox.box[BOXRIGHT] = v2->x;
+    }
+  else
+    {
+      bbox.box[BOXLEFT] = v2->x;
+      bbox.box[BOXRIGHT] = v1->x;
+    }
+
+  if (v1->y < v2->y)
+    {
+      bbox.box[BOXBOTTOM] = v1->y;
+      bbox.box[BOXTOP] = v2->y;
+    }
+  else
+    {
+      bbox.box[BOXBOTTOM] = v2->y;
+      bbox.box[BOXTOP] = v1->y;
+    }
 }
 
 
@@ -636,45 +678,7 @@ void Map::LoadLineDefs(int lump)
       ld->sideptr[0] = (temp[0] == NULL_INDEX) ? NULL : &sides[temp[0]];
       ld->sideptr[1] = (temp[1] == NULL_INDEX) ? NULL : &sides[temp[1]];
 
-      ld->dx = v2->x - v1->x;
-      ld->dy = v2->y - v1->y;
-
-      if (!ld->dx)
-        ld->slopetype = ST_VERTICAL;
-      else if (!ld->dy)
-        ld->slopetype = ST_HORIZONTAL;
-      else
-        {
-          if (ld->dy / ld->dx > 0)
-            ld->slopetype = ST_POSITIVE;
-          else
-            ld->slopetype = ST_NEGATIVE;
-        }
-
-      //ld->bbox.Add(v1->x, v1->y);
-      //ld->bbox.Add(v2->x, v2->y);
-
-      if (v1->x < v2->x)
-        {
-          ld->bbox.box[BOXLEFT] = v1->x;
-          ld->bbox.box[BOXRIGHT] = v2->x;
-        }
-      else
-        {
-          ld->bbox.box[BOXLEFT] = v2->x;
-          ld->bbox.box[BOXRIGHT] = v1->x;
-        }
-
-      if (v1->y < v2->y)
-        {
-          ld->bbox.box[BOXBOTTOM] = v1->y;
-          ld->bbox.box[BOXTOP] = v2->y;
-        }
-      else
-        {
-          ld->bbox.box[BOXBOTTOM] = v2->y;
-          ld->bbox.box[BOXTOP] = v1->y;
-        }
+      ld->SetDims();
 
       // set line references to the sidedefs
       if (ld->sideptr[0])
@@ -1641,6 +1645,14 @@ bool Map::Setup(tic_t start, bool spawnthings)
   else
     {
       CONS_Printf(" Map has no GL nodes.\n");
+      // OpenGL renderer. TODO more friendly behavior (include glBSP, build nodes on the fly)
+      if (rendermode == render_opengl)
+	{
+	  CONS_Printf("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
+	  CONS_Printf("Build GL nodes with glbsp and try again.\n");
+	  return false;
+	}
+
       gllump = -1;
     }
 
@@ -1667,8 +1679,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
     }
 
   LoadSectors2(lumpnum+LUMP_SECTORS); // rest of secs, uses nothing!!!
-  rejectmatrix = (byte *)fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL);
+  rejectmatrix = static_cast<byte*>(fc.CacheLumpNum(lumpnum+LUMP_REJECT,PU_LEVEL));
   GroupLines();
+
+
 
   // lights, scrollers, sectordamage...
   for (int i=0; i<numsectors; i++)
@@ -1676,7 +1690,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   R_SetFadetable(info->fadetablelump.c_str());
 
-  // fix renderer to this map
+  // fix renderer to this map TODO why?
   R.SetMap(this);
 
   // NOTE: in loading a game, we ignore spawnflags so (almost) every mapthing gets a type.
@@ -1684,7 +1698,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
   LoadThings(lumpnum + LUMP_THINGS, spawnthings);
 
   if (!polyspawn.empty())
-    InitPolyobjs(); // create the polyobjs, clear their mapthings (before spawning other things!)
+    PO_Init(); // create the polyobjs, clear their mapthings (before spawning other things!)
 
   // spawn the THINGS (Actors) if needed (not needed on clients or when loading savegames)
   if (spawnthings && game.server)
@@ -1696,7 +1710,10 @@ bool Map::Setup(tic_t start, bool spawnthings)
       PlaceWeapons(); // Heretic mace
     }
 
-  SpawnLineSpecials(); // spawn Thinkers created by linedefs (also does some mandatory initializations!)
+  RemoveAllActiveCeilings(); // TODO unnecessary?
+  RemoveAllActivePlats(); // TODO unnecessary?
+  InitTagLists(); // Create hash tables for tags and lineid's
+  SpawnLineSpecials(); // spawn Thinkers created by linedefs, confer properties given by linedefs
 
   if (game.server)
     {
@@ -1706,18 +1723,13 @@ bool Map::Setup(tic_t start, bool spawnthings)
       FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
     }
 
-  effects = new MapEffect(this); // Hexen lightning effect
+  if (info->lightning)
+    effects = new MapEffect(this); // Hexen lightning effect
 
   if (precache)
     PrecacheMap();
 
-  // OpenGL renderer. TODO more friendly behavior
-  if (rendermode == render_opengl && glvertexes == NULL)
-    {
-      CONS_Printf("Trying to use OpenGL renderer without GL nodes. Exiting.\n");
-      CONS_Printf("Build GL nodes with glbsp and try again.\n");
-      return false;
-    }
+
 
   int minisegs = 0;
   int botnodes2 = 0;

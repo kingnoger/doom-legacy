@@ -582,7 +582,7 @@ static bool IT_FindEnemies(Thinker *th)
   const int MONS_LOOK_RANGE = 20*64;
   const int MONS_LOOK_LIMIT = 64;
 
-  Actor *a = th->IsOf(Actor::_type) ? reinterpret_cast<Actor*>(th) : NULL;
+  Actor *a = th->Inherits<Actor>();
 
   if (!a)
     return true; // not an Actor
@@ -1248,10 +1248,10 @@ bool PIT_VileCheck(Actor *th)
   if (!(th->flags & MF_CORPSE) )
     return true;    // not a monster
 
-  if (!th->IsOf(DActor::_type))
-    return true;
+  DActor *thing = th->Inherits<DActor>();
 
-  DActor *thing = (DActor *)th;
+  if (!thing)
+    return true;
 
   if (thing->tics != -1)
     return true;    // not lying still yet

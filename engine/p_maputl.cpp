@@ -33,7 +33,7 @@
 #include "g_blockmap.h"
 
 #include "m_bbox.h"
-#include "r_poly.h"
+#include "p_polyobj.h"
 #include "r_sky.h"
 #include "p_maputl.h"
 
@@ -282,6 +282,58 @@ int bbox_t::BoxOnLineSide(const line_t *ld) const
   return -1;
 }
 
+
+
+//==========================================================================
+//  BSP utilities
+//==========================================================================
+
+/// Returns the subsector_t corresponding to the BSP leaf to which the point (x,y) belongs.
+/// NOTE that (x,y) may be outside the actual subsector_t, yet inside the leaf node.
+subsector_t *Map::GetSubsector(fixed_t x, fixed_t y)
+{
+  // single subsector is a special case
+  if (!numnodes)
+    return subsectors;
+
+  int nodenum = numnodes-1;
+
+  while (!(nodenum & NF_SUBSECTOR))
+    {
+      node_t *node = &nodes[nodenum];
+      int side = node->PointOnSide(x, y);
+      nodenum = node->children[side];
+    }
+
+  return &subsectors[nodenum & ~NF_SUBSECTOR];
+}
+
+
+/// Same as Map::GetSubsector, but returns NULL if not inside the subsector_t.
+subsector_t* Map::FindSubsector(fixed_t x, fixed_t y)
+{
+  // single subsector is a special case
+  if (!numnodes)
+    return subsectors;
+
+  int nodenum = numnodes-1;
+
+  while (!(nodenum & NF_SUBSECTOR))
+    {
+      node_t *node = &nodes[nodenum];
+      int side = node->PointOnSide(x, y);
+      nodenum = node->children[side];
+    }
+
+  subsector_t *ret = &subsectors[nodenum & ~NF_SUBSECTOR];
+  for (unsigned i=0; i < ret->num_segs; i++)
+    {
+      if (divline_t(&segs[ret->first_seg + i]).PointOnSide(x, y))
+	return NULL;
+    }
+
+  return ret;
+}
 
 
 
@@ -546,15 +598,12 @@ bool blockmap_t::LinesIterator(int x, int y, line_iterator_t func)
     {
       if (p->polyobj && p->polyobj->validcount != validcount)
 	{
-	  p->polyobj->validcount = validcount;
-	  seg_t **tempSeg = p->polyobj->segs;
-	  for (int i=0; i < p->polyobj->numsegs; i++, tempSeg++)
+	  polyobj_t *temp = p->polyobj;
+	  temp->validcount = validcount;
+	  int n = temp->lines.size();
+	  for (int i=0; i < n; i++)
 	    {
-	      if ((*tempSeg)->linedef->validcount == validcount)
-		continue;
-	      
-	      (*tempSeg)->linedef->validcount = validcount;
-	      if (!func((*tempSeg)->linedef))
+	      if (!func(temp->lines[i]))
 		return false;
 	    }
 	}
@@ -708,9 +757,9 @@ bool Map::IterateActors(thing_iterator_t func)
   for (t = thinkercap.next; t != &thinkercap; t = n)
     {
       n = t->next; // if t is removed while it thinks, its 'next' pointer will no longer be valid.
-      if (t->IsOf(Actor::_type))
-	if (!func(reinterpret_cast<Actor*>(t)))
-	  return false;
+      Actor *a = t->Inherits<Actor>();
+      if (a && !func(a))
+	return false;
     }
   return true;
 }

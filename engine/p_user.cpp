@@ -461,10 +461,10 @@ static bool   given;
 
 static bool IT_HealRadius(Thinker *th)
 {
-  if (!th->IsOf(PlayerPawn::_type))
+  PlayerPawn *t = th->Inherits<PlayerPawn>();
+  if (!t)
     return true;
-	
-  PlayerPawn *t = reinterpret_cast<PlayerPawn*>(th);
+
   if (t->health <= 0)
     return true;
 		
@@ -592,10 +592,9 @@ static bool IT_BlastRadius(Actor *a)
   if (!(a->flags & (MF_CORPSE | MF_MONSTER | MF_MISSILE)))
     return true;
 
-  if (a->IsOf(DActor::_type))
+  DActor *m = a->Inherits<DActor>();
+  if (m)
     {
-      DActor *m = reinterpret_cast<DActor*>(a);
-
       // blastable must be live monster, poisoncloud, holyfx, icecorpse, missile
       // TODO MT_POISONCLOUD can be blasted
     }
@@ -848,7 +847,7 @@ bool Map::EV_LineSearchForPuzzleItem(line_t *line, byte *args, Actor *a)
   if (!a)
     return false;
 
-  PlayerPawn *p = a->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(a) : NULL;
+  PlayerPawn *p = a->Inherits<PlayerPawn>();
 
   if (!p)
     return false;

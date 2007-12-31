@@ -961,20 +961,15 @@ void Map::AddFakeFloor(sector_t* sec, sector_t* sec2, line_t* master, int flags)
 /// that spawn thinkers or confer properties
 void Map::SpawnLineSpecials()
 {
-  RemoveAllActiveCeilings();
-  RemoveAllActivePlats();
-  InitTagLists(); // Create hash tables for tags
-
   //  Init line EFFECTs
   for (int i = 0; i < numlines; i++)
     {
       line_t *l = &lines[i];
-      line_t *l2;
       int special = l->special;
       if (!special)
 	continue;
 
-      int s, subtype;
+      int subtype;
       int tag = l->tag; // Doom format: use the tag if we have one
 
       // Legacy extensions are mapped to Hexen linedef namespace so they are reachable from Hexen as well!
@@ -984,52 +979,19 @@ void Map::SpawnLineSpecials()
 	  int sec = l->sideptr[0]->sector - sectors;
 	  int kind = l->args[1];
 
-
-	  if (subtype == LINE_LEGACY_BOOM_SCROLLERS)
+	  switch (subtype)
 	    {
+	    case LINE_LEGACY_BOOM_SCROLLERS:
 	      SpawnScroller(l, tag, kind, l->args[2]);
-	    }
-	  /*
-	  else if (subtype == LINE_LEGACY_BOOM_FRICTION)
-	    {
-	      SpawnFriction(l, tag);
-	    }
-	  */
-	  /*
-	  else if (subtype == LINE_LEGACY_BOOM_PUSHERS)
-	    SpawnPusher(l, tag, kind);
-	  */
-	  /*
-	  else if (subtype == LINE_LEGACY_BOOM_RENDERER)
-	    {
-	      switch (kind)
-		{
-		  // Boom: 213 floor lighting independently (e.g. lava)
-		case 0:
-		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
-		    sectors[s].floorlightsec = sec;
-		  break;
+	      break;
 
-		  // Boom: 261 ceiling lighting independently
-		case 1:
-		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
-		    sectors[s].ceilinglightsec = sec;
-		  break;
-
-		default:
-		  goto error;
-		}
-	    
-	    }
-	  */
-	  else if (subtype == LINE_LEGACY_EXOTIC_TEXTURE)
-	    {
+	    case LINE_LEGACY_EXOTIC_TEXTURE:
 	      // types which store data in the texture name fields
 	      switch (kind)
 		{
 		  // Boom 242: fake floor and ceiling
 		case 1:
-		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		  for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 		    {
 		      sectors[s].heightsec = sec;
 		    }
@@ -1045,7 +1007,8 @@ void Map::SpawnLineSpecials()
 		    if (l->lineid)
 		      {
 			l->transmap = -1;
-			for (s = -1; (l2 = FindLineFromID(l->lineid, &s)); )
+			line_t *l2;
+			for (int s = -1; (l2 = FindLineFromID(l->lineid, &s)); )
 			  l2->transmap = temp; // make tagged lines translucent too
 		      }
 		    else
@@ -1055,7 +1018,7 @@ void Map::SpawnLineSpecials()
 
 		  // Legacy 280: swimmable water with Boom 242-style colormaps
 		case 3:
-		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		  for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 		    {
 		      sectors[s].heightsec = sec;
 		      sectors[s].heightsec_type = sector_t::CS_water;
@@ -1064,7 +1027,7 @@ void Map::SpawnLineSpecials()
 
 		  // Legacy 282: easy colormap/fog effect
 		case 4:
-		  for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+		  for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 		    {
 		      sectors[s].midmap = l->frontsector->midmap;
 		    }
@@ -1073,9 +1036,10 @@ void Map::SpawnLineSpecials()
 		default:
 		  goto error;
 		}
-	    }
-	  else if (subtype == LINE_LEGACY_FAKEFLOOR)  // fake floors
-	    {
+	      break;
+
+	    case LINE_LEGACY_FAKEFLOOR:  // fake floors
+	      {
 	      int ff_flags = FF_EXISTS;
 
 	      // make it simple for now
@@ -1128,18 +1092,19 @@ void Map::SpawnLineSpecials()
 		}
 
 	      if (ff_flags)
-		for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
+		for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 		  AddFakeFloor(&sectors[s], &sectors[sec], lines+i, ff_flags);
-	    }
-	  else if (subtype == LINE_LEGACY_RENDERER)
-	    {
+	      }
+	      break;
+
+	    case LINE_LEGACY_RENDERER:
 	      if (kind >= 100)
 		l->transmap = kind - 100; // transmap number
 	      else if (kind == 0) // 283 (legacy fog sheet)
 		continue;  // FIXME fog sheet requires keeping (renderer!, r_segs):
-	    }
-	  else if (subtype == LINE_LEGACY_MISC)
-	    {
+	      break;
+	    
+	    case LINE_LEGACY_MISC:
 	      switch (kind)
 		{
 		  // Instant lower for floor SSNTails 06-13-2002
@@ -1155,13 +1120,17 @@ void Map::SpawnLineSpecials()
 		default:
 		  goto error;
 		}
+	      break;
+
+	    default:
+	      goto error;
 	    }
 
 	  l->special = 0;
 	  continue;
 
 	error:
-	  I_Error("Unknown Legacy linedef subtype %d in line %d.\n", kind, i);
+	  CONS_Printf("Unknown Legacy linedef subtype %d, %d in line %d.\n", subtype, kind, i);
 	}
 
 
@@ -1190,7 +1159,7 @@ void Map::SpawnLineSpecials()
 	  {
 	    int sec = l->sideptr[0]->sector - sectors;
 
-	    for (s = -1; (s = FindSectorFromTag(tag, s)) >= 0;)
+	    for (int s = -1; (s = FindSectorFromTag(tag, s)) >= 0; )
 	      if (special == 209)
 		sectors[s].heightsec = sec; // TODO "when" parameter
 	      else if (special == 210)
@@ -1755,18 +1724,17 @@ static DActor *GetPushThing(sector_t *sec)
 
   while (thing)
     {
-      if (thing->IsOf(DActor::_type))
-	{
-	  DActor *dp = (DActor *)thing;
-	  switch (dp->type)
-	    {
-	    case MT_PUSH:
-	    case MT_PULL:
-	      return dp;
-	    default:
-	      break;
-	    }
-	}
+      DActor *dp = thing->Inherits<DActor>();
+      if (dp)
+	switch (dp->type)
+	  {
+	  case MT_PUSH:
+	  case MT_PULL:
+	    return dp;
+	  default:
+	    break;
+	  }
+
       thing = thing->snext;
     }
   return NULL;
@@ -1823,10 +1791,11 @@ void Map::SpawnPusher(line_t *l, unsigned tag, int type)
 	  }
       else
 	{
+	  DActor *d;
 	  Iterate_TID iter(this, l->args[1]);
 	  for (Actor *m = iter.Next(); m; m = iter.Next())
-	    if (m->IsOf(DActor::_type))
-	      new pusher_t(this, m->subsector->sector, pusher_t::p_point, dx, dy, reinterpret_cast<DActor*>(m));
+	    if (d = m->Inherits<DActor>())
+	      new pusher_t(this, m->subsector->sector, pusher_t::p_point, dx, dy, d);
 	}
       break;
     }

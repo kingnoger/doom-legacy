@@ -30,6 +30,7 @@
 
 #include "p_effects.h"
 #include "p_spec.h"
+#include "p_polyobj.h"
 
 
 extern mobjtype_t TranslateThingType[];
@@ -57,7 +58,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
   // Next we check if the line responds to it.
 
   unsigned spec = unsigned(line->special);
-  PlayerPawn *p = thing->IsOf(PlayerPawn::_type) ? reinterpret_cast<PlayerPawn*>(thing) : NULL;
+  PlayerPawn *p = thing->Inherits<PlayerPawn>();
 
   // Boom generalized types first
   if (boomsupport && spec >= GenCrusherBase)
@@ -211,7 +212,7 @@ bool Map::ActivateLine(line_t *line, Actor *thing, int side, int atype)
 // 
 // Hexen linedefs
 //
-static inline fixed_t SPEED(byte a)  { return fixed_t(a)/8; }
+static inline float SPEED(byte a)  { return float(a)/8.0f; }
 static inline fixed_t HEIGHT(byte a) { return fixed_t(a); }
 static inline int TICS(byte a)   { return (a * TICRATE)/35; }
 static inline int OCTICS(byte a) { return (a * TICRATE)/8; }
@@ -240,24 +241,24 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
     case 1: // Poly Start Line
       break;
     case 2: // Poly Rotate Left
-      success = EV_RotatePoly(args, 1, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, false);
       break;
     case 3: // Poly Rotate Right
-      success = EV_RotatePoly(args, -1, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -(ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, false);
       break;
     case 4: // Poly Move
-      success = EV_MovePoly(args, false, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), args[3], 0, false);
       break;
     case 5: // Poly Explicit Line:  Only used in initialization
       break;
     case 6: // Poly Move Times 8
-      success = EV_MovePoly(args, true, false);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), 8*args[3], 0, false);
       break;
     case 7: // Poly Door Swing
-      success = EV_OpenPolyDoor(args, polyobject_t::pd_swing);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_door_swing, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, args[3], false);
       break;
     case 8: // Poly Door Slide
-      success = EV_OpenPolyDoor(args, polyobject_t::pd_slide);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_door_slide, SPEED(args[1]), ANGLE(args[2]), args[3], args[4], false);
       break;
     case 10: // Door Close
       success = EV_DoDoor(tag, line, mo, vdoor_t::Close, SPEED(args[1]), TICS(args[2]));
@@ -449,16 +450,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       break;
 
     case 90: // Poly Rotate Left Override
-      success = EV_RotatePoly(args, 1, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, (ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, true);
       break;
     case 91: // Poly Rotate Right Override
-      success = EV_RotatePoly(args, -1, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_rotate, -(ANGLE(args[1]) >> 3), ANGLE(args[2]), 0, 0, true);
       break;
     case 92: // Poly Move Override
-      success = EV_MovePoly(args, false, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), args[3], 0, true);
       break;
     case 93: // Poly Move Times 8 Override
-      success = EV_MovePoly(args, true, true);
+      success = EV_ActivatePolyobj(args[0], polyobject_t::po_move, SPEED(args[1]), ANGLE(args[2]), 8*args[3], 0, true);
       break;
     case 94: // Build Pillar Crush
       success = EV_DoElevator(tag, elevator_t::ClosePillar, SPEED(args[1]), HEIGHT(args[2]), 0, args[3]);

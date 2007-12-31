@@ -403,7 +403,7 @@ void Actor::SetPosition()
   ceilingz = PosCheck.op.top;
 
   // link into subsector
-  subsector_t *ss = mp->R_PointInSubsector(pos.x, pos.y);
+  subsector_t *ss = mp->GetSubsector(pos.x, pos.y);
   subsector = ss;
 
   if (!(flags & MF_NOSECTOR))
@@ -679,7 +679,7 @@ bool Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
     {
       // The base floor / ceiling is from the subsector that contains the point.
       // Any contacted lines will adjust them closer together.
-      subsector_t *ss = mp->R_PointInSubsector(p.x, p.y);
+      subsector_t *ss = mp->GetSubsector(p.x, p.y);
 
       PosCheck.spechit.clear();
       PosCheck.block_line = NULL;
@@ -1361,7 +1361,7 @@ static bool PTR_LineTrace(intercept_t *in)
       if (impact_point.z < th->Feet())
 	return true; // under
 
-      sector_t *sec = m->R_PointInSubsector(impact_point.x, impact_point.y)->sector;
+      sector_t *sec = m->GetSubsector(impact_point.x, impact_point.y)->sector;
       
       if (trace.HitZPlane(sec))
 	; // Z-plane shielded Actor, trace hit the plane

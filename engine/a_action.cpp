@@ -597,8 +597,9 @@ void A_Summon(DActor *actor)
       else
 	{
 	  mo->owner = master;
-	  if (master->IsOf(PlayerPawn::_type))
-	    ((PlayerPawn *)master)->GivePower(pw_minotaur);
+	  PlayerPawn *p = master->Inherits<PlayerPawn>();
+	  if (p)
+	    p->GivePower(pw_minotaur);
 	}
 
       // Make smoke puff

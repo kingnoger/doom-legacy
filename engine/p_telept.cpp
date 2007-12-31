@@ -144,9 +144,10 @@ bool Map::EV_Teleport(unsigned tag, line_t *line, Actor *thing, int type, int fl
       for (i = -1; (i = FindSectorFromTag(tag, i)) >= 0;)
 	for (m = sectors[i].thinglist; m != NULL; m = m->snext)
 	  {
-	    if (!m->IsOf(DActor::_type))
+	    DActor *dm = m->Inherits<DActor>();
+	    if (!dm)
 	      continue;
-	    DActor *dm = reinterpret_cast<DActor*>(m);
+
 	    // not a teleportman
 	    if (dm->type != MT_TELEPORTMAN)
 	      continue;

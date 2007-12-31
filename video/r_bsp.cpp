@@ -31,10 +31,11 @@
 #include "g_pawn.h"
 #include "g_player.h"
 
+#include "p_polyobj.h"
+
 #include "r_render.h" // experiment
 #include "r_bsp.h"
 #include "r_plane.h"
-#include "r_poly.h"
 #include "r_splats.h"
 
 #include "z_zone.h"   //SoM: Check R_Prep3DFloors
@@ -921,11 +922,11 @@ void Rend::R_Subsector(int num)
   // Render the polyobj in the subsector first
   if (sub->poly)
     {
-      count = sub->poly->numsegs;
-      seg_t **polySeg = sub->poly->segs;
+      count = sub->poly->lines.size();
+      seg_t *polySeg = sub->poly->segs;
       while (count--)
 	{
-	  R_AddLine(*polySeg++);
+	  R_AddLine(polySeg++);
 	}
     }
 

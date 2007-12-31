@@ -693,7 +693,9 @@ void A_XMinotaurAtk3(DActor *actor)
   if(actor->CheckMeleeRange())
     {
       t->Damage(actor, actor, HITDICE(3));
-      if (t->IsOf(PlayerPawn::_type))
+
+      PlayerPawn *p = t->Inherits<PlayerPawn>();
+      if (p)
 	{ // Squish the player
 	  ((PlayerPawn *)t)->player->deltaviewheight = -16;
 	}

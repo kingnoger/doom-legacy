@@ -21,7 +21,7 @@
 /// \file
 /// \brief Dynamic geometry elements and related utilities.
 ///
-/// Sector-based and polyobj Thinker classes defined.
+/// Sector-based Thinker classes defined.
 
 
 #ifndef p_spec_h
@@ -161,110 +161,6 @@ const int BUTTONTIME = 35;
 
 
 
-//======================================
-//   Polyobjects
-//======================================
-
-/// Polyobject ABC
-class polyobject_t : public Thinker
-{
-  friend class Map;
-  DECLARE_CLASS(polyobject_t)
-protected:  
-  int polyobj;
-
-public:
-  inline polyobject_t(int num) { polyobj = num; }
-
-  virtual void    Think() {}
-  virtual fixed_t PushForce() { return 0; }
-
-  enum podoor_e
-  {
-    pd_slide,
-    pd_swing,
-  };
-};
-
-
-/// Polyobject Rotator
-class polyrotator_t : public polyobject_t
-{
-  friend class Map;
-  DECLARE_CLASS(polyrotator_t)
-protected:  
-  int  speed;     ///< angular velocity (in fineangle units)
-  int  dist;  ///< remaining angle to turn (in fineangle units)
-
-public:
-  polyrotator_t(int num, byte *args, int dir);
-  
-  virtual void    Think();
-  virtual fixed_t PushForce();
-};
-
-
-/// Polyobject Mover
-class polymover_t : public polyobject_t
-{
-  friend class Map;
-  DECLARE_CLASS(polymover_t)
-protected:
-  fixed_t speed;
-  fixed_t dist;
-  angle_t ang;
-  fixed_t xs, ys;
-
-public:
-  polymover_t(int num, byte *args, bool timesEight, bool mirror);
-  
-  virtual void    Think();
-  virtual fixed_t PushForce();
-};
-
-
-
-/// \brief Polyobject Rotating Door
-///
-/// A timed polyrotator.
-class polydoor_rot_t : public polyrotator_t
-{
-  friend class Map;
-  DECLARE_CLASS(polydoor_rot_t)
-public:
-
-protected:
-  bool    closing;
-  int     tics, waitTics;
-  int     totalDist; ///< in fineangle units
-
-public:
-  polydoor_rot_t(int num, byte *args, bool mirror);
-  virtual void Think();
-};
-
-
-/// \brief Polyobject Sliding Door
-///
-/// A polymover with a timer.
-class polydoor_slide_t : public polymover_t
-{
-  friend class Map;
-  DECLARE_CLASS(polydoor_slide_t)
-public:
-
-protected:
-  bool    closing;
-  int     tics, waitTics;
-  fixed_t totalDist;
-
-public:
-  polydoor_slide_t(int num, byte *args, bool mirror);
-  virtual void Think();
-};
-
-
-
 //========================================================
 //  Sector effects
 //========================================================
@@ -279,6 +175,7 @@ protected:
   sector_t *sector;
   sectoreffect_t(Map *m, sector_t *s);
 };
+
 
 //======================================
 ///   Sector light effects

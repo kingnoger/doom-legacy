@@ -575,7 +575,7 @@ void DActor::DSparilTeleport()
     p.x = mp->BossSpots[i]->x;
     p.y = mp->BossSpots[i]->y;
   } while (P_XYdist(pos, p) < 128 && count < n);
-  p.z = mp->R_PointInSubsector(p.x, p.y)->sector->floorheight + mp->BossSpots[i]->height;
+  p.z = mp->GetSubsector(p.x, p.y)->sector->floorheight + mp->BossSpots[i]->height;
 
   vec_t<fixed_t> prev_pos(pos);
 
@@ -746,9 +746,10 @@ void A_MinotaurAtk1(DActor *actor)
     {
       t->Damage(actor, actor, HITDICE(4));
 
-      if (t->IsOf(PlayerPawn::_type)) 
+      PlayerPawn *p = t->Inherits<PlayerPawn>();
+      if (p)
 	{ // Squish the player
-	  ((PlayerPawn*)t)->player->deltaviewheight = -16;
+	  p->player->deltaviewheight = -16;
 	}
     }
 }
@@ -875,7 +876,9 @@ void A_MinotaurAtk3(DActor *actor)
   if (actor->CheckMeleeRange())
     {
       actor->target->Damage(actor, actor, HITDICE(5));
-      if (t->IsOf(PlayerPawn::_type))
+      
+      PlayerPawn *p = t->Inherits<PlayerPawn>();
+      if (p)
 	{ // Squish the player
 	  ((PlayerPawn *)t)->player->deltaviewheight = -16;
 	}
@@ -1582,10 +1585,9 @@ void A_VolcBallImpact(DActor *ball)
 
 void A_SkullPop(DActor *actor)
 {
-  if (!actor->IsOf(PlayerPawn::_type))
+  PlayerPawn *p = actor->Inherits<PlayerPawn>();
+  if (!p)
     return;
-
-  PlayerPawn *p = (PlayerPawn *)actor;
 
   p->flags &= ~MF_SOLID;
   DActor *mo = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z+48, MT_BLOODYSKULL);

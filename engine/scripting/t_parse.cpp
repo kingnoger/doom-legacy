@@ -369,8 +369,9 @@ void script_t::parse()
 
   // some shortcuts
   trigger_obj = trigger;  // set trigger
+  PlayerPawn *p;
   trigger_player = trigger ?
-    (trigger->IsOf(PlayerPawn::_type) ? ((PlayerPawn *)trigger)->player : NULL)
+    ((p = trigger->Inherits<PlayerPawn>()) ? p->player : NULL)
     : NULL;
   
   parse_data(data, data+len);

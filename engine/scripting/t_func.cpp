@@ -567,7 +567,7 @@ void SF_MobjIsPlayer()
   if (!mobj)
     t_return.value.i = 0;
   else
-    t_return.value.i = mobj->IsOf(PlayerPawn::_type) ? 1 : 0;
+    t_return.value.i = mobj->Inherits<PlayerPawn>() ? 1 : 0;
 }
 
 
@@ -577,12 +577,13 @@ static PlayerPawn *GetPawn(svalue_t &s)
   if (s.type == svt_actor)
     {
       Actor *a = s.value.mobj;
-      if (!a || !a->IsOf(PlayerPawn::_type))
+      PlayerPawn *p;
+      if (!a || !(p = a->Inherits<PlayerPawn>()))
         {
           script_error("mobj not a player!\n");
           return NULL;
         }
-      return (PlayerPawn *)a;
+      return p;
     }
   else
     {
@@ -706,9 +707,10 @@ void SF_Player()
   Actor *mo = t_argc ? MobjForSvalue(t_argv[0]) :
     current_script->trigger;
 
-  if (mo && mo->IsOf(PlayerPawn::_type))
+  PlayerPawn *p;
+  if (mo && (p = mo->Inherits<PlayerPawn>()))
     {
-      t_return.value.i = reinterpret_cast<PlayerPawn *>(mo)->player->number - 1;
+      t_return.value.i = p->player->number - 1;
     }
   else
     t_return.value.i = -1;
@@ -732,7 +734,7 @@ void SF_Spawn()
   else
     {
       // SoM: Check thing flags for spawn-on-ceiling types...
-      z = current_map->R_PointInSubsector(x, y)->sector->floorheight;
+      z = current_map->GetSubsector(x, y)->sector->floorheight;
     }
 
   angle_t angle = 0;
@@ -779,7 +781,7 @@ void SF_SpawnExplosion()
   if (t_argc > 3)
     z = fixedvalue(t_argv[3]);
   else
-    z = current_map->R_PointInSubsector(x, y)->sector->floorheight;
+    z = current_map->GetSubsector(x, y)->sector->floorheight;
 
   DActor *spawn = current_map->SpawnDActor(x, y, z, type);
 

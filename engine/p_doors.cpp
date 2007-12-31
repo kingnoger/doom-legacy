@@ -280,7 +280,7 @@ int Map::EV_DoDoor(unsigned tag, line_t *line, Actor *mo, byte type, fixed_t spe
 
       if (sec->ceilingdata) //SoM: 3/6/2000
 	{
-	  vdoor_t *door = sec->ceilingdata->IsOf(vdoor_t::_type) ? reinterpret_cast<vdoor_t*>(sec->ceilingdata) : NULL;
+	  vdoor_t *door = sec->ceilingdata->Inherits<vdoor_t>();
 	  if (door && (door->type & vdoor_t::TMASK) == vdoor_t::OwC)
 	    {
 	      if (door->direction == -1)

@@ -129,11 +129,9 @@ void GameType::performScopeQuery(GhostConnection *c)
 	  // TODO use IterateThinkers?
 	  for (Thinker *t = m->thinkercap.next; t != &m->thinkercap; t = t->next)
 	    {
-	      if (t->IsOf(Actor::_type))
-		{
-		  Actor *a = reinterpret_cast<Actor *>(t);
-		  c->objectInScope(a);
-		}
+	      Actor *a = t->Inherits<Actor>();
+	      if (a)
+		c->objectInScope(a);
 	    }
 	}
     }

@@ -554,7 +554,7 @@ public:
 
   virtual Actor *Spawn(Map *m, mapthing_t *mt, bool initial = true)
   {
-    subsector_t *ss = m->R_PointInSubsector(mt->x, mt->y);
+    subsector_t *ss = m->GetSubsector(mt->x, mt->y);
     if (ss)
       ss->sector->teamstartsec = mt->angle & 0xff; // high byte is free
 

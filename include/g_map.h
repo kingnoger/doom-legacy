@@ -158,7 +158,7 @@ public:
   acs_script_t *ACS_FindScript(unsigned number);
 
   void TagFinished(unsigned tag);
-  void PolyobjFinished(unsigned po);
+  void PO_Finished(unsigned po);
   //@}
 
 
@@ -309,6 +309,8 @@ public:
   bool CheckSight2(Actor *t1, Actor *t2, fixed_t nx, fixed_t ny, fixed_t nz);
 
   // in p_maputl.cpp
+  subsector_t *GetSubsector(fixed_t x, fixed_t y);
+  subsector_t *FindSubsector(fixed_t x, fixed_t y);
   bool IterateThinkers(thinker_iterator_t func);
   bool IterateActors(thing_iterator_t func);
   void CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y);
@@ -411,26 +413,16 @@ public:
 
   // elsewhere, usually former R_* functions
   void PrecacheMap();
-  subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
-  subsector_t* R_IsPointInSubsector(fixed_t x, fixed_t y);
 
-  // in p_poly.cpp
-  void InitPolyobjs();
-  int  FindPolySegs(seg_t *startseg);
-  bool SpawnPolyobj(polyobj_t *po, unsigned tag, bool crush);
-  void TranslateToStartSpot(polyobj_t *po, fixed_t originX, fixed_t originY);
-  void InitPolyBlockMap();
+  // in p_polyobj.cpp
+  map<unsigned, polyobj_t*> PO_map;
+  typedef map<unsigned, polyobj_t*>::iterator PO_iter_t;
+  void PO_Init();
+  bool PO_FindLines(polyobj_t *p, line_t *line);
 
-  polyobj_t *GetPolyobj(int num);
-  int  GetPolyobjMirror(int num);
-
-  bool PO_MovePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
-  bool PO_RotatePolyobj(polyobj_t *po, angle_t angle);
-  bool PO_Busy(int num);
-
-  bool EV_RotatePoly(byte *args, int direction, bool overRide);
-  bool EV_MovePoly(byte *args, bool timesEight, bool overRide);
-  bool EV_OpenPolyDoor(byte *args, int type);
+  polyobj_t *PO_FindPolyobj(unsigned num);
+  bool PO_Busy(unsigned  num);
+  bool EV_ActivatePolyobj(unsigned id, int type, float speed, angle_t angle, float dist, int delay, bool override);
 
   // in p_things.cpp
   bool EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspeed, fixed_t vspeed, bool gravity);

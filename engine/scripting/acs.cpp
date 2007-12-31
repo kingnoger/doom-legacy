@@ -480,16 +480,12 @@ static mobjtype_t moType;
 static int thingCount;
 bool IT_TypeCount(Thinker *th)
 {
-  if (th->IsOf(DActor::_type))
+  DActor *m = th->Inherits<DActor>();
+  if (m && m->type == moType)
     {
-      DActor *m = reinterpret_cast<DActor *>(th);
-
-      if (m->type == moType)
-	{
-	  if (m->flags & MF_CORPSE) // had && m->flags & MF_COUNTKILL, but why?
-	    return true; // Don't count dead monsters
-	  thingCount++;
-	}
+      if (m->flags & MF_CORPSE) // had && m->flags & MF_COUNTKILL, but why?
+	return true; // Don't count dead monsters
+      thingCount++;
     }
   return true;
 }
@@ -516,10 +512,10 @@ void acs_t::CountThings(int type, int tid)
 	{
 	  if (type == 0)	    
 	    thingCount++; // Just count TIDs
-	  else if (a->IsOf(DActor::_type))
+	  else
 	    {
-	      DActor *da = reinterpret_cast<DActor *>(a);
-	      if (moType == da->type)
+	      DActor *da = a->Inherits<DActor>();
+	      if (da && moType == da->type)
 		{
 		  if (a->flags & MF_CORPSE) // NOTE: && a->flags & MF_COUNTKILL, but why?
 		    continue; // Don't count dead monsters or corpses
@@ -738,10 +734,10 @@ int acs_t::StartPrint()
 
 int acs_t::EndPrint()
 {
-  if (triggerer && triggerer->IsOf(PlayerPawn::_type))
+  if (triggerer)
     {
-      PlayerPawn *p = reinterpret_cast<PlayerPawn*>(triggerer);
-      if (p->player)
+      PlayerPawn *p = triggerer->Inherits<PlayerPawn>();
+      if (p && p->player)
 	p->player->SetMessage(PrintText.c_str(), 1, PlayerInfo::M_HUD, 150);
     }
   else
@@ -1282,7 +1278,7 @@ void Map::TagFinished(unsigned tag)
 
 
 /// Unpauses scripts that are waiting for a particular polyobj to finish
-void Map::PolyobjFinished(unsigned po)
+void Map::PO_Finished(unsigned po)
 {
   if (PO_Busy(po) == true)
     return;

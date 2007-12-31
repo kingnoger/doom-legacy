@@ -198,9 +198,9 @@ bool Map::EV_ThingActivate(int tid)
   Iterate_TID iter(this, tid);
   for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      if (m->IsOf(DActor::_type))
-	if (((DActor *)m)->Activate())
-	  ret = true;
+      DActor *d = m->Inherits<DActor>();
+      if (d && d->Activate())
+	ret = true;
     }
   return ret;
 }
@@ -212,9 +212,9 @@ bool Map::EV_ThingDeactivate(int tid)
   Iterate_TID iter(this, tid);
   for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      if (m->IsOf(DActor::_type))
-	if (((DActor *)m)->Deactivate())
-	  ret = true;
+      DActor *d = m->Inherits<DActor>();
+      if (d && d->Deactivate())
+	ret = true;
     }
   return ret;
 }

@@ -37,7 +37,7 @@
 #include "p_effects.h"
 #include "p_spec.h"
 #include "p_hacks.h"
-#include "r_poly.h"
+#include "p_polyobj.h"
 
 #include "r_splats.h"
 
@@ -126,8 +126,11 @@ Map::~Map()
 	  if (polyobjs[i].segs)
 	    Z_Free(polyobjs[i].segs);
 
-	  if (polyobjs[i].originalPts)
-	    Z_Free(polyobjs[i].originalPts);
+	  if (polyobjs[i].base_points)
+	    Z_Free(polyobjs[i].base_points);
+
+	  if (polyobjs[i].current_points)
+	    Z_Free(polyobjs[i].current_points);
 	}
 
       Z_Free(polyobjs);
@@ -388,7 +391,7 @@ bool Map::CheckRespawnSpot(PlayerInfo *p, mapthing_t *mthing)
 
   fixed_t x = mthing->x;
   fixed_t y = mthing->y;
-  subsector_t *ss = R_PointInSubsector(x,y);
+  subsector_t *ss = GetSubsector(x,y);
 
   // check for respawn in team-sector
   if (ss->sector->teamstartsec)
@@ -780,15 +783,15 @@ int Map::Massacre()
 
   for (Thinker *th = thinkercap.next; th != &thinkercap; th = th->next)
     {
-      if (!th->IsOf(DActor::_type))
-	continue; // Not a dactor
-	
-      Actor *mo = reinterpret_cast<Actor*>(th);
-      if ((mo->flags & MF_MONSTER) && (mo->health > 0))
+      Actor *a = th->Inherits<Actor>();
+      if (!a)
+	continue; // Not an actor
+      
+      if ((a->flags & MF_MONSTER) && (a->health > 0))
 	{
-	  mo->flags2 &= ~(MF2_NONSHOOTABLE + MF2_INVULNERABLE);
-	  mo->flags |= MF_SHOOTABLE;
-	  mo->Damage(NULL, NULL, 10000, dt_always);
+	  a->flags2 &= ~(MF2_NONSHOOTABLE + MF2_INVULNERABLE);
+	  a->flags |= MF_SHOOTABLE;
+	  a->Damage(NULL, NULL, 10000, dt_always);
 	  count++;
 	}
     }
@@ -870,18 +873,16 @@ void Map::BossDeath(const DActor *mo)
     return; // no one left alive, so do not end game
 
 
-  Thinker *th;
-  DActor   *a;
   const state_t *finalst = P_FinalState(mo->info->deathstate);
 
   // scan the remaining thinkers to see
   // if all bosses are dead
-  for (th = thinkercap.next ; th != &thinkercap ; th=th->next)
+  for (Thinker *th = thinkercap.next ; th != &thinkercap ; th=th->next)
     {
-      if (!th->IsOf(DActor::_type))
+      DActor *a = th->Inherits<DActor>();
+      if (!a)
 	continue;
 
-      a = (DActor *)th;
       if (a != mo && a->type == mo->type
 	  // && a->health > 0           // the old one (doom original 1.9)
 	  // && !(a->flags & MF_CORPSE) // the Heretic one
@@ -1145,8 +1146,9 @@ void Map::ExitMap(Actor *activator, int next, int ep)
     next = info->secretlevel; // 100 means "secret exit"
 
   // HACK...
-  PlayerInfo *quitter = (activator && activator->IsOf(PlayerPawn::_type)) ?
-    ((PlayerPawn *)activator)->player : NULL;
+
+  PlayerPawn *p;
+  PlayerInfo *quitter = (activator && (p = activator->Inherits<PlayerPawn>())) ? p->player : NULL;
 
   int mode = quitter ? cv_exitmode.value : 1; // timed exit, bossdeath => everyone leaves at once.
 

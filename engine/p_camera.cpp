@@ -158,7 +158,7 @@ void Camera::Think()
     ResetCamera(target);
 
   // move camera down to move under lower ceilings
-  subsector_t *newsubsec = mp->R_IsPointInSubsector((target->pos.x + t.x) >> 1, (target->pos.y + t.y) >> 1);
+  subsector_t *newsubsec = mp->FindSubsector((target->pos.x + t.x) >> 1, (target->pos.y + t.y) >> 1);
   if (!newsubsec)
     {
       // use player sector
@@ -170,7 +170,7 @@ void Camera::Think()
   // don't be blocked by a opened door
 
   // does the camera fit in its own sector
-  newsubsec = mp->R_PointInSubsector(t.x, t.y);
+  newsubsec = mp->GetSubsector(t.x, t.y);
   if (newsubsec->sector->ceilingheight < t.z + height)
     t.z = newsubsec->sector->ceilingheight - height;// - 11;
 

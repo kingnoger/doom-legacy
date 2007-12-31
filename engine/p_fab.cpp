@@ -358,7 +358,8 @@ int MT_LIGHTNING_touchfunc(DActor *d, Actor *p)
       p->vel.y += d->vel.y>>4;
     }
 
-  mobjtype_t temp = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p)->type : MT_NONE;
+  DActor *m = p->Inherits<DActor>();
+  mobjtype_t temp = m ? m->type : MT_NONE;
 
   // players and bosses take less damage
   if (!(temp == MT_NONE || (p->flags2 & MF2_BOSS))
@@ -440,7 +441,8 @@ int MT_MSTAFF_FX2_touchfunc(DActor *d, Actor *p)
 
   Actor *ultimateowner = FindOwner(d);
   
-  mobjtype_t temp = p->IsOf(DActor::_type) ? reinterpret_cast<DActor*>(p)->type : MT_NONE;
+  DActor *m = p->Inherits<DActor>();
+  mobjtype_t temp = m ? m->type : MT_NONE;
 
   if (p == ultimateowner || temp == MT_NONE || (p->flags2 & MF2_BOSS))
     return -1;

@@ -42,7 +42,7 @@
 #include "n_interface.h"
 
 #include "p_spec.h"
-#include "r_poly.h"
+#include "p_polyobj.h"
 
 #include "r_data.h"
 #include "r_sprite.h"
@@ -299,35 +299,35 @@ int pusher_t::Marshal(LArchive &a)
 
 int polyobject_t::Marshal(LArchive &a)
 {
-  a << polyobj;
+  a << poly->id;
   return 0;
 }
 
 int polyrotator_t::Marshal(LArchive &a)
 {
   polyobject_t::Marshal(a);
-  a << speed << dist;
+  a << ang_vel << dist;
   return 0;
 }
 
 int polymover_t::Marshal(LArchive &a)
 {
   polyobject_t::Marshal(a);
-  a << speed << dist << ang << xs << ys;
+  a << speed << dist << angle << xs << ys;
   return 0;
 }
 
-int polydoor_rot_t::Marshal(LArchive &a)
+int polydoor_swing_t::Marshal(LArchive &a)
 {
   polyrotator_t::Marshal(a);
-  a << closing << tics << waitTics << totalDist;
+  a << closing << open_delay << delay << initial_dist;
   return 0;
 }
 
 int polydoor_slide_t::Marshal(LArchive &a)
 {
   polymover_t::Marshal(a);
-  a << closing << tics << waitTics << totalDist;
+  a << closing << open_delay << delay << initial_dist;
   return 0;
 }
 
@@ -1199,8 +1199,8 @@ int Map::Serialize(LArchive &a)
   a.Marker(MARK_POLYOBJ);
 
   for (i = 0; i < NumPolyobjs; i++)
-    a << polyobjs[i].tag << polyobjs[i].angle
-      << polyobjs[i].spawnspot.x << polyobjs[i].spawnspot.y;
+    a << polyobjs[i].id << polyobjs[i].angle
+      << polyobjs[i].origin.x << polyobjs[i].origin.y;
 
   //----------------------------------------------
   // scripts
@@ -1440,16 +1440,15 @@ int Map::Unserialize(LArchive &a)
   for (i = 0; i < NumPolyobjs; i++)
     {
       a << n;
-      if (n != polyobjs[i].tag)
+      if (n != polyobjs[i].id)
 	I_Error("Invalid polyobj tag!\n");
 
       angle_t ang;
       a << ang;
-      PO_RotatePolyobj(&polyobjs[i], ang);
+      polyobjs[i].Rotate(ang);
       fixed_t x, y;
       a << x << y;
-      PO_MovePolyobj(&polyobjs[i], x - polyobjs[i].spawnspot.x,
-		     y - polyobjs[i].spawnspot.y);
+      polyobjs[i].Move(x - polyobjs[i].origin.x, y - polyobjs[i].origin.y);
     }
 
   //----------------------------------------------
