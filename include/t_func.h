@@ -27,7 +27,5 @@
 #ifndef t_func_h
 #define t_func_h 1
 
-#define AngleToFixed(x)  fixed_t(float(x) / (ANG45 / 45.0f))
-#define FixedToAngle(x)  angle_t((x).Float() * (ANG45 / 45.0f))
 
 #endif

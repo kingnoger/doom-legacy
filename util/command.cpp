@@ -299,7 +299,7 @@ void command_buffer_t::AddCommand(const char *name, com_func_t func)
         }
     }
 
-  cmd = (xcommand_t *)ZZ_Alloc(sizeof(xcommand_t));
+  cmd = static_cast<xcommand_t*>(Z_Malloc(sizeof(xcommand_t), PU_STATIC, NULL));
   cmd->name = name;
   cmd->function = func;
   cmd->next = com_commands;

@@ -1597,9 +1597,8 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   InitThinkers();
 
-  FS_ClearScripts();
   // NOTE Hexen map separators are not empty!!! They contain a version string "version 2.3\0"
-  levelscript->data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
+  char *FS_data = info->Read(lumpnum); // load map separator lump info (map properties, FS...)
 
   // is the map in Hexen format?
   const char *acslumpname = fc.FindNameForNum(lumpnum + LUMP_BEHAVIOR);
@@ -1720,7 +1719,7 @@ bool Map::Setup(tic_t start, bool spawnthings)
       if (hexen_format)
 	ACS_LoadScripts(lumpnum + LUMP_BEHAVIOR);
 
-      FS_PreprocessScripts();        // preprocess FraggleScript scripts (needs already added players)
+      FS_LoadScripts(FS_data); // load and preprocess FraggleScript scripts (needs already added players)
     }
 
   if (info->lightning)

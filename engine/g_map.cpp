@@ -90,12 +90,10 @@ Map::Map(MapInfo *i)
   skytexture = NULL;
   skybox_pov = NULL;
 
-  levelscript = NULL;
-  runningscripts = NULL;
+  FS_levelscript = NULL;
+  FS_runningscripts = NULL;
 
   ACS_base = NULL;
-  ACS_num_strings = 0;
-  ACS_strings = NULL;
 
   mapthings = NULL;
   force_pointercheck = false;
@@ -145,14 +143,10 @@ Map::~Map()
   delete blockmap;
   Z_Free(rejectmatrix);
 
-  // FIXME free FS stuff
-  FS_ClearRunningScripts();
+  FS_ClearScripts();
 
   if (ACS_base)
     Z_Free(ACS_base);
-
-  if (ACS_strings)
-    Z_Free(ACS_strings);
 
   Z_Free(mapthings);
 

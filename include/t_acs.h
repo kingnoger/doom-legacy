@@ -70,9 +70,9 @@ protected:
   Sint32 stack[ACS_STACKSIZE]; ///< Stack for this script instance.
 
   /// Stack manipulation
-  void Push(Sint32 value) { stack[sp++] = value; }
-  int  Pop() { return stack[--sp]; }
-  int  Top() { return stack[sp - 1]; }
+  void   Push(Sint32 value) { stack[sp++] = value; }
+  Sint32 Pop() { return stack[--sp]; }
+  Sint32 Top() { return stack[sp - 1]; }
 
 public:
   Sint32 vars[ACS_LOCAL_VARS]; ///< Local variables for the script instance.

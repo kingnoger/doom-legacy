@@ -839,6 +839,12 @@ material_cache_t::material_cache_t()
   default_item = NULL;
 }
 
+material_cache_t::~material_cache_t()
+{
+  if (default_item)
+    delete default_item;
+}
+
 
 void material_cache_t::SetDefaultItem(const char *name)
 {
@@ -892,7 +898,7 @@ void material_cache_t::ClearGLTextures()
 /// Creates a new blank Material in cache or returns an existing one for updating. Does not change reference counts. For NTEXTURE.
 Material *material_cache_t::Edit(const char *name, material_class_t mode, bool create)
 {
-  cacheitem_t *t;
+  Material *t;
 
   switch (mode)
     {
@@ -919,6 +925,7 @@ Material *material_cache_t::Edit(const char *name, material_class_t mode, bool c
 
   if (!t && create)
     {
+      // FIXME
       Material *m = new Material(name);
       if (mode == TEX_sprite)
 	sprite_tex.Insert(m);
@@ -929,13 +936,13 @@ Material *material_cache_t::Edit(const char *name, material_class_t mode, bool c
       return m;
     }
   
-  return reinterpret_cast<Material *>(t);
+  return t;
 }
 
 
 /// Build a single-Texture Material during startup, insert it into a given source.
 /// Texture is assumed not to be in cache before call (unless there is a namespace overlap).
-Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t &source, bool h_start)
+Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t<Material> &source, bool h_start)
 {
   if (!t)
     return NULL;
@@ -949,7 +956,7 @@ Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t &source, boo
     CONS_Printf("Overlapping Texture names '%s'!\n", t->GetName());
 
   // see if we already have a Material with this name
-  Material *m = reinterpret_cast<Material *>(source.Find(name.c_str()));
+  Material *m = source.Find(name.c_str());
   if (!m)
     {
       if (h_start)
@@ -1025,7 +1032,7 @@ Material *material_cache_t::Get(const char *name, material_class_t mode)
   if (name[0] == '-')
     return NULL;
 
-  cacheitem_t *t;
+  Material *t;
 
   switch (mode)
     {
@@ -1061,7 +1068,8 @@ Material *material_cache_t::Get(const char *name, material_class_t mode)
       // Item not found at all.
       // Some nonexistant items are asked again and again.
       // We use a special cacheitem_t to link their names to the default item.
-      t = new cacheitem_t(name, true);
+      t = new Material(name);
+      t->MakeLink();
 
       // NOTE insertion to cachesource only, not to id-map
       if (mode == TEX_sprite)
@@ -1078,7 +1086,7 @@ Material *material_cache_t::Get(const char *name, material_class_t mode)
       return default_item;
     }
   else
-    return reinterpret_cast<Material *>(t); // should be safe
+    return t;
 }
 
 

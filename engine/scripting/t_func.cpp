@@ -95,6 +95,11 @@
 #include "t_func.h"
 
 
+
+inline fixed_t AngleToFixed(angle_t x) { return fixed_t(float(x) * 45.0f / ANG45); }
+inline angle_t FixedToAngle(fixed_t x) { return angle_t(x.Float() * ANG45 / 45.0f); }
+
+
 svalue_t evaluate_expression(int start, int stop);
 int find_operator(int start, int stop, char *value);
 

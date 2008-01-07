@@ -38,8 +38,13 @@ protected:
   int   refcount;   ///< reference count, number of current users
 
 public:
-  cacheitem_t(const char *name, bool link = false);
-  virtual ~cacheitem_t() {};
+  cacheitem_t(const char *name);
+  virtual ~cacheitem_t() {}; // TODO unnecessary virtualization???
+
+  inline void MakeLink()
+  {
+    usefulness = -usefulness - 1; // HACK negative usefulness marks them as links, -1 denotes link with zero usefulness etc.
+  }
 
   /// Mark item used by incrementing refcount. Return true if item is a link, i.e. usefulness is negated.
   inline bool AddRef()
@@ -85,14 +90,37 @@ public:
 ///
 /// This is an extra layer of abstraction for complex caches with multiple data sources
 /// which can have different priorities depending on the query. See material_cache_t.
-class cachesource_t : public HashDictionary<cacheitem_t>
+template<typename T>
+class cachesource_t : public HashDictionary<T>
 {
+  typedef HashDictionary<T> parent;
 public:
   /// Prints current contents
-  void Inventory();
+  void Inventory()
+  {
+    for (typename parent::dict_iter_t s = parent::dict_map.begin(); s != parent::dict_map.end(); s++)
+      s->second->Print();
+  }
 
-  /// Removes unused data items
-  int  Cleanup();
+  /// Deletes unused items (refcount == 0)
+  int  Cleanup()
+  {
+    int k = 0;
+    for (typename parent::dict_iter_t s = parent::dict_map.begin(); s != parent::dict_map.end(); )
+      {
+	cacheitem_t *p = s->second;
+	typename parent::dict_iter_t t = s++; // first copy s to t, then increment s
+
+	if (p->FreeIfUnused())
+	  {
+	    parent::dict_map.erase(t); // erase it from the hash_map
+	    // Once an iterator is erased, it becomes invalid
+	    // and cannot be incremented! Therefore we have both s and t.
+	    k++;
+	  }
+      }
+    return k;
+  }
 };
 
 
@@ -105,7 +133,7 @@ template<typename T>
 class cache_t
 {
 protected:
-  cachesource_t source; ///< a simple cache has only one source
+  cachesource_t<T> source; ///< a simple cache has only one source
   T      *default_item; ///< the default data item
 
   /// Creates a new cacheitem_t, does the actual loading and conversion of the data during a Get() operation.
@@ -118,7 +146,9 @@ public:
   /// cache destructor
   virtual ~cache_t()
   {
-    // should empty the source and delete the items, but caches are only destroyed at program end...
+    // source takes care of itself
+    if (default_item)
+      delete default_item;
   }
 
   /// Inserts an item into the cache. Alternative to Get().
@@ -130,7 +160,7 @@ public:
     if (!name)
       return NULL;
 
-    cacheitem_t *p = source.Find(name);
+    T *p = source.Find(name);
     if (!p)
       return NULL;
 
@@ -141,7 +171,7 @@ public:
 	return default_item;
       }
     else
-      return reinterpret_cast<T*>(p);
+      return p;
   }
 
   /// Caches and returns the requested data item, or, if not found, the default_item.
@@ -150,7 +180,7 @@ public:
   /// If not, returns a link to the defaultitem.
   T *Get(const char *name)
   {
-    cacheitem_t *p;
+    T *p;
 
     if (name == NULL)
       p = default_item;
@@ -166,7 +196,8 @@ public:
 		// Item not found at all.
 		// Some nonexistant items are asked again and again.
 		// We use a special cacheitem_t to link their names to the default item.
-		p = new cacheitem_t(name, true);
+		p = new T(name);
+		p->MakeLink();
 	      }
 	    source.Insert(p);
 	  }
@@ -179,7 +210,7 @@ public:
 	return default_item;
       }
     else
-      return reinterpret_cast<T*>(p);
+      return p;
   }
 
   /// Defines the default data item for the cache.

@@ -27,12 +27,12 @@
 
 //=================================================================================
 
-cacheitem_t::cacheitem_t(const char *n, bool link)
+cacheitem_t::cacheitem_t(const char *n)
 {
   strncpy(name, n, CACHE_NAME_LEN); // we make a copy so it stays intact as long as this cacheitem lives
   name[CACHE_NAME_LEN] = '\0';      // NUL-terminated to be safe
   refcount = 0;
-  usefulness = link ? -1 : 0; // negative usefulness marks them as links
+  usefulness = 0;
 }
 
 
@@ -67,39 +67,6 @@ bool cacheitem_t::FreeIfUnused()
   return false;
 }
 
-
-//=================================================================================
-
-/// Lists contents.
-void cachesource_t::Inventory()
-{
-  for (dict_iter_t s = dict_map.begin(); s != dict_map.end(); s++)
-    {
-      s->second->Print();
-    }
-}
-
-
-/// Erases unused items (refcount == 0) and makes
-/// their data purgable (it _may_ still remain in the filecache)
-int cachesource_t::Cleanup()
-{
-  int k = 0;
-  for (dict_iter_t s = dict_map.begin(); s != dict_map.end(); )
-    {
-      cacheitem_t *p = s->second;
-      dict_iter_t t = s++; // first copy s to t, then increment s
-
-      if (p->FreeIfUnused())
-	{
-	  dict_map.erase(t); // erase it from the hash_map
-	  // Once an iterator is erased, it becomes invalid
-	  // and cannot be incremented! Therefore we have both s and t.
-	  k++;
-	}
-    }
-  return k;
-}
 
 
 //=================================================================================

@@ -3,7 +3,7 @@
 //
 // $Id:$
 //
-// Copyright (C) 2003-2007 by DooM Legacy Team.
+// Copyright (C) 2003-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -39,6 +39,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+
+// precautions
+#define ACS_MAX_SCRIPTS 1024
+#define ACS_MAX_STRINGS 1024
 
 Sint32 ACS_world_vars[ACS_WORLD_VARS]; ///< ACS world variables (visible in all maps)
 
@@ -561,7 +565,7 @@ int acs_t::PolyWaitImm()
 
 int acs_t::ChangeFloor()
 {
-  const char *texname = mp->ACS_strings[Pop()];
+  const char *texname = mp->ACS_FindString(Pop());
   Material *m = materials.Get(texname, TEX_floor);
   int tag = Pop();
   for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
@@ -576,7 +580,7 @@ int acs_t::ChangeFloor()
 int acs_t::ChangeFloorImm()
 {
   int tag = *ip++;
-  const char *texname = mp->ACS_strings[*ip++];
+  const char *texname = mp->ACS_FindString(*ip++);
   Material *m = materials.Get(texname, TEX_floor);
   
   for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
@@ -590,7 +594,7 @@ int acs_t::ChangeFloorImm()
 
 int acs_t::ChangeCeiling()
 {
-  Material *m = materials.Get(mp->ACS_strings[Pop()], TEX_floor);
+  Material *m = materials.Get(mp->ACS_FindString(Pop()), TEX_floor);
   int tag = Pop();
 
   for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
@@ -602,7 +606,7 @@ int acs_t::ChangeCeiling()
 int acs_t::ChangeCeilingImm()
 {
   int tag = *ip++;
-  Material *m = materials.Get(mp->ACS_strings[*ip++], TEX_floor);
+  Material *m = materials.Get(mp->ACS_FindString(*ip++), TEX_floor);
   
   for (int i = -1; (i = mp->FindSectorFromTag(tag, i)) >= 0; )
     mp->sectors[i].ceilingpic = m;
@@ -753,7 +757,7 @@ int acs_t::EndPrint()
 
 int acs_t::PrintString()
 {
-  PrintText += mp->ACS_strings[Pop()];
+  PrintText += mp->ACS_FindString(Pop());
   return ACS_CONTINUE;
 }
 
@@ -814,21 +818,21 @@ int acs_t::SectorSound()
 {
   mappoint_t *orig = line ? &line->frontsector->soundorg : NULL;
   int volume = Pop();
-  S_StartSound(orig, S_GetSoundID(mp->ACS_strings[Pop()]), volume/127.0);
+  S_StartSound(orig, S_GetSoundID(mp->ACS_FindString(Pop())), volume/127.0);
   return ACS_CONTINUE;
 }
 
 int acs_t::AmbientSound()
 {
   int volume = Pop();
-  S_StartAmbSound(NULL, S_GetSoundID(mp->ACS_strings[Pop()]), volume/127.0);
+  S_StartAmbSound(NULL, S_GetSoundID(mp->ACS_FindString(Pop())), volume/127.0);
   return ACS_CONTINUE;
 }
 
 int acs_t::SoundSequence()
 {
   mappoint_t *orig = line ? &line->frontsector->soundorg : NULL;
-  mp->SN_StartSequenceName(orig, mp->ACS_strings[Pop()]);
+  mp->SN_StartSequenceName(orig, mp->ACS_FindString(Pop()));
   return ACS_CONTINUE;
 }
 
@@ -845,7 +849,7 @@ int acs_t::SetLineTexture()
 
   line_t *line;
 
-  Material *texture = materials.Get(mp->ACS_strings[Pop()], TEX_wall);
+  Material *texture = materials.Get(mp->ACS_FindString(Pop()), TEX_wall);
   int position = Pop();
   int side = Pop();
   int lineid = Pop();
@@ -897,7 +901,7 @@ int acs_t::SetLineSpecial()
 int acs_t::ThingSound()
 {
   int volume = Pop();
-  int sound = S_GetSoundID(mp->ACS_strings[Pop()]);
+  int sound = S_GetSoundID(mp->ACS_FindString(Pop()));
   int tid = Pop();
 
   Map::Iterate_TID iter(mp, tid);
@@ -1035,13 +1039,13 @@ static unsigned num_acsfuncs = sizeof(ACS_opcode_map)/sizeof(acs_func_t);
 //  Map class methods
 //=================================================
 
-// Initialization, called during Map setup.
-void Map::ACS_LoadScripts(int lump)
+/// Initialization, called during Map setup. \return true if succesful.
+bool Map::ACS_LoadScripts(int lump)
 {
   int length = fc.LumpLength(lump);
 
   if (hexen_format == false || length == 0)
-    return;
+    return false;
 
   ACS_base = static_cast<byte *>(fc.CacheLumpNum(lump, PU_LEVEL));
 
@@ -1055,16 +1059,16 @@ void Map::ACS_LoadScripts(int lump)
     {
       Z_Free(ACS_base);
       ACS_base = NULL;
-      return; // Unknown magic number
+      return false; // Unknown magic number
     }
 
   Sint32 *rover = reinterpret_cast<Sint32 *>(ACS_base + LONG(header->info_offset));
   int ACS_num_scripts = LONG(*rover++);
-  if (ACS_num_scripts == 0)
+  if (ACS_num_scripts == 0 || ACS_num_scripts > ACS_MAX_SCRIPTS)
     {
       Z_Free(ACS_base);
       ACS_base = NULL;
-      return; // No scripts defined
+      return false; // No scripts defined
     }
 
   // convert the script definitions
@@ -1092,16 +1096,23 @@ void Map::ACS_LoadScripts(int lump)
     }
 
   // now read and convert the string table
-  ACS_num_strings = LONG(*rover++);
+  int ACS_num_strings = LONG(*rover++);
+  if (ACS_num_strings > ACS_MAX_STRINGS)
+    {
+      CONS_Printf("Map::ACS_LoadScripts: Too many (%d) strings defined.\n", ACS_num_strings);
+      ACS_num_strings = ACS_MAX_STRINGS; // truncate
+    }
+
   if (ACS_num_strings > 0)
     {
-      ACS_strings = static_cast<char **>(Z_Malloc(ACS_num_strings * sizeof(char*), PU_LEVEL, 0));
+      ACS_strings.resize(ACS_num_strings);
       for (int i = 0; i < ACS_num_strings; i++)
 	ACS_strings[i] = reinterpret_cast<char *>(ACS_base + LONG(rover[i]));
     }
 
   // zero Map vars
   memset(ACS_map_vars, 0, sizeof(ACS_map_vars));
+  return true;
 }
 
 
@@ -1241,6 +1252,17 @@ acs_script_t *Map::ACS_FindScript(unsigned number)
     return NULL;
 
   return &i->second;
+}
+
+
+
+/// Safe way of querying ACS strings.
+const char *Map::ACS_FindString(unsigned num)
+{
+  if (num < ACS_strings.size())
+    return ACS_strings[num];
+
+  return "UNDEFINED_STRING";
 }
 
 

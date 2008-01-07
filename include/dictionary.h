@@ -52,6 +52,12 @@ protected:
   dict_map_t dict_map; ///< hash_map from object names to corresponding object pointers.
 
 public:
+  /// Destructor: delete the contents.
+  ~HashDictionary()
+  {
+    Clear();
+  }
+
   /// The safe way of inserting stuff into the hash_map.
   /// The main point is that 'name' is stored within the T structure itself.
   /// If the hash_map already contains an item with the same key (name) as p, nothing is done.
@@ -105,8 +111,11 @@ public:
   /// Erases all dictionary items.
   void Clear()
   {
-    for (dict_iter_t t = dict_map.begin(); t != dict_map.end(); t++)
-      delete t->second;
+    for (dict_iter_t t = dict_map.begin(); t != dict_map.end(); )
+      {
+	dict_iter_t s = t++; // because... well, incrementing the iterator apparently uses its name, which must not yet be deleted.
+	delete s->second;
+      }
 
     dict_map.clear();
   }

@@ -106,7 +106,7 @@ void runningscript_t::operator delete(void *mem)
 // stop and free runningscripts
 void Map::FS_ClearRunningScripts()
 {
-  runningscript_t *r = runningscripts;
+  runningscript_t *r = FS_runningscripts;
   
   // free the whole chain
   while (r)
@@ -115,16 +115,16 @@ void Map::FS_ClearRunningScripts()
       delete r;
       r = next;
     }
-  runningscripts = NULL;
+  FS_runningscripts = NULL;
 }
 
 
 void Map::FS_AddRunningScript(runningscript_t *r)
 {
   // hook into chain at start
-  r->next = runningscripts;
+  r->next = FS_runningscripts;
   r->prev = NULL;
-  runningscripts = r;
+  FS_runningscripts = r;
   if (r->next)
     r->next->prev = r;
 }
@@ -141,7 +141,7 @@ bool Map::FS_wait_finished(runningscript_t *s)
     case wt_scriptwait:  // waiting for another script to finish
       {
 	runningscript_t *current;
-	for (current = runningscripts; current; current = current->next)
+	for (current = FS_runningscripts; current; current = current->next)
 	  {
 	    if (current == s)
 	      continue;      // ignore this script
@@ -179,7 +179,7 @@ void Map::FS_DelayedScripts()
 
   current_map = this; // this must always be set before we start processing FS scripts...
 
-  runningscript_t *current = runningscripts;
+  runningscript_t *current = FS_runningscripts;
   
   while (current)
     {
@@ -202,7 +202,7 @@ void Map::FS_DelayedScripts()
 	  if (current->prev)
 	    current->prev->next = current->next;
 	  else
-	    runningscripts = current->next;  // this was the first script in list
+	    FS_runningscripts = current->next;  // this was the first script in list
 
 	  if (current->next)
 	    current->next->prev = current->prev;
@@ -289,18 +289,21 @@ void FS_Init()
 
 
 
-// called at level start, clears all scripts
+/// Called at level end, frees all FS data in the Map.
 void Map::FS_ClearScripts()
 {
-  FS_ClearRunningScripts(); // TODO better to do this when map ends!
+  FS_ClearRunningScripts();
 
-  if (!levelscript)
-    levelscript = (script_t *)Z_Malloc(sizeof(script_t), PU_LEVEL, NULL);
-  else if (levelscript->data)
-    Z_Free(levelscript->data);
+  if (FS_levelscript)
+    {
+      if (FS_levelscript->data)
+	Z_Free(FS_levelscript->data);
 
-  //levelscript->data = NULL;
-  memset(levelscript, 0, sizeof(script_t));
+      Z_Free(FS_levelscript);
+      FS_levelscript = NULL;
+    }
+  
+  // FIXME FS must leak memory like hell... make a constructor and destructor for script_t
 }
 
 void FS_LoadThingScript()
@@ -343,25 +346,30 @@ void FS_LoadThingScript()
 }
 
 
-
-void Map::FS_PreprocessScripts()
+/// Load and preprocess the FS scripts. Called at Map setup.
+void Map::FS_LoadScripts(char *data)
 {
+  FS_levelscript = static_cast<script_t *>(Z_Malloc(sizeof(script_t), PU_LEVEL, NULL));
+  memset(FS_levelscript, 0, sizeof(script_t));
+
+  FS_levelscript->data = data;
+
   current_map = this; // this must always be set before we start processing FS scripts...
 
   // clear the levelscript
   // levelscript started by first player (not necessarily player 0) 'superplayer'
-  //  levelscript->player = NULL;  // FIXME who is superplayer?
-  levelscript->trigger = NULL; // superplayer->pawn;
+  //  FS_levelscript->player = NULL;  // FIXME who is superplayer?
+  FS_levelscript->trigger = NULL; // superplayer->pawn;
 
-  levelscript->scriptnum = -1;
-  levelscript->parent = &hub_script;
+  FS_levelscript->scriptnum = -1;
+  FS_levelscript->parent = &hub_script;
 
   // run the levelscript first
   // get the other scripts
-  if (levelscript->data)
+  if (FS_levelscript->data)
     {
-      levelscript->preprocess();
-      levelscript->run();
+      FS_levelscript->preprocess();
+      FS_levelscript->run();
     }
 
   // load and run the thing script
@@ -376,7 +384,7 @@ bool Map::FS_RunScript(int n, Actor *trig)
     return false;
 
   // use the level's child script script n
-  script_t *script = levelscript->children[n];
+  script_t *script = FS_levelscript->children[n];
   if (!script)
     {
       CONS_Printf("FS_RunScript: script %d does not exist.\n", n);
@@ -433,9 +441,9 @@ void COM_FS_DumpScript_f()
   Map *m = com_player->mp;
 
   if (!strcmp(COM.Argv(1), "level"))
-    script = m->levelscript;
+    script = m->FS_levelscript;
   else
-    script = m->levelscript->children[atoi(COM.Argv(1))];
+    script = m->FS_levelscript->children[atoi(COM.Argv(1))];
   
   if (!script)
     {
@@ -463,7 +471,7 @@ void COM_FS_RunScript_f()
 
   int sn = atoi(COM.Argv(1));
   
-  if (!m->levelscript->children[sn])
+  if (!m->FS_levelscript->children[sn])
     {
       CONS_Printf("script not defined\n");
       return;
@@ -482,7 +490,7 @@ void COM_FS_Running_f()
 
   Map *m = com_player->mp;
 
-  runningscript_t *current = m->runningscripts;
+  runningscript_t *current = m->FS_runningscripts;
   
   CONS_Printf("Running scripts:\n");
   
@@ -527,7 +535,7 @@ void SF_StartScript()
 
   int snum = intvalue(t_argv[0]);
   
-  script_t *script = current_map->levelscript->children[snum];
+  script_t *script = current_map->FS_levelscript->children[snum];
   
   if (!script)
     {
@@ -562,8 +570,6 @@ void SF_StartScript()
 
 void SF_ScriptRunning()
 {
-  runningscript_t *current;
-
   if (t_argc < 1)
     {
       script_error("not enough arguments to function\n");
@@ -572,7 +578,7 @@ void SF_ScriptRunning()
 
   int snum = intvalue(t_argv[0]);
   
-  for (current = current_map->runningscripts; current; current = current->next)
+  for (runningscript_t *current = current_map->FS_runningscripts; current; current = current->next)
     {
       if (current->script->scriptnum == snum)
 	{

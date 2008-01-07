@@ -157,7 +157,6 @@ export engine_objects = \
 	$(objdir)/p_map.o \
 	$(objdir)/p_maputl.o \
 	$(objdir)/p_sight.o \
-	$(objdir)/p_hsight.o \
 	$(objdir)/p_telept.o \
 	$(objdir)/p_camera.o \
 	$(objdir)/p_user.o \

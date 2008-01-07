@@ -137,7 +137,7 @@ public:
   //@}
 
 public:
-  Texture(const char *name, int lump);
+  Texture(const char *name, int lump = -1);
   virtual ~Texture();
 
   /// \name Software renderer
@@ -152,7 +152,7 @@ public:
   virtual byte *GetColumn(fixed_t col);
 
   /// Get indexed column-major texture data.
-  virtual byte *GetData() = 0;
+  virtual byte *GetData() { return NULL; }; // Could also be pure virtual, but this way we can use Texture for a link cacheitem_t.
 
   /// Draw the Texture in the LFB.
   virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
@@ -413,11 +413,11 @@ enum material_class_t
 class material_cache_t
 {
 protected:
-  cachesource_t new_tex;    ///< advanced textures, TX_START
-  cachesource_t doom_tex;   ///< TEXTUREx/PNAMES
-  cachesource_t flat_tex;   ///< F_START
-  cachesource_t sprite_tex; ///< advanced spritetextures, S_START
-  cachesource_t lod_tex;    ///< load-on-demand textures, mostly for misc. graphics
+  cachesource_t<Material> new_tex,   ///< advanced textures, TX_START
+    doom_tex,   ///< TEXTUREx/PNAMES
+    flat_tex,   ///< F_START
+    sprite_tex, ///< advanced spritetextures, S_START
+    lod_tex;    ///< load-on-demand textures, mostly for misc. graphics
 
   Material   *default_item; ///< the default data item
 
@@ -435,7 +435,7 @@ protected:
 
 
   /// Creates a Material from the Texture, also inserts it to the given source.
-  Material *BuildMaterial(Texture *t, cachesource_t &source, bool h_start = false);
+  Material *BuildMaterial(Texture *t, cachesource_t<Material> &source, bool h_start = false);
 
   /// sw renderer: colormaps for palette conversions (one for each resource file)
   std::vector<byte *> palette_conversion;
@@ -460,6 +460,7 @@ public:
 
 public:
   material_cache_t();
+  ~material_cache_t();
 
   /// sets the default Material
   void SetDefaultItem(const char *name);

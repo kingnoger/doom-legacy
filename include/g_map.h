@@ -133,20 +133,18 @@ public:
   /// \name Scripting
   //@{
   // FS
-  struct script_t        *levelscript;    ///< the mother of all FS scripts in this map
-  struct runningscript_t *runningscripts; ///< linked list of currently active FS scripts
+  struct script_t        *FS_levelscript;    ///< the mother of all FS scripts in this map
+  struct runningscript_t *FS_runningscripts; ///< linked list of currently active FS scripts
 
   // ACS
-  byte   *ACS_base; ///< the raw BEHAVIOR lump, base for offsets
-  map<unsigned, struct acs_script_t> ACS_scripts; ///< mapping from script numbers to script definitions
-  int     ACS_num_strings;     ///< number of ACS strings in this map
-  char  **ACS_strings;         ///< array of the ACS strings
+  byte   *ACS_base;                        ///< the raw BEHAVIOR lump, base for offsets
+  typedef map<unsigned, struct acs_script_t>::iterator acs_script_iter_t;
+  map<unsigned, acs_script_t> ACS_scripts; ///< mapping from script numbers to script definitions
+  vector<char *>              ACS_strings; ///< array of the ACS strings in this map
 #define ACS_MAP_VARS 32
-  Sint32  ACS_map_vars[ACS_MAP_VARS]; ///< ACS map variables
+  Sint32  ACS_map_vars[ACS_MAP_VARS];      ///< ACS map variables
 
-  typedef map<unsigned, acs_script_t>::iterator acs_script_iter_t;
-
-  void ACS_LoadScripts(int lump);
+  bool ACS_LoadScripts(int lump);
   void ACS_StartOpenScript(acs_script_t *s);
   bool ACS_StartScriptInMap(int mapnum, unsigned scriptnum, byte *args);
   class acs_t *ACS_StartScript(unsigned number, byte *args, Actor *activator, line_t *line, int side);
@@ -156,6 +154,7 @@ public:
   void ACS_ScriptFinished(unsigned number);
 
   acs_script_t *ACS_FindScript(unsigned number);
+  const char *ACS_FindString(unsigned number);
 
   void TagFinished(unsigned tag);
   void PO_Finished(unsigned po);
@@ -435,7 +434,7 @@ public:
   // FS scripting
   void FS_ClearScripts();
   void FS_ClearRunningScripts();
-  void FS_PreprocessScripts();
+  void FS_LoadScripts(char *data);
   bool FS_RunScript(int n, Actor *trig);
   void FS_DelayedScripts();
   void FS_AddRunningScript(runningscript_t *s);

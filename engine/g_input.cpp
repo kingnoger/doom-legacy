@@ -186,7 +186,6 @@ void ticcmd_t::Build(LocalPlayerInfo *pref, int realtics)
   bool turnleft  = ControlDown(gc[gc_turnleft]);
 
   // initialization
-  //memcpy(this, I_BaseTiccmd(), sizeof(ticcmd_t)); // FIXME dangerous
   Clear();
 
   if (pawn)
@@ -478,7 +477,7 @@ bool G_MapEventsToControls(event_t *ev)
       gamekeydown[KEY_DBLMOUSE1+i] = flag;
     }
 
-  /* FIXME, removed. Do we even want to have joystick double clicks?
+  /* NOTE: Do we even want to have joystick double clicks?
   for (i=0;i<JOYBUTTONS;i++)
     {
       flag = G_CheckDoubleClick(gamekeydown[KEY_JOY1+i], &joydclicks[i]);

@@ -142,7 +142,8 @@ void PatchTexture::Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
 
   for ( ; dest_tl < dest_tr; col += colfrac, dest_tl++)
     {
-      post_t *post = (post_t *)(patch_data + p->columnofs[col.floor()]);
+#warning FIXME LFB top/bottom limits
+      post_t *post = reinterpret_cast<post_t *>(patch_data + p->columnofs[col.floor()]);
 
       // step through the posts in a column
       while (post->topdelta != 0xff)
@@ -168,7 +169,7 @@ void PatchTexture::Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
 	      dest += vid.width;
 	      row += rowfrac;
 	    }
-	  post = (post_t *)&post->data[post->length + 1]; // next post
+	  post = reinterpret_cast<post_t *>(&post->data[post->length + 1]); // next post
 	}
     }
 }

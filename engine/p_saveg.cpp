@@ -1216,19 +1216,19 @@ int Map::Serialize(LArchive &a)
   a.Write(reinterpret_cast<byte*>(ACS_map_vars), sizeof(ACS_map_vars));
 
   // FS: levelscript contains the map global variables (everything else can be loaded from the WAD)
-  levelscript->Serialize(a);
+  FS_levelscript->Serialize(a);
 
   //runningscripts (scripts currently suspended)
   runningscript_t *rs;
   
   // count runningscripts
   n = 0;
-  for (rs = runningscripts; rs; rs = rs->next)
+  for (rs = FS_runningscripts; rs; rs = rs->next)
     n++;
   a << n;
   
   // now archive them
-  for (rs = runningscripts; rs; rs = rs->next)
+  for (rs = FS_runningscripts; rs; rs = rs->next)
     {
       a << rs->script->scriptnum;
       a << (n = (rs->savepoint - rs->script->data)); // offset
@@ -1467,7 +1467,7 @@ int Map::Unserialize(LArchive &a)
   a.Read((byte *)ACS_map_vars, sizeof(ACS_map_vars));
 
   // FS: restore levelscript
-  levelscript->Unserialize(a);
+  FS_levelscript->Unserialize(a);
 
   // restore runningscripts
   // remove all runningscripts first: levelscript may have started them
@@ -1484,9 +1484,9 @@ int Map::Unserialize(LArchive &a)
     
       // levelscript?
       if (scriptnum == -1)
-	rs->script = levelscript;
+	rs->script = FS_levelscript;
       else
-	rs->script = levelscript->children[scriptnum];
+	rs->script = FS_levelscript->children[scriptnum];
 
       a << n; // read out offset from save
       rs->savepoint = rs->script->data + n;

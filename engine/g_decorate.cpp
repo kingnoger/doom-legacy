@@ -42,6 +42,7 @@ static const char *StandardLabels[] = {"spawn", "see", "melee", "missile", "pain
 
 ActorInfo::~ActorInfo()
 {
+  CONS_Printf(" debug: deleting %s.\n", classname);
   int n = labels.size();
   for (int i=0; i<n; i++)
     if (labels[i].dyn_states && labels[i].label_states)
