@@ -101,6 +101,9 @@ void OGLRenderer::InitGLState()
 
   // GL_ALPHA_TEST gets rid of "black boxes" around sprites. Might also speed up rendering a bit?
   glAlphaFunc(GL_GEQUAL, 0.5); // 0.5 is an optimal value for linear magfiltering
+  glEnable(GL_ALPHA_TEST);
+
+  glDepthFunc(GL_LESS);
 
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1280,14 +1283,6 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int f
   GLfloat top, bottom, left, right;
   GLfloat texleft, texright, textop, texbottom;
 
-  // Rendering sprite items requires skipping totally transparent
-  // pixels. Since alpha testing may slow down rendering we want to
-  // use it as little as possible.
-  GLboolean isAlpha = 0; // Shut up compiler.
-  glGetBooleanv(GL_ALPHA_TEST, &isAlpha);
-  if (!isAlpha)
-    glEnable(GL_ALPHA_TEST);
-
   if (flags & FLIP_X) {
     texleft = 1.0;
     texright = 0.0;
@@ -1306,8 +1301,6 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int f
   // top = mat->worldheight; bottom = 0; // HACK, too high
   top = mat->topoffs; // this is correct but causes the sprite to penetrate the floor, hence the depth test trick
   bottom = top - mat->worldheight;
-  // sprites must be drawn without depth test, but must also update depth buffer
-  glDepthFunc(GL_ALWAYS);
 
 
   glMatrixMode(GL_MODELVIEW);
@@ -1346,13 +1339,7 @@ void OGLRenderer::DrawSpriteItem(const vec_t<fixed_t>& pos, Material *mat, int f
 
   // Leave the matrix stack as it was.
   glPopMatrix();
-
-  // Restore alpha testing to the state it was.
-  if (!isAlpha)
-    glDisable(GL_ALPHA_TEST);
-
-  glDepthFunc(GL_LESS); // back to normal depth testing
-
+  
   glColor4f(1.0, 1.0, 1.0, 1.0); // back to normal material params
 }
 
