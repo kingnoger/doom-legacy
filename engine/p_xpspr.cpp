@@ -386,7 +386,7 @@ void A_MLightningAttack2(PlayerPawn *actor)
   DActor *c = actor->SpawnPlayerMissile(MT_LIGHTNING_CEILING);
   if (f)
     {
-      f->pos.z = ONFLOORZ;
+      f->pos.z = 0; // see A_LightningClip
       f->vel.z = 0;
       f->target = c; // special case
       f->special1 = 0; // zigzag counter
@@ -396,7 +396,7 @@ void A_MLightningAttack2(PlayerPawn *actor)
 
   if (c)
     {
-      c->pos.z = ONCEILINGZ;
+      c->pos.z = 0; // see A_LightningClip
       c->vel.z = 0;
       c->target = NULL; // initially no target
       c->owner = f;
@@ -851,7 +851,7 @@ void A_CStaffMissileSlither(DActor *actor)
   newX += finecosine[angle] * FloatBobOffsets[weaveXY];
   newY += finesine[angle] * FloatBobOffsets[weaveXY];
 
-  if (!actor->TryMove(newX, newY, true))
+  if (!actor->TryMove(newX, newY, true).first)
     CONS_Printf("safafzfdfz\n");
 
   actor->special2 = weaveXY;
@@ -926,16 +926,17 @@ void A_CFlameMissile(DActor *actor)
   A_UnHideThing(actor);
   S_StartSound(actor, SFX_CLERIC_FLAME_EXPLODE);
 
-  if (PosCheck.block_thing && PosCheck.block_thing->flags & MF_SHOOTABLE)
+  Actor *target = actor->target;
+  if (target && target->flags & MF_SHOOTABLE)
     {
       // Hit something, so spawn the flame circle around the thing
-      fixed_t dist = PosCheck.block_thing->radius+18;
+      fixed_t dist = target->radius+18;
       for (int i = 0; i < 4; i++)
 	{
 	  int an = (i*ANG45) >> ANGLETOFINESHIFT;
 	  //int an90 = (i*ANG45 + ANG90) >> ANGLETOFINESHIFT;
 	  vec_t<fixed_t> temp(dist * finecosine[an], dist * finesine[an], 5);
-	  temp += PosCheck.block_thing->pos;
+	  temp += target->pos;
 
 	  DActor *mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
@@ -949,7 +950,7 @@ void A_CFlameMissile(DActor *actor)
 	    }
 
 	  temp.Set(-dist * finecosine[an], -dist * finesine[an], fixed_t(5));
-	  temp += PosCheck.block_thing->pos;
+	  temp += target->pos;
 
 	  mo = actor->mp->SpawnDActor(temp, MT_CIRCLEFLAME);
 	  if (mo)
@@ -1353,7 +1354,7 @@ static void CHolyTailFollow(Actor *actor, fixed_t dist)
       int an = R_PointToAngle2(actor->pos, child->pos) >> ANGLETOFINESHIFT;
       fixed_t oldDistance = P_XYdist(child->pos, actor->pos);
       if (child->TryMove(actor->pos.x + dist * finecosine[an], 
-			 actor->pos.y + dist * finesine[an], true))
+			 actor->pos.y + dist * finesine[an], true).first)
 	{
 	  fixed_t newDistance = P_XYdist(child->pos, actor->pos) - 1;
 	  if (oldDistance < 1)
@@ -1405,7 +1406,7 @@ void A_CHolyTail(DActor *actor)
 	  return;
 	}
       else if (actor->TryMove(parent->pos.x - 14 * Cos(parent->yaw),
-			      parent->pos.y - 14 * Sin(parent->yaw), true))
+			      parent->pos.y - 14 * Sin(parent->yaw), true).first)
 	{
 	  actor->pos.z = parent->pos.z-5;
 	}

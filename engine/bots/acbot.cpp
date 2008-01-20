@@ -1136,10 +1136,13 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       fixed_t cpy = (forwardmove * finesine[forwardAngle] + sidemove * finesine[sideAngle]) >> 5;
       vec_t<fixed_t> npos = pawn->pos + pawn->vel + vec_t<fixed_t>(cpx, cpy, 0);
 
-      bool blocked = !pawn->TestLocation(npos) || // FIXME wrong
-	PosCheck.op.bottom - pawn->Feet() > 24 ||
-	PosCheck.op.Range() < pawn->height;
-      //if its time to change strafe directions, 
+      position_check_t *ccc = pawn->CheckPosition(npos, Actor::PC_FIT);
+
+      bool blocked = !ccc->xy_move_ok // XY no-fit
+	|| ccc->op.bottom > npos.z + MAXSTEP // max climb is not enough
+	|| ccc->op.Range() < pawn->height; // Z no-fit
+
+      // if its time to change strafe directions, 
       if (sidemove && ((pawn->eflags & MFE_JUSTHIT) || blocked))
 	{
 	  straferight = !straferight;
@@ -1150,18 +1153,18 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
 	{
 	  if (++blockedcount > 20 &&
 	      (P_AproxDistance(pawn->vel.x, pawn->vel.y) < 4 ||
-	       (PosCheck.block_thing && (PosCheck.block_thing->flags & MF_SOLID))))
+	       (ccc->block_thing && (ccc->block_thing->flags & MF_SOLID))))
 	    avoidtimer = 20;
 
-	  if (PosCheck.op.bottom - pawn->Feet() > 24 &&
-	      (PosCheck.op.bottom - pawn->Feet() <= 37 ||
-	       (PosCheck.op.bottom - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
+	  if (ccc->op.bottom - pawn->Feet() > MAXSTEP &&
+	      (ccc->op.bottom - pawn->Feet() <= MAXWATERSTEP ||
+	       (ccc->op.bottom - pawn->Feet() <= 45 && pawn->subsector->sector->floortype != FLOOR_WATER))) // FIXME cv_jumpspeed
 	    cmd->buttons |= ticcmd_t::BT_JUMP;
 
-	  for (unsigned i=0; i < PosCheck.spechit.size(); i++)
-	    if (PosCheck.spechit[i]->backsector)
+	  for (unsigned i=0; i < ccc->spechit.size(); i++)
+	    if (ccc->spechit[i]->backsector)
 	      {
-		if (!PosCheck.spechit[i]->backsector->ceilingdata && !PosCheck.spechit[i]->backsector->floordata)
+		if (!ccc->spechit[i]->backsector->ceilingdata && !ccc->spechit[i]->backsector->floordata)
 		  cmd->buttons |= ticcmd_t::BT_USE;
 	      }
 	}

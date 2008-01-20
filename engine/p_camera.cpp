@@ -111,7 +111,7 @@ void Camera::ResetCamera(Actor *p)
 	ClearCamera();
 
       // add cam to the map
-      p->mp->SpawnActor(this);
+      p->mp->SpawnActor(this, 0);
       //cam = p->mp->SpawnActor(x,y,z, MT_CHASECAM);
     }
 

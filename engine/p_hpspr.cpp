@@ -64,8 +64,8 @@ void Map::RepositionMace(DActor *mo)
   int spot = P_Random() % MaceSpots.size();
   mo->pos.x = MaceSpots[spot]->x;
   mo->pos.y = MaceSpots[spot]->y;
+  mo->pos.z = GetSubsector(mo->pos.x, mo->pos.y)->sector->floorheight + MaceSpots[spot]->height;
   mo->SetPosition();
-  mo->pos.z = mo->floorz;
 }
 
 //---------------------------------------------------------------------------
@@ -77,20 +77,17 @@ void Map::RepositionMace(DActor *mo)
 void Map::PlaceWeapons()
 {
   if (MaceSpots.size() == 0)
-    { // No maces placed
-      return;
-    }
+    return; // No maces placed
 
-  if(!cv_deathmatch.value && P_Random() < 64)
-    { // Sometimes doesn't show up if not in deathmatch
-      return;
-    }
+  if (!cv_deathmatch.value && P_Random() < 64)
+    return; // Sometimes doesn't show up if not in deathmatch
+
   int spot = P_Random() % MaceSpots.size();
-  fixed_t nx, ny;
-  nx = MaceSpots[spot]->x;
-  ny = MaceSpots[spot]->y;
 
-  SpawnDActor(nx, ny, ONFLOORZ, MT_WMACE);
+  fixed_t nx = MaceSpots[spot]->x;
+  fixed_t ny = MaceSpots[spot]->y;
+  fixed_t nz = GetSubsector(nx, ny)->sector->floorheight + MaceSpots[spot]->height;
+  SpawnDActor(nx, ny, nz, MT_WMACE);
 }
 
 
@@ -299,7 +296,7 @@ void DActor::BlasterMissileThink()
 	{
 	  if (changexy)
 	    {
-	      if(!TryMove(pos.x + frac.x, pos.y + frac.y, true))
+	      if(!TryMove(pos.x + frac.x, pos.y + frac.y, true).first)
 		{ // Blocked move
 		  ExplodeMissile();
 		  return;

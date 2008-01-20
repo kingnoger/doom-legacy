@@ -46,7 +46,7 @@ void P_ThrustSpike(Actor *actor);
 
 
 // A Hexen hack to store a mobjtype number into one byte
-mobjtype_t TranslateThingType[] =
+mobjtype_t TranslateThingType[256] =
 {
   MT_MAPSPOT,				// T_NONE
   MT_CENTAUR,				// T_CENTAUR

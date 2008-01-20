@@ -384,13 +384,16 @@ bool DActor::P_Move()
   fixed_t tryx = pos.x + info->speed * xspeed[movedir];
   fixed_t tryy = pos.y + info->speed * yspeed[movedir];
 
-  if (!TryMove(tryx, tryy, false))
+  pair<bool, position_check_t*> ppp = TryMove(tryx, tryy, false);
+  position_check_t* ccc = ppp.second;
+
+  if (!ppp.first)
     {
       // open any specials
-      if (flags & MF_FLOAT && floatok)
+      if (flags & MF_FLOAT && ccc->floatok)
         {
 	  // must adjust height
-	  if (pos.z < PosCheck.op.bottom)
+	  if (pos.z < ccc->op.bottom)
 	    pos.z += FLOATSPEED;
 	  else
 	    pos.z -= FLOATSPEED;
@@ -399,15 +402,15 @@ bool DActor::P_Move()
 	  return true;
         }
 
-      if (!PosCheck.spechit.size())
+      if (!ccc->spechit.size())
 	return false;
 
       movedir = DI_NODIR;
 
       bool good = false;
-      while (PosCheck.spechit.size())
+      while (ccc->spechit.size())
         {	  
-	  line_t *ld = PosCheck.spechit.back();
+	  line_t *ld = ccc->spechit.back();
 	  // if the special is not a door
 	  // that can be opened,
 	  // return false
@@ -415,7 +418,7 @@ bool DActor::P_Move()
 	    good = true;
 	  // Old version before use/cross/impact specials were combined
 	  //if (mp->UseSpecialLine(this, ld, 0))
-	  PosCheck.spechit.pop_back();
+	  ccc->spechit.pop_back();
         }
       return good;
     }
@@ -1589,7 +1592,7 @@ void A_PainShootSkull(DActor *actor, angle_t angle)
   newmobj = actor->mp->SpawnDActor(x, y, z, MT_SKULL);
 
   // Check for movements.
-  if (!newmobj->TryMove(newmobj->pos.x, newmobj->pos.y, false))
+  if (!newmobj->TryMove(newmobj->pos.x, newmobj->pos.y, false).first)
     {
       // kill it immediately
       newmobj->Damage(actor,actor,10000);

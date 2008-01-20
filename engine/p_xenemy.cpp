@@ -726,8 +726,7 @@ void A_MntrFloorFire(DActor *actor)
   DActor *mo;
 
   actor->pos.z = actor->floorz;
-  mo = actor->mp->SpawnDActor(actor->pos.x + P_SignedFRandom(6),
-		   actor->pos.y + P_SignedFRandom(6), ONFLOORZ, MT_MNTRFX3);
+  mo = actor->mp->SpawnDActor(actor->pos.x + P_SignedFRandom(6), actor->pos.y + P_SignedFRandom(6), ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
   mo->vel.x = 1; // Force block checking
   mo->CheckMissileSpawn();
@@ -2607,8 +2606,7 @@ void A_IceGuyMissileExplode(DActor *actor)
 //              owner                   Points to Sorcerer (aka parent)
 //		special1		Previous angle of ball (for woosh)
 //		special2		Countdown of rapid fire (FX4)
-//		args[0]			If set, don't play the bounce sound when bouncing
-//              args[4]			Ball 1 only
+//              args[4]     MT_SORCBALL1 only: phase
 //============================================================================
 
 #define SORCBALL_INITIAL_SPEED 		7

@@ -513,16 +513,16 @@ bool Map::ExecuteLineSpecial(unsigned special, byte *args, line_t *line, int sid
       success = EV_ThingDestroy(args[0]);
       break;
     case 134: // Thing_Projectile
-      success = EV_ThingProjectile(args[0], TranslateThingType[args[1]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), false);
+      success = EV_ThingProjectile(args[0], aid[TranslateThingType[args[1]]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), false);
       break;
     case 135: // Thing_Spawn
-      success = EV_ThingSpawn(args[0], TranslateThingType[args[1]], ANGLE(args[2]), true);
+      success = EV_ThingSpawn(args[0], aid[TranslateThingType[args[1]]], ANGLE(args[2]), true);
       break;
     case 136: // Thing_ProjectileGravity
-      success = EV_ThingProjectile(args[0], TranslateThingType[args[1]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), true);
+      success = EV_ThingProjectile(args[0], aid[TranslateThingType[args[1]]], ANGLE(args[2]), SPEED(args[3]), SPEED(args[4]), true);
       break;
     case 137: // Thing_SpawnNoFog
-      success = EV_ThingSpawn(args[0], TranslateThingType[args[1]], ANGLE(args[2]), false);
+      success = EV_ThingSpawn(args[0], aid[TranslateThingType[args[1]]], ANGLE(args[2]), false);
       break;
     case 138: // Floor_Waggle
       success = EV_DoFloorWaggle(tag, HEIGHT(args[1]) >> 3, angle_t(args[2] << 20), ANGLE(args[3]) << 2, args[4]*35);

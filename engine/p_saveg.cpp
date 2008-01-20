@@ -463,7 +463,7 @@ int Actor::Marshal(LArchive &a)
 	  if (spawnpoint)
 	    spawnpoint->mobj = this;
 	  // set links to map geometry
-	  TestLocation();
+	  floorz = ceilingz = 0; // TEST
 	  SetPosition();
 	}
     }
@@ -715,7 +715,7 @@ int DActor::Marshal(LArchive &a)
       // set sprev, snext, bprev, bnext, subsector
       if (mp)
 	{
-	  TestLocation(); // TEST, sets tmfloorz, tmceilingz
+	  floorz = ceilingz = 0; // TEST
 	  SetPosition();
 	}
 

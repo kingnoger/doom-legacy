@@ -121,7 +121,7 @@ public:
   virtual ~ActorInfo();
 
   /// Creates an Actor of the type described by this ActorInfo instance.
-  virtual class Actor *Spawn(class Map *m, struct mapthing_t *mt, bool initial = true);
+  virtual class Actor *Spawn(class Map *m, struct mapthing_t *mt, bool initial = true) const;
 
   /// Sets the DECORATE class name.
   void SetName(const char *n);

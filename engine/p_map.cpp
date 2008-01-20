@@ -157,27 +157,18 @@ bool blockmap_t::IterateThingsRadius(fixed_t x, fixed_t y, fixed_t radius, thing
 //  Movement
 //===========================================
 
-// If floatok is true, XY move would be ok if we were at the correct Z
-bool    floatok;
-
-static Actor::poscheck_e PC_mode;
-
-// checkposition data (stuff in the XY footprint of the Actor)
-position_check_t PosCheck;
-
 
 const float   SHOOTFRAC   = 36.0/56; ///< fraction of Actor height where shots start
 extern const fixed_t MAXSTEP      = 24; ///< Max Z move up or down without jumping. Above this, a height difference is considered a 'dropoff'.
 const fixed_t MAXWATERSTEP = 37; ///< Same, but in water.
 
 
-
-// Attempt to move to a new position,
-// crossing special lines in the way.
-bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
+/*!
+  Attempt to move to a new position, crossing special lines in the way.
+  \return An std::pair where first member is true if move succeeded, and the second a position_check_t* for the new position.
+ */
+pair<bool, position_check_t*> Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
 {
-  floatok = false;
-
   vec_t<fixed_t> newpos(nx, ny, pos.z);
 
   // TODO the problems with the collision check code are
@@ -191,89 +182,92 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   // If z fit ok, all crossings in spechit are processed.
 
   Actor *floor_thing = NULL;
+  position_check_t *ccc = CheckPosition(newpos, PC_MOVE);
+  ccc->floatok = false;
 
-  if (!CheckPosition(newpos, PC_MOVE))
+  if (!ccc->xy_move_ok)
     {
       // blocked by an unpassable line or an Actor
-      if (PosCheck.block_thing)
+      if (ccc->block_thing)
 	{
 	  // try to climb on top of it
-	  if (PosCheck.block_thing->Top() - Feet() <= MAXSTEP &&
-	      //PosCheck.block_thing->subsector->sector->ceilingheight - PosCheck.block_thing->Top() >= height &&
-	      PosCheck.op.top - PosCheck.block_thing->Top() >= height)
-	    floor_thing = PosCheck.block_thing;
+	  if (ccc->block_thing->Top() - Feet() <= MAXSTEP &&
+	      //ccc->block_thing->subsector->sector->ceilingheight - ccc->block_thing->Top() >= height &&
+	      ccc->op.top - ccc->block_thing->Top() >= height)
+	    floor_thing = ccc->block_thing;
 	  else
-	    return false;
+	    return pair<bool, position_check_t*>(false, ccc);
 	}
       else
 	{
 	  // must be a blocking line
-	  CheckLineImpact();
-	  return false;
+	  CheckLineImpact(ccc->spechit);
+	  return pair<bool, position_check_t*>(false, ccc);
 	}
     }
 
+  // xy move is OK, or at least we may climb on top of the blocking Actor
   // handle z-lineclip and spechit
   if (!(flags & MF_NOCLIPLINE))
     {
       // do we fit in the z direction?
-      if (PosCheck.op.Range() < height)
+      if (ccc->op.Range() < height)
 	{
-	  CheckLineImpact();
-	  return false;
+	  CheckLineImpact(ccc->spechit);
+	  return pair<bool, position_check_t*>(false, ccc);
 	}
 
-      floatok = true; // if we float to the correct height first, we will fit
+      ccc->floatok = true; // if we float to the correct height first, we will fit
 
       // When flying, we have a slight z-directional autopilot for convenience
       if (eflags & MFE_FLY)
 	{
-	  if (Top() > PosCheck.op.top)
+	  if (Top() > ccc->op.top)
 	    {
 	      vel.z = -8;
-	      return false;
+	      return pair<bool, position_check_t*>(false, ccc);
 	    }
-	  else if (Feet() < PosCheck.op.bottom && PosCheck.op.Drop() > MAXSTEP)
+	  else if (Feet() < ccc->op.bottom && ccc->op.Drop() > MAXSTEP)
 	    {
 	      vel.z = 8;
-	      return false;
+	      return pair<bool, position_check_t*>(false, ccc);
 	    }
 	}
 
       // do we hit the upper texture?
-      if (Top() > PosCheck.op.top &&
+      if (Top() > ccc->op.top &&
 	  !(flags2 & MF2_CEILINGHUGGER)) // ceilinghuggers step down any amount
 	{
-	  CheckLineImpact();
-	  PosCheck.skyimpact = PosCheck.op.top_sky;
-	  return false; // must lower itself to fit
+	  CheckLineImpact(ccc->spechit);
+	  ccc->skyimpact = ccc->op.top_sky;
+	  return pair<bool, position_check_t*>(false, ccc); // must lower itself to fit
 	}
 
       // do we hit the lower texture without being able to climb the step?
-      if (PosCheck.op.bottom > Feet() &&
+      if (ccc->op.bottom > Feet() &&
 	  !(flags2 & MF2_FLOORHUGGER)) // floorhuggers step up any amount
 	{
 	  // easier to move in water / climb out of water
 	  fixed_t maxstep = (eflags & MFE_UNDERWATER) ? MAXWATERSTEP : MAXSTEP;
 
 	  if (flags & MF_MISSILE || // missiles do not step up
-	      PosCheck.op.bottom - Feet() > maxstep)
+	      ccc->op.bottom - Feet() > maxstep)
 	    {
-	      CheckLineImpact();
-	      PosCheck.skyimpact = PosCheck.op.bottom_sky;
-	      return false;       // too big a step up
+	      CheckLineImpact(ccc->spechit);
+	      ccc->skyimpact = ccc->op.bottom_sky;
+	      return pair<bool, position_check_t*>(false, ccc);       // too big a step up
 	    }
 	}
 
       // are we afraid of the dropoff?
       if (!allowdropoff && !(flags & MF_DROPOFF) && !(eflags & MFE_BLASTED))
-	if (PosCheck.op.Drop() > MAXSTEP && !floor_thing)
-	  return false; // don't go over a dropoff (unless blasted)
+	if (ccc->op.Drop() > MAXSTEP && !floor_thing)
+	  return pair<bool, position_check_t*>(false, ccc); // don't go over a dropoff (unless blasted)
 
       // are we unable to leave the floor texture? (water monsters)
       if (flags2 & MF2_CANTLEAVEFLOORPIC
-	  && (PosCheck.op.bottompic != subsector->sector->floorpic || PosCheck.op.bottom != Feet()))
-	return false;
+	  && (ccc->op.bottompic != subsector->sector->floorpic || ccc->op.bottom != Feet()))
+	return pair<bool, position_check_t*>(false, ccc);
     }
 
   // the move is ok, so link the thing into its new position
@@ -289,6 +283,8 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   else
     eflags |= MFE_ONGROUND;
 
+  floorz = ccc->op.bottom;
+  ceilingz = ccc->op.top;
   SetPosition();
 
   // Heretic fake water...
@@ -302,11 +298,11 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
   // if any special lines were hit, do the effect
   if (!(flags & MF_NOCLIPLINE))
     {
-      while (PosCheck.spechit.size())
+      while (ccc->spechit.size())
         {
 	  // see if the line was crossed
-	  line_t *ld = PosCheck.spechit.back();
-	  PosCheck.spechit.pop_back();
+	  line_t *ld = ccc->spechit.back();
+	  ccc->spechit.pop_back();
 
 	  int side = P_PointOnLineSide(pos.x, pos.y, ld);
 	  int oldside = P_PointOnLineSide(oldx, oldy, ld);
@@ -326,7 +322,7 @@ bool Actor::TryMove(fixed_t nx, fixed_t ny, bool allowdropoff)
         }
     }
 
-  return true;
+  return pair<bool, position_check_t*>(true, ccc);
 }
 
 
@@ -398,10 +394,6 @@ void Actor::UnsetPosition(bool clear_touching_sectorlist)
 */
 void Actor::SetPosition()
 {
-  // NOTE that PosCheck.op.bottom and PosCheck.op.top must be set (using CheckPosition() or something)
-  floorz = PosCheck.op.bottom;
-  ceilingz = PosCheck.op.top;
-
   // link into subsector
   subsector_t *ss = mp->GetSubsector(pos.x, pos.y);
   subsector = ss;
@@ -467,9 +459,9 @@ static void CheckForPushSpecial(line_t *line, int side, Actor *thing)
 //
 // Checks if a colliding actor triggers shootable or pushable linedefs
 //
-void Actor::CheckLineImpact()
+void Actor::CheckLineImpact(vector<line_t*> &spechit)
 {
-  int n = PosCheck.spechit.size();
+  int n = spechit.size();
   if (!n || (flags & MF_NOCLIPLINE))
     return;
 
@@ -484,7 +476,7 @@ void Actor::CheckLineImpact()
 
   for (int i = n - 1; i >= 0; i--)
     {
-      line_t *ld = PosCheck.spechit[i];
+      line_t *ld = spechit[i];
       int side = P_PointOnLineSide(pos.x, pos.y, ld);
       CheckForPushSpecial(ld, side, this);
     }
@@ -492,18 +484,20 @@ void Actor::CheckLineImpact()
 
 
 
+/// Data for PIT_CheckThing and PIT_CheckLine, also holds the return value of last call to Actor::CheckPosition()
+static position_check_t PC_data;
 
 /// \brief Checks if an Actor is physically collided by another.
 /// \ingroup g_collision
 /// \ingroup g_pit
 /*!
   Iterator function for Actor->Actor collision checks. tmthing collides, thing gets collided.
-  Sets PosCheck.block_thing, calls Actor::Touch.
+  Sets PC_data.block_thing, calls Actor::Touch.
 */
 static bool PIT_CheckThing(Actor *thing)
 {
   // early out: unless thing has one of these qualifiers, it's immaterial to us
-  if (PC_mode & Actor::PC_TOUCH_THINGS)
+  if (PC_data.mode & Actor::PC_TOUCH_THINGS)
     {
       if (!(thing->flags & (MF_SOLID|MF_SPECIAL|MF_SHOOTABLE)))
 	return true;
@@ -527,9 +521,9 @@ static bool PIT_CheckThing(Actor *thing)
     return true; // didn't hit it
 
   // no Z checking for teleportation yet
-  if (PC_mode & Actor::PC_TELEFRAG)
+  if (PC_data.mode & Actor::PC_TELEFRAG)
     {
-      PosCheck.thingshit.push_back(thing);
+      PC_data.thingshit.push_back(thing);
       return true;
     }
 
@@ -551,11 +545,11 @@ static bool PIT_CheckThing(Actor *thing)
 
   // things overlap geometrically
 
-  if (PC_mode & Actor::PC_TOUCH_THINGS)
+  if (PC_data.mode & Actor::PC_TOUCH_THINGS)
     {
       if (tmthing->Touch(thing))
 	{
-	  PosCheck.block_thing = thing;
+	  PC_data.block_thing = thing;
 	  return false;
 	}
       else
@@ -564,7 +558,7 @@ static bool PIT_CheckThing(Actor *thing)
   else
     {
       // first solid thing hit stops the iteration
-      PosCheck.block_thing = thing;
+      PC_data.block_thing = thing;
       return false;
     }
 }
@@ -577,8 +571,8 @@ static bool PIT_CheckThing(Actor *thing)
 /// \ingroup g_pit
 /*!
   Iterator for Actor->Line collision checking.
-  Adjusts PosCheck.op.bottom and PosCheck.op.top as lines are contacted.
-  Sets PosCheck.block_line, pushes lines, adds them to spechit vector.
+  Adjusts PC_data.op.bottom and PC_data.op.top as lines are contacted.
+  Sets PC_data.block_line, pushes lines, adds them to spechit vector.
 */
 static bool PIT_CheckLine(line_t *ld)
 {
@@ -596,7 +590,7 @@ static bool PIT_CheckLine(line_t *ld)
   // NOTE: specials are NOT sorted by order, so two special lines that are only 8 pixels apart
   // could be crossed in either order.
 
-  PosCheck.block_line = ld;
+  PC_data.block_line = ld;
 
   // some XY lines cannot be crossed no matter what
   if (!ld->backsector || // one-sided line
@@ -605,7 +599,7 @@ static bool PIT_CheckLine(line_t *ld)
 	(ld->flags & ML_BLOCKMONSTERS && tmthing->flags & MF_MONSTER)))) // block monsters only
     {
       // stopped
-      if (PC_mode & Actor::PC_TOUCH_LINES)
+      if (PC_data.mode & Actor::PC_TOUCH_LINES)
 	{
 	  // take damage from impact
 	  if (tmthing->eflags & MFE_BLASTED)
@@ -624,26 +618,26 @@ static bool PIT_CheckLine(line_t *ld)
   if (s->validcount != validcount)
     {
       s->validcount = validcount;
-      PosCheck.op.SubtractFromOpening(tmthing, s);
+      PC_data.op.SubtractFromOpening(tmthing, s);
     }
 
   s = ld->backsector;
   if (s->validcount != validcount)
     {
       s->validcount = validcount;
-      PosCheck.op.SubtractFromOpening(tmthing, s);
+      PC_data.op.SubtractFromOpening(tmthing, s);
     }
 
   /*
     // No early out, checked at Actor::TryMove
-  if (PosCheck.op.Range() < tmthing->height)
+  if (PC_data.op.Range() < tmthing->height)
     return false; // collision? push? TODO
   */
 
   // crossing the line is possible during this move
   // if contacted a special line, add it to the list
-  if (ld->special && PC_mode & Actor::PC_TOUCH_LINES)
-    PosCheck.spechit.push_back(ld);
+  if (ld->special && PC_data.mode & Actor::PC_TOUCH_LINES)
+    PC_data.spechit.push_back(ld);
 
   return true;
 }
@@ -662,44 +656,44 @@ static bool PIT_CheckLine(line_t *ld)
   finding openings between sectors.
   Crossed special lines are stored into spechit.
   \param[in] mode Should we generate collisions or just check fit?
-  \return false if XY position is utterly impossible
+  \return A position_check_t* describing possible collisions.
  */
-bool Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
+position_check_t *Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
 {
-  PC_mode = mode; // should we touch or just look?
+  PC_data.mode = mode; // should we touch or just look?
   tmthing = this;
 
-  // for convenience change z temporarily
+  // HACK: for convenience change z temporarily
   fixed_t oldz = pos.z;
   pos.z = p.z;
 
   bool ret = true;
 
-  if (PC_mode & Actor::PC_LINES)
+  if (mode & Actor::PC_LINES)
     {
       // The base floor / ceiling is from the subsector that contains the point.
       // Any contacted lines will adjust them closer together.
       subsector_t *ss = mp->GetSubsector(p.x, p.y);
 
-      PosCheck.spechit.clear();
-      PosCheck.block_line = NULL;
-      PosCheck.skyimpact = false;
-      PosCheck.op.Reset();
-      PosCheck.op.SubtractFromOpening(this, ss->sector);
-      PosCheck.op.lowfloor = PosCheck.op.bottom; // necessary if no lines are encountered...
+      PC_data.spechit.clear();
+      PC_data.block_line = NULL;
+      PC_data.skyimpact = false;
+      PC_data.op.Reset();
+      PC_data.op.SubtractFromOpening(this, ss->sector); // NOTE: uses the Actor z coordinate!
+      PC_data.op.lowfloor = PC_data.op.bottom; // necessary if no lines are encountered...
 
       // check lines
       if (!(flags & MF_NOCLIPLINE) && !mp->blockmap->IterateLinesRadius(p.x, p.y, radius, PIT_CheckLine))
 	ret = false;
     }
 
-  if (PC_mode & Actor::PC_THINGS)
+  if (mode & Actor::PC_THINGS)
     {
       tmx = p.x;
       tmy = p.y;
 
-      PosCheck.thingshit.clear();
-      PosCheck.block_thing = NULL;
+      PC_data.thingshit.clear();
+      PC_data.block_thing = NULL;
 
       // Check things, possibly picking things up.
       // The bounding box is extended by MAXRADIUS because Actors are grouped into mapblocks
@@ -711,16 +705,19 @@ bool Actor::CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode)
 
   pos.z = oldz;
 
-  return ret;
+  PC_data.xy_move_ok = ret;
+  return &PC_data;
 }
 
 
 // Returns true if the mobj is not blocked by anything at p, otherwise returns false.
 bool Actor::TestLocation(const vec_t<fixed_t> &p)
 {
-  return (CheckPosition(p, PC_FIT) &&
-	  (p.z >= PosCheck.op.bottom) &&
-	  (p.z + height <= PosCheck.op.top));
+  position_check_t *ccc = CheckPosition(p, PC_FIT);
+
+  return ccc->xy_move_ok &&
+    (p.z >= ccc->op.bottom) &&
+    (p.z + height <= ccc->op.top);
 }
 
 
@@ -890,7 +887,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
     {
       // the move must have hit the middle, so stairstep
     stairstep:
-      if (!TryMove(pos.x, pos.y + delta.y, true)) //SoM: 4/10/2000
+      if (!TryMove(pos.x, pos.y + delta.y, true).first) //SoM: 4/10/2000
 	TryMove (pos.x + delta.x, pos.y, true);  //Allow things to drop off.
       return;
     }
@@ -902,7 +899,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
       fixed_t newx = bestslidefrac * delta.x;
       fixed_t newy = bestslidefrac * delta.y;
 
-      if (!TryMove(pos.x+newx, pos.y+newy, true))
+      if (!TryMove(pos.x+newx, pos.y+newy, true).first)
 	goto stairstep;
     }
 
@@ -924,7 +921,7 @@ void Actor::SlideMove(fixed_t nx, fixed_t ny)
   delta.x = tmmove.x;
   delta.y = tmmove.y;
 
-  if (!TryMove(pos.x+delta.x, pos.y+delta.y, true))
+  if (!TryMove(pos.x+delta.x, pos.y+delta.y, true).first)
     {
       goto retry;
     }
@@ -1855,12 +1852,12 @@ static bool P_ThingHeightClip(Actor *thing)
 #warning TODO check this
   bool onfloor = (thing->Feet() <= thing->floorz);
 
-  thing->CheckPosition(thing->pos, Actor::PC_MOVE);
+  position_check_t *ccc = thing->CheckPosition(thing->pos, Actor::PC_MOVE);
 
   // what about stranding a monster partially off an edge?
 
-  thing->floorz = PosCheck.op.bottom;
-  thing->ceilingz = PosCheck.op.top;
+  thing->floorz = ccc->op.bottom;
+  thing->ceilingz = ccc->op.top;
 
   if (onfloor && !(thing->flags & MF_NOGRAVITY))
     {
@@ -1872,7 +1869,7 @@ static bool P_ThingHeightClip(Actor *thing)
       // don't adjust a floating monster unless forced to
       //added:18-04-98:test onfloor
       if (!onfloor)                    //was tmsectorceilingz
-	if (thing->Top() > PosCheck.op.top)
+	if (thing->Top() > ccc->op.top)
 	  thing->pos.z = thing->ceilingz - thing->height;
 
       //thing->eflags &= ~MFE_ONGROUND;
@@ -2147,37 +2144,38 @@ void Map::CreateSecNodeList(Actor *thing, fixed_t x, fixed_t y)
 bool Actor::TeleportMove(const vec_t<fixed_t> &p)
 {
   // check if we can teleport there
-  if (!CheckPosition(p, PC_TELEPORT))
+  position_check_t *ccc = CheckPosition(p, PC_TELEPORT);
+  if (!ccc->xy_move_ok)
     return false;
 
   // NOTE: teleportation will fudge with destination z coord if necessary
-  if (PosCheck.op.Range() < height)
+  if (ccc->op.Range() < height)
     return false;
 
   vec_t<fixed_t> np(p);
 
-  if (np.z < PosCheck.op.bottom)
-    np.z = PosCheck.op.bottom; 
+  if (np.z < ccc->op.bottom)
+    np.z = ccc->op.bottom; 
 
-  if (np.z + height > PosCheck.op.top)
-    np.z = PosCheck.op.top - height;
+  if (np.z + height > ccc->op.top)
+    np.z = ccc->op.top - height;
 
   // now that we have geometrically enough space, telefrag the contacted things
-  for (int i = PosCheck.thingshit.size() - 1; i >= 0; i--)
+  for (int i = ccc->thingshit.size() - 1; i >= 0; i--)
     {
-      Actor *a = PosCheck.thingshit[i];
+      Actor *a = ccc->thingshit[i];
       
       // outside Z reach?
       if (np.z >= a->Top())
         {
 	  // over, ignore
-	  PosCheck.thingshit[i] = NULL;
+	  ccc->thingshit[i] = NULL;
 	  continue;
         }
       else if (np.z + height <= a->Feet())
         {
 	  // under, ignore
-	  PosCheck.thingshit[i] = NULL;
+	  ccc->thingshit[i] = NULL;
 	  continue;
         }
 
@@ -2190,9 +2188,9 @@ bool Actor::TeleportMove(const vec_t<fixed_t> &p)
     }
 
   // if there are no obstacles, do the teleportation
-  for (int i = PosCheck.thingshit.size() - 1; i >= 0; i--)
+  for (int i = ccc->thingshit.size() - 1; i >= 0; i--)
     {
-      Actor *a = PosCheck.thingshit[i];
+      Actor *a = ccc->thingshit[i];
       if (a)
 	a->Damage(this, this, 10000, dt_telefrag | dt_always); // 'frag it
     }
@@ -2200,6 +2198,8 @@ bool Actor::TeleportMove(const vec_t<fixed_t> &p)
   // the move is ok, so link the thing into its new position
   UnsetPosition();
   pos = np;
+  floorz = ccc->op.bottom;
+  ceilingz = ccc->op.top;
   SetPosition();
 
   return true;

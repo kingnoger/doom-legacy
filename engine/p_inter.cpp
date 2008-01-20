@@ -47,6 +47,7 @@
 #include "tables.h"
 
 
+
 #define BASETHRESHOLD 100
 
 extern int ArmorIncrement[NUMCLASSES][NUMARMOR];
@@ -362,6 +363,7 @@ bool DActor::Touch(Actor *p)
 	}
 
     explode:
+      target = p;
 
       if (flags & MF_TOUCHFUNC)
 	{

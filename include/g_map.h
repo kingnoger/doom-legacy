@@ -258,10 +258,11 @@ public:
   void RespawnSpecials();
   void RespawnWeapons();
 
-  Actor  *SpawnActor(Actor *p);
+  Actor  *SpawnActor(Actor *a, fixed_t spawnheight);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const class ActorInfo *ai);
   DActor *SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t);
   inline DActor *SpawnDActor(const vec_t<fixed_t>& r, mobjtype_t t) { return SpawnDActor(r.x, r.y, r.z, t); }
+  inline DActor *SpawnDActor(const vec_t<fixed_t>& r, const ActorInfo *ai) { return SpawnDActor(r.x, r.y, r.z, ai); }
   void SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing);
   DActor *SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
 		      mobjtype_t chunk = MT_NONE, bool randtics = true); 
@@ -424,8 +425,8 @@ public:
   bool EV_ActivatePolyobj(unsigned id, int type, float speed, angle_t angle, float dist, int delay, bool override);
 
   // in p_things.cpp
-  bool EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspeed, fixed_t vspeed, bool gravity);
-  bool EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog);
+  bool EV_ThingProjectile(int tid, const ActorInfo *ai, angle_t angle, float hspeed, float vspeed, bool gravity);
+  bool EV_ThingSpawn(int tid, const ActorInfo *ai, angle_t angle, bool fog);
   bool EV_ThingActivate(int tid);
   bool EV_ThingDeactivate(int tid);
   bool EV_ThingRemove(int tid);

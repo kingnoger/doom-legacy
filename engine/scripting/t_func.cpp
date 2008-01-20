@@ -1422,7 +1422,7 @@ void SF_MoveCamera()
     }
   }
 
-  if((x != camera->pos.x || y != camera->pos.y) && !camera->TryMove(x, y, true))
+  if((x != camera->pos.x || y != camera->pos.y) && !camera->TryMove(x, y, true).first)
   {
     script_error("Illegal camera move\n");
     return;

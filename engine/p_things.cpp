@@ -125,9 +125,9 @@ bool DActor::Deactivate()
 
 
 /// Shoot a projectile from all mapthings with the given TID
-bool Map::EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspeed, fixed_t vspeed, bool gravity)
+bool Map::EV_ThingProjectile(int tid, const ActorInfo *ai, angle_t angle, float hspeed, float vspeed, bool gravity)
 {
-  if (cv_nomonsters.value && (aid[mt]->flags & MF_MONSTER))   
+  if (cv_nomonsters.value && (ai->flags & MF_MONSTER))   
     return false;
 
   // projectile velocity
@@ -137,7 +137,7 @@ bool Map::EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspe
   Iterate_TID iter(this, tid);
   for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      DActor *p = SpawnDActor(m->pos, mt);
+      DActor *p = SpawnDActor(m->pos, ai);
       if (p->info->seesound)
 	S_StartSound(p, p->info->seesound);
 
@@ -159,16 +159,16 @@ bool Map::EV_ThingProjectile(int tid, mobjtype_t mt, angle_t angle, fixed_t hspe
 
 
 /// Spawn a mapthing from a limited selection of types.
-bool Map::EV_ThingSpawn(int tid, mobjtype_t mt, angle_t angle, bool fog)
+bool Map::EV_ThingSpawn(int tid, const ActorInfo *ai, angle_t angle, bool fog)
 {
-  if (cv_nomonsters.value && (aid[mt]->flags & MF_MONSTER))
+  if (cv_nomonsters.value && (ai->flags & MF_MONSTER))
     return false;
 
   bool ret = false;
   Iterate_TID iter(this, tid);
   for (Actor *m = iter.Next(); m; m = iter.Next())
     {
-      DActor *a = SpawnDActor(m->pos, mt);
+      DActor *a = SpawnDActor(m->pos, ai);
 
       if (!a->TestLocation())
 	a->Remove(); // Didn't fit

@@ -38,6 +38,7 @@
 #include "p_spec.h"
 #include "p_hacks.h"
 #include "p_polyobj.h"
+#include "p_maputl.h"
 
 #include "r_splats.h"
 
@@ -167,7 +168,7 @@ Map::~Map()
   for (int i=0; i<n; i++)
     delete DeletionList[i];
 
-  // TODO anims? sound sequences?
+  // TODO sound sequences?
 
   // clear the splats from deleted map
   R_ClearLevelSplats(); // FIXME find a better way
@@ -182,34 +183,28 @@ Map::~Map()
 //===================================================
 
 
-Actor *Map::SpawnActor(Actor *a)
+Actor *Map::SpawnActor(Actor *a, fixed_t spawnheight)
 {
-  // NOTE: nz may have the values ONFLOORZ, ONCEILINGZ and FLOATRANDZ in addition to real z coords
-  fixed_t nz = a->pos.z;
-
   AddThinker(a);     // AddThinker sets Map *mp
-  if (game.server)
-    a->CheckPosition(a->pos, Actor::PC_LINES); // for missiles owner is not yet set => collides, so we only check geometry
   a->SetPosition();  // set subsector and/or block links
 
-  // set z coordinate properly
-  if (nz == ONFLOORZ || (a->flags2 & MF2_FLOORHUGGER))
-    {
-      a->eflags |= MFE_ONGROUND;
-      a->pos.z = a->floorz;
-    }
-  else if (nz == ONCEILINGZ || (a->flags2 & MF2_CEILINGHUGGER))
-    a->pos.z = a->ceilingz - a->height;
-  else if (nz == FLOATRANDZ)
+  sector_t *s = a->subsector->sector;
+  fixed_t nz = a->pos.z;
+
+  // NOTE: We need a proper z coordinate for CheckPosition (due to fake floors!)
+  if (nz == ONFLOORZ || nz == FLOATRANDZ)
+    a->pos.z = s->floorheight + spawnheight; // from floor up
+  else if (nz == ONCEILINGZ)
+    a->pos.z = s->ceilingheight -a->height -spawnheight; // from ceiling down
+
+  position_check_t *ccc = a->CheckPosition(a->pos, Actor::PC_LINES); // for missiles owner is not yet set => collides, so we only check geometry
+  a->floorz = ccc->op.bottom;
+  a->ceilingz = ccc->op.top;
+
+  if (nz == FLOATRANDZ)
     {
       fixed_t space = a->ceilingz - a->height - a->floorz;
-      if (space > 48)
-        {
-	  space -= 40;
-	  a->pos.z = a->floorz + ((space*P_Random()) >> 8) + 40;
-        }
-      else
-	a->pos.z = a->floorz;
+      a->pos.z = (space > 48) ? a->floorz +40 +(((space - 40) * P_Random()) >> 8) : a->floorz;
     }
 
   if ((a->flags2 & MF2_FOOTCLIP) && (a->subsector->sector->floortype >= FLOOR_LIQUID)
@@ -223,8 +218,7 @@ Actor *Map::SpawnActor(Actor *a)
 
 
 /// when something disturbs a liquid surface, we get a splash
-DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base,
-		      mobjtype_t chunk, bool randtics)
+DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base, mobjtype_t chunk, bool randtics)
 {
   // spawn a base splash
   DActor *p = SpawnDActor(pos.x, pos.y, z, base);
@@ -295,8 +289,9 @@ DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 /// Spawns and adds a DActor to a Map.
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)
 {
+  // NOTE: nz may have the values ONFLOORZ, ONCEILINGZ and FLOATRANDZ in addition to real z coords...
   DActor *a = new DActor(nx, ny, nz, ai);
-  SpawnActor(a);
+  SpawnActor(a, 0);
   return a;
 }
 
@@ -326,7 +321,7 @@ void Map::SpawnPlayer(PlayerInfo *pi, mapthing_t *mthing)
       p->vel.Set(0, 0, 0);
     }
 
-  SpawnActor(p); // spawn the pawn
+  SpawnActor(p, mthing->height); // spawn the pawn
   p->TeleportMove(p->pos); // teleport to current location to telefrag bothersome obstacles (read: other players)
 
   // Boris stuff
@@ -955,7 +950,7 @@ void Map::BossDeath(const DActor *mo)
 
 
 // The fields of the mapthing are already in host byte order.
-Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
+Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial) const
 {
   // don't spawn keycards in deathmatch
   if (cv_deathmatch.value && (flags & MF_NOTDMATCH))
@@ -977,28 +972,30 @@ Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
   else
     nz = ONFLOORZ;
 
-  DActor *p = m->SpawnDActor(nx, ny, nz, this);
+  DActor *p = new DActor(nx, ny, nz, this);
+  m->SpawnActor(p, mt->height); // set pos.z and floorz, among other things...
+
+  // Seed random starting index for bobbing motion
+  if (flags2 & MF2_FLOATBOB)
+    {
+      p->reactiontime = P_Random(); // randomize phase
+      p->special1 = (p->pos.z - p->floorz).floor(); // floating height above floor (integer, NOT fixed_t) 
+    }
+
   mt->mobj = p;
-
-  if (nz == ONFLOORZ)
-    p->pos.z += mt->height;
-  else if (nz == ONCEILINGZ)
-    p->pos.z -= mt->height;
-
-  // yaw
-  if (p->flags & MF_MONSTER)
-    p->yaw = ANG45 * (mt->angle/45);
-  else
-    p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
-
   p->spawnpoint = mt;
-  p->tid = mt->tid;
   p->special = mt->special;
   p->args[0] = mt->args[0];
   p->args[1] = mt->args[1];
   p->args[2] = mt->args[2];
   p->args[3] = mt->args[3];
   p->args[4] = mt->args[4];
+
+  // yaw
+  if (flags & MF_MONSTER)
+    p->yaw = ANG45 * (mt->angle/45);
+  else
+    p->yaw = ((mt->angle << 8)/360) << 24; // full angle resolution
 
   // do the flags
   if (mt->flags & MTF_AMBUSH)
@@ -1012,34 +1009,28 @@ Actor *ActorInfo::Spawn(Map *m, mapthing_t *mt, bool initial)
       p->tics = -1;
     }
 
-  // Seed random starting index for bobbing motion
-  if (p->flags2 & MF2_FLOATBOB)
-    {
-      p->reactiontime = P_Random();
-      p->special1 = mt->height; // floating height (integer, NOT fixed_t)
-    }
-
   // randomize initial tics
   if (p->tics > 0)
     p->tics = 1 + (P_Random () % p->tics);
 
 
   // the rest could be done within Map
-
-  if (p->tid)
-    m->InsertIntoTIDmap(p, p->tid);
-
   if (initial)
     {
-      if (p->flags & MF_COUNTKILL)
+      // NOTE: To make Hexen maps with TID counting scripts playable, respawned monsters get no TID.
+      p->tid = mt->tid;
+      if (p->tid)
+	m->InsertIntoTIDmap(p, p->tid);
+
+      if (flags & MF_COUNTKILL)
 	m->kills++;
-      if (p->flags & MF_COUNTITEM)
+      if (flags & MF_COUNTITEM)
 	m->items++;
     }
   else
     {
       // spawn teleport fog (not in Heretic?)
-      Actor *fog = m->SpawnDActor(nx, ny, nz, MT_IFOG);
+      Actor *fog = m->SpawnDActor(nx, ny, p->pos.z + (game >= gm_heretic ? TELEFOGHEIGHT : 0), MT_IFOG);
       S_StartSound(fog, sfx_itemrespawn);
     }
 

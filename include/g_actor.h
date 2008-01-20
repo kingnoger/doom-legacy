@@ -368,12 +368,12 @@ public:
       PC_TELEPORT = PC_FIT | PC_TELEFRAG,
     };
 
-  bool CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode);
+  struct position_check_t *CheckPosition(const vec_t<fixed_t> &p, poscheck_e mode);
+  pair<bool, position_check_t*> TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
   bool TeleportMove(const vec_t<fixed_t> &p);
 
-  bool TryMove(fixed_t nx, fixed_t ny, bool allowdropoff);
 protected:
-  void CheckLineImpact(); ///< only used with TryMove
+  void CheckLineImpact(vector<struct line_t*> &spechit); ///< only used with TryMove
   void SlideMove(fixed_t nx, fixed_t ny);
   void BounceWall(fixed_t nx, fixed_t ny);
 public:

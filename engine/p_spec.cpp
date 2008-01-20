@@ -1794,7 +1794,7 @@ void Map::SpawnPusher(line_t *l, unsigned tag, int type)
 	  DActor *d;
 	  Iterate_TID iter(this, l->args[1]);
 	  for (Actor *m = iter.Next(); m; m = iter.Next())
-	    if (d = m->Inherits<DActor>())
+	    if ((d = m->Inherits<DActor>()))
 	      new pusher_t(this, m->subsector->sector, pusher_t::p_point, dx, dy, d);
 	}
       break;

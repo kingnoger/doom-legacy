@@ -87,11 +87,7 @@ void VoodooDoll::Spawn(PlayerInfo *p, mapthing_t *mthing)
   d->victim = p->pawn;
 
   Map *m = p->mp;
-  m->SpawnActor(d);
-
-
-  d->eflags |= MFE_ONGROUND;
-  d->pos.z = d->floorz;
+  m->SpawnActor(d, mthing->height);
 
   //d->angle = ANG45 * (mthing->angle/45);
 

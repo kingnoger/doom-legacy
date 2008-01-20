@@ -84,12 +84,14 @@
 /*!
   \page actor_missile Missile
   \ingroup g_actor
-  Moving projectile, e.g. a rocket. Often does damage. Definition: has the flag MF_MISSILE.
-  Usually also has the flags MF_DROPOFF | MF_NOBLOCKMAP | MF_NOGRAVITY
-  and the flags2 MF2_NOTELEPORT | MF2_IMPACT | MF2_PCROSS.
+  Moving projectile, e.g. a rocket. Often does damage. Definition: has the flag MF_MISSILE.<br/>
+  Usually also has the flags MF_DROPOFF | MF_NOBLOCKMAP | MF_NOGRAVITY<br/>
+  and the flags2 MF2_NOTELEPORT | MF2_IMPACT | MF2_PCROSS.<br/>
   Many flags only make sense if they are combined with MF_MISSILE... TODO explain
 
   MF2_SEEKERMISSILE homes towards its target. If reflected from a MF2_REFLECTIVE target, owner becomes target and v.v.
+
+  When a missile Touch:es an Actor and explodes, the Actor is stored in its target field.
 */
 
 /*!
@@ -97,6 +99,12 @@
   \ingroup g_actor
   Item that can be picked up by the players, e.g. a health bonus. Definition: has the flag MF_SPECIAL.
   Often also has the flags MF_COUNTITEM and MF2_FLOATBOB.
+*/
+
+/*!
+  \page actor_floatbob Floatbob
+  \ingroup g_actor
+  MF2_FLOATBOB makes the item smoothly bob up and down: pos.z = floorz + special1 + 8*sin(2pi * reactiontime / 64), where reactiontime is incremented each tic.
 */
 
 
@@ -150,8 +158,7 @@ Actor::Actor()
 Actor::Actor(fixed_t nx, fixed_t ny, fixed_t nz)
   : Thinker(), pos(nx, ny, nz)
 {
-  // note! here Map *mp is not yet set! This means you can't call functions such as
-  // SetPosition that have something to do with a map.
+  // NOTE Map *mp is not yet set! This means you can't call functions which use it!
   pres = NULL;
   snext = sprev = bnext = bprev = NULL;
   subsector = NULL;
@@ -307,7 +314,7 @@ void Actor::unpackUpdate(GhostConnection *connection, BitStream *stream)
 
       pos = apos;
       vel = avel;
-      m->me->SpawnActor(this); // link the ghost to the correct Map
+      m->me->SpawnActor(this, 0); // link the ghost to the correct Map
     }
 }
 
@@ -560,30 +567,33 @@ void Actor::XYMovement()
 	  xmove = ymove = 0;
         }
 
-      if (!TryMove(ptryx, ptryy, true))
+      pair<bool, position_check_t*> check = TryMove(ptryx, ptryy, true);
+      if (!check.first)
         {
 	  // blocked move
+	  position_check_t *ccc = check.second;
+
 	  if (flags2 & MF2_SLIDE)
             {
 	      // try to slide along whatever blocked us
-	      if (!PosCheck.block_thing)
+	      if (!ccc->block_thing)
 		{
 		  SlideMove(ptryx, ptryy); // Slide against wall
 		}
 	      else
 		{
 		  // Slide against an Actor
-		  if (TryMove(pos.x, ptryy, true))
+		  if (TryMove(pos.x, ptryy, true).first)
 		    vel.x = 0;
-		  else if (TryMove(ptryx, pos.y, true))
+		  else if (TryMove(ptryx, pos.y, true).first)
 		    vel.y = 0;
 		  else
 		    vel.x = vel.y = 0;
 		}
             }
-	    else if (flags & MF_MISSILE)
+	  else if (flags & MF_MISSILE)
             {
-	      if (PosCheck.block_thing)
+	      if (ccc->block_thing)
 		return; // explosions handled at Actor::Touch()
 
 	      // must have been blocked by a line
@@ -612,7 +622,7 @@ void Actor::XYMovement()
 
 
 	      // explode a missile, but not against a sky wall
-	      if (PosCheck.skyimpact)
+	      if (ccc->skyimpact)
 		{
 		  // Hack to prevent missiles exploding against the sky.
 		  // if (type == MT_HOLY_FX) ExplodeMissile(); // TODO some things do explode against sky
@@ -621,11 +631,11 @@ void Actor::XYMovement()
 		}
 
 	      // draw damage on wall
-	      if (PosCheck.block_line && !(flags & MF_NOSCORCH))  // set by last TryMove() that failed
+	      if (ccc->block_line && !(flags & MF_NOSCORCH))
                 {
 		  divline_t   misl(this);
-		  float frac = divline_t(PosCheck.block_line).InterceptVector(&misl);
-		  PosCheck.block_line->AddWallSplat("A_DMG3", P_PointOnLineSide(pos.x, pos.y, PosCheck.block_line),
+		  float frac = divline_t(ccc->block_line).InterceptVector(&misl);
+		  ccc->block_line->AddWallSplat("A_DMG3", P_PointOnLineSide(pos.x, pos.y, ccc->block_line),
 						    pos.z, frac, SPLATDRAWMODE_SHADE);
                 }
 
@@ -895,15 +905,21 @@ void Actor::ZMovement()
 
 
   // check if new z position makes us hit things
-  if ((flags2 & MF2_NOPASSMOBJ) || (flags & MF_NOCLIPTHING) ||
-      (flags & MF_MISSILE) || // missiles explode at next XYMovement
-      CheckPosition(pos, PC_THINGS))
+  if ((flags2 & MF2_NOPASSMOBJ)
+      || (flags & MF_NOCLIPTHING)
+      || (flags & MF_MISSILE)) // missiles explode at next XYMovement
     eflags &= ~MFE_ONMOBJ;
   else
     {
+      position_check_t *ccc = CheckPosition(pos, PC_THINGS);
+      if (ccc->xy_move_ok)
+	{
+	  eflags &= ~MFE_ONMOBJ;
+	  return;
+	}
+
       extern const fixed_t MAXSTEP;
-  
-      Actor *onmo = PosCheck.block_thing;
+      Actor *onmo = ccc->block_thing;
 
       // did we actually hit the thing from above or below?
       if (onmo->Top() < Feet() - vel.z)
@@ -1459,47 +1475,31 @@ bool DActor::SetState(const state_t *ns, bool call)
 // The old corpse is removed, a new monster appears at the old one's spawnpoint
 void DActor::NightmareRespawn()
 {
-  mapthing_t *mthing = spawnpoint;
-  if (!mthing)
+  mapthing_t *mt = spawnpoint;
+  if (!mt)
     return; // no spawnpoint, no respawn
 
-#warning FIXME mapthing height in spawn!
-  vec_t<fixed_t> p(mthing->x, mthing->y, 0); // FIXME z???
+  Actor *a = info->Spawn(mp, mt, false);
 
-  // somthing is occupying it's position?
-  if (!TestLocation(p))
-    return; // no respwan (will try again later!)
+  // something is occupying it's position?
+  if (!a->TestLocation())
+    {
+      a->Remove(); // didn't fit
+      return; // no respawn (will try again later!)
+    }
 
-  // spawn a teleport fog at old spot
-  // because of removal of the body?
-  DActor *mo = mp->SpawnDActor(pos.x, pos.y, subsector->sector->floorheight + 
-			       (game.mode == gm_heretic ? TELEFOGHEIGHT : 0), MT_TFOG);
-  // initiate teleport sound
-  S_StartSound(mo, sfx_teleport);
+  a->reactiontime = 18;
 
+  fixed_t fh = game.mode >= gm_heretic ? TELEFOGHEIGHT : 0;
+
+  // spawn a teleport fog at old spot (body vanishes)
+  DActor *fog = mp->SpawnDActor(pos.x, pos.y, pos.z + fh, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+  /*
   // spawn a teleport fog at the new spot
-  subsector_t *ss = mp->GetSubsector(p.x, p.y);
-
-  mo = mp->SpawnDActor(p.x, p.y, ss->sector->floorheight +
-		   (game.mode == gm_heretic ? TELEFOGHEIGHT : 0) , MT_TFOG);
-  S_StartSound(mo, sfx_teleport);
-
-  // spawn it
-  if (info->flags & MF_SPAWNCEILING)
-    p.z = ONCEILINGZ;
-  else
-    p.z = ONFLOORZ;
-
-  // spawn the new monster
-  // inherit attributes from deceased one
-  mo = mp->SpawnDActor(p, type);
-  mo->spawnpoint = mthing;
-  mo->yaw = ANG45 * (mthing->angle/45);
-
-  if (mthing->flags & MTF_AMBUSH)
-    mo->flags |= MF_AMBUSH;
-
-  mo->reactiontime = 18;
+  fog = mp->SpawnDActor(a->pos.x, a->pos.y, a->pos.z + fh, MT_TFOG);
+  S_StartSound(fog, sfx_teleport);
+  */
 
   // remove the old monster,
   Remove();
@@ -1585,7 +1585,7 @@ bool DActor::CheckMissileSpawn()
   // be computed if it immediately explodes
   pos += vel >> 1;
 
-  if (!TryMove(pos.x, pos.y, true))
+  if (!TryMove(pos.x, pos.y, true).first)
     {
       ExplodeMissile();
       return false;
@@ -1646,7 +1646,6 @@ void DActor::ExplodeMissile()
       return;
 
   vel.Set(0, 0, 0);
-
   SetState(info->deathstate);
 
   if (game.mode < gm_heretic)
@@ -1659,22 +1658,8 @@ void DActor::ExplodeMissile()
 
   flags &= ~MF_MISSILE;
 
-  switch (type)
-    {
-    case MT_SORCBALL1:
-    case MT_SORCBALL2:
-    case MT_SORCBALL3:
-      S_StartSound(this, SFX_SORCERER_BIGBALLEXPLODE); // TODO see if these can be made deathsounds...
-      break;
-    case MT_SORCFX1:
-      S_StartSound(this, SFX_SORCERER_HEADSCREAM);
-      break;
-
-    default:
-      if (info->deathsound)
-	S_StartSound(this, info->deathsound);
-      break;
-    }
+  if (info->deathsound)
+    S_StartSound(this, info->deathsound); // missile hitting target -sound (e.g. an explosion)
 }
 
 
@@ -1737,19 +1722,5 @@ void DActor::FloorBounceMissile()
   vel.y *= 2.0f/3;
 
   if (info->seesound)
-    {
-      switch (type)
-	{
-	case MT_SORCBALL1:
-	case MT_SORCBALL2:
-	case MT_SORCBALL3:
-	  if (!args[0])
-	    S_StartSound(this, info->seesound);
-	  break;
-	default:
-	  S_StartSound(this, info->seesound);
-	  break;
-	}
-    }
-
+    S_StartSound(this, info->seesound);
 }
