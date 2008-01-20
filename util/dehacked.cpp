@@ -410,7 +410,7 @@ dehacked_t::dehacked_t()
 }
 
 
-void dehacked_t::error(char *first, ...)
+void dehacked_t::error(const char *first, ...)
 {
   va_list argptr;
 

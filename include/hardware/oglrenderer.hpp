@@ -87,7 +87,7 @@ private:
   void RenderGlSsecPolygon(subsector_t *ss, GLfloat height, Material *tex, bool isFloor, GLfloat xoff=0.0, GLfloat yoff=0.0);
   void RenderGLSeg(int num);
   void GetSegQuads(int num, quad &u, quad &m, quad &l) const;
-  void RenderActors(sector_t *sec);
+  void RenderActors(subsector_t *ssec);
   void DrawSingleQuad(Material *m, vertex_t *v1, vertex_t *v2, GLfloat lower, GLfloat upper, GLfloat texleft=0.0, GLfloat texright=1.0, GLfloat textop=0.0, GLfloat texbottom=1.0) const;
   void DrawSingleQuad(const quad *q) const;
 

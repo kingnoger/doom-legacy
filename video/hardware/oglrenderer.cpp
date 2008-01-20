@@ -999,21 +999,14 @@ void OGLRenderer::RenderGLSubsector(int num)
   }
 
   // finally the actors
-  RenderActors(s);
+  RenderActors(ss);
 }
 
 
 
-void OGLRenderer::RenderActors(sector_t *sec)
+void OGLRenderer::RenderActors(subsector_t *ssec)
 {
-  // BSP is traversed by subsector.
-  // A sector might have been split into several subsectors during BSP building.
-  // Thus we check whether its already drawn.
-  if (sec->validcount == validcount)
-    return;
-
-  // Well, now it will be done.
-  sec->validcount = validcount;
+  sector_t *sec = ssec->sector;
 
   /*
   if (!sec->numlights)
@@ -1032,9 +1025,10 @@ void OGLRenderer::RenderActors(sector_t *sec)
     }
   */
 
-  // Handle all things in sector.
+  // Handle all things in this subsector.
   for (Actor *thing = sec->thinglist; thing; thing = thing->snext)
-    if (!(thing->flags2 & MF2_DONTDRAW) && thing->pres)
+    if (!(thing->flags2 & MF2_DONTDRAW) && thing->pres &&
+            thing->subsector == ssec)
       {
         thing->pres->Draw(thing); // does both sprites and 3d models
       }

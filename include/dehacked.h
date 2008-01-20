@@ -52,7 +52,7 @@ public:
 
   dehacked_t();
   bool LoadDehackedLump(int lump);
-  void error(char *first, ...);
+  void error(const char *first, ...);
 
   int   idfa_armor;
   float idfa_armorfactor;
