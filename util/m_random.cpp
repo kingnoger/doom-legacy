@@ -24,6 +24,7 @@
 ///
 /// Original Doom required this to keep network games synchronized.
 
+#include <stdlib.h>
 #include "doomdef.h"
 #include "doomtype.h"
 #include "m_random.h"
@@ -114,3 +115,21 @@ void P_SetRandIndex(byte rindex)
 {
   prndindex = rindex;
 }
+
+
+
+float Random()
+{
+  return drand48(); // Could be something else as well, this function is from SVID.
+}
+
+float RandomS()
+{
+  return drand48() -drand48();
+}
+
+float RandomGauss()
+{
+  return RandomS(); // TODO real gaussian
+}
+

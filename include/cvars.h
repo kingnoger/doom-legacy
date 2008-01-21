@@ -62,6 +62,8 @@ extern consvar_t cv_itemrespawntime;
 extern consvar_t cv_respawnmonsters;
 extern consvar_t cv_respawnmonsterstime;
 extern consvar_t cv_fragsweaponfalling;
+extern consvar_t cv_bodyqueue_size;
+extern consvar_t cv_bodyqueue_monsters;
 
 extern consvar_t cv_gravity;
 extern consvar_t cv_nomonsters;

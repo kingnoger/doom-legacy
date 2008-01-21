@@ -175,11 +175,13 @@ consvar_t cv_allowautoaim    = {"allowautoaim", "1", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowmlook      = {"allowfreelook", "1", CV_NETVAR, CV_YesNo};
 consvar_t cv_allowpause      = {"allowpause", "1", CV_NETVAR, CV_YesNo};
 
-consvar_t cv_itemrespawn     ={"respawnitem"    , "0", CV_NETVAR, CV_OnOff};
-consvar_t cv_itemrespawntime ={"respawnitemtime", "30", CV_NETVAR, CV_Unsigned};
+consvar_t cv_itemrespawn     = {"respawnitem"    , "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_itemrespawntime = {"respawnitemtime", "30", CV_NETVAR, CV_Unsigned};
 consvar_t cv_respawnmonsters = {"respawnmonsters", "0", CV_NETVAR, CV_OnOff};
 consvar_t cv_respawnmonsterstime = {"respawnmonsterstime", "12", CV_NETVAR, CV_Unsigned};
 consvar_t cv_fragsweaponfalling  = {"fragsweaponfalling", "0", CV_NETVAR, CV_OnOff};
+consvar_t cv_bodyqueue_size  = {"bodyqueue_size", "32", CV_NETVAR, CV_Unsigned};
+consvar_t cv_bodyqueue_monsters = {"bodyqueue_monsters", "0", CV_NETVAR, CV_YesNo};
 
 consvar_t cv_gravity = {"gravity", "1", CV_NETVAR | CV_FLOAT | CV_ANNOUNCE};
 consvar_t cv_nomonsters = {"nomonsters", "0", CV_NETVAR, CV_OnOff};
@@ -738,6 +740,8 @@ void SV_Init()
   cv_respawnmonsters.Reg();
   cv_respawnmonsterstime.Reg();
   cv_fragsweaponfalling.Reg();
+  cv_bodyqueue_size.Reg();
+  cv_bodyqueue_monsters.Reg();
 
   cv_gravity.Reg();
   cv_nomonsters.Reg();

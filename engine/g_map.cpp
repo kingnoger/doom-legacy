@@ -754,14 +754,14 @@ PlayerInfo *Map::FindPlayer(int num)
 void Map::QueueBody(Actor *p)
 {
   p->flags2 &= ~MF2_DONTDRAW;
+  bodyqueue.push_back(p);
 
   // flush an old corpse if needed
-  if (bodyqueue.size() >= BODYQUESIZE)
+  while (bodyqueue.size() > cv_bodyqueue_size.value)
     {
       bodyqueue.front()->Remove();
       bodyqueue.pop_front();
     }
-  bodyqueue.push_back(p);
 }
 
 

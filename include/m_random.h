@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2000 by DooM Legacy Team.
+// Portions Copyright (C) 1998-2007 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,8 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -30,6 +28,14 @@
 #include "doomtype.h"
 #include "m_fixed.h"
 
+/// Uniformly distributed pseudo-random numbers in the range [0,1).
+float Random();
+
+/// Pseudo-random numbers following a pyramid distribution in the range (-1,1).
+float RandomS();
+
+/// N(0,1) normally distributed pseudo-random numbers .
+float RandomGauss();
 
 // Returns a number from 0 to 255,
 // from a lookup table.

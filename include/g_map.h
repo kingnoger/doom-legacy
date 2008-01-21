@@ -174,8 +174,7 @@ public:
   deque<mapthing_t *> itemrespawnqueue; ///< for respawning items
   deque<tic_t>        itemrespawntime;  ///< this could be combined to the previous one, but...
 
-  static const unsigned BODYQUESIZE = 32;
-  deque<Actor *> bodyqueue; ///< queue for player corpses
+  deque<Actor *> bodyqueue; ///< queue for player/monster corpses
 
   multimap<short, Actor *> TID_map; ///< Thing ID, a system for grouping things.
   typedef multimap<short, Actor *>::iterator TID_map_iter_t;

@@ -910,6 +910,88 @@ void A_Pain(DActor *actor)
 }
 
 
+
+
+static void P_DropItem(Actor *source, mobjtype_t type, int amount, int chance, bool onfloor = false)
+{
+  if (P_Random() > chance)
+    return;
+
+  fixed_t z = source->pos.z;
+
+  if (!onfloor)
+    z += source->height >> 1;
+
+  DActor *item = source->mp->SpawnDActor(source->pos.x, source->pos.y, z, type);
+
+  // add a little bounce
+  if (!onfloor)
+    item->vel = vec_t<fixed_t>(RandomS(), RandomS(), 5 + 4*Random());
+
+  item->flags |= MF_DROPPED;
+  item->health = amount;
+}
+
+
+/// First A_Fall, the drop something.
+void A_NoBlocking(DActor *actor)
+{
+  A_Fall(actor);
+
+  // Check for monsters dropping things TODO ZDoom-style droplist into ActorInfo, merge with A_Fall
+  switch (actor->type)
+    {
+      // Heretic
+    case MT_MUMMY:
+    case MT_MUMMYLEADER:
+    case MT_MUMMYGHOST:
+    case MT_MUMMYLEADERGHOST:
+      P_DropItem(actor, MT_AMGWNDWIMPY, 3, 84);
+      break;
+    case MT_KNIGHT:
+    case MT_KNIGHTGHOST:
+      P_DropItem(actor, MT_AMCBOWWIMPY, 5, 84);
+      break;
+    case MT_WIZARD:
+      P_DropItem(actor, MT_AMBLSRWIMPY, 10, 84);
+      P_DropItem(actor, MT_ARTITOMEOFPOWER, 0, 4);
+      break;
+    case MT_HHEAD:
+      P_DropItem(actor, MT_AMBLSRWIMPY, 10, 84);
+      P_DropItem(actor, MT_ARTIEGG, 0, 51);
+      break;
+    case MT_BEAST:
+      P_DropItem(actor, MT_AMCBOWWIMPY, 10, 84);
+      break;
+    case MT_CLINK:
+      P_DropItem(actor, MT_AMSKRDWIMPY, 20, 84);
+      break;
+    case MT_SNAKE:
+      P_DropItem(actor, MT_AMPHRDWIMPY, 5, 84);
+      break;
+    case MT_MINOTAUR:
+      P_DropItem(actor, MT_ARTISUPERHEAL, 0, 51);
+      P_DropItem(actor, MT_AMPHRDWIMPY, 10, 84);
+      break;
+
+      // Doom
+    case MT_WOLFSS:
+    case MT_POSSESSED:
+      P_DropItem(actor, MT_CLIP, mobjinfo[MT_CLIP].spawnhealth/2, 255, true); // half a clip
+      break;
+    case MT_SHOTGUY:
+      P_DropItem(actor, MT_SHOTGUN, mobjinfo[MT_SHOTGUN].spawnhealth/2, 255, true);
+      break;
+    case MT_CHAINGUY:
+      P_DropItem(actor, MT_CHAINGUN, mobjinfo[MT_CHAINGUN].spawnhealth/2, 255, true);
+      break;
+
+    default:
+      return;
+    }
+}
+
+
 /// A dying thing falls to the ground (monster deaths)
 void A_Fall(DActor *actor)
 {
@@ -917,12 +999,15 @@ void A_Fall(DActor *actor)
   if (!cv_solidcorpse.value)
     actor->flags &= ~MF_SOLID;
 
-  actor->flags   |= MF_DROPOFF;
-  actor->height >>= 2;
-  actor->radius -= (actor->radius>>4);      //for solid corpses
-  actor->health = actor->info->spawnhealth>>1;
   // So change this if corpse objects
   // are meant to be obstacles.
+  actor->flags  |= MF_DROPOFF;
+  actor->height *= 0.25;
+  actor->radius *= 0.9375; // TODO huh?
+  actor->health = actor->info->spawnhealth >> 1;
+
+  if (cv_bodyqueue_monsters.value)
+    actor->mp->QueueBody(actor);
 }
 
 
@@ -1807,13 +1892,11 @@ void A_BrainPain(DActor *mo)
 
 void A_BrainScream(DActor *mo)
 {
-  fixed_t x, y, z;
-  for (x = mo->pos.x - 196; x < mo->pos.x + 320; x += 8)
+  fixed_t y = mo->pos.y - 320;
+  for (fixed_t x = mo->pos.x - 196; x < mo->pos.x + 320; x += 8)
     {
-      y = mo->pos.y - 320;
-      z = 128 + P_Random()*2;
-      DActor *th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
-      th->vel.z = P_FRandom(7); // max 2
+      DActor *th = mo->mp->SpawnDActor(x, y, 128 + P_Random()*2, MT_ROCKET);
+      th->vel.z = 2*Random();
 
       th->SetState(S_BRAINEXPLODE1);
 
@@ -1829,13 +1912,8 @@ void A_BrainScream(DActor *mo)
 
 void A_BrainExplode(DActor *mo)
 {
-  fixed_t x, y, z;
-
-  x = P_SignedFRandom(5) + mo->pos.x;
-  y = mo->pos.y;
-  z = 128 + P_Random()*2;
-  DActor *th = mo->mp->SpawnDActor(x,y,z, MT_ROCKET);
-  th->vel.z = P_FRandom(7); // max 2
+  DActor *th = mo->mp->SpawnDActor(mo->pos.x + 8*RandomS(), mo->pos.y, 128 + P_Random()*2, MT_ROCKET);
+  th->vel.z = 2*Random();
 
   th->SetState(S_BRAINEXPLODE1);
 

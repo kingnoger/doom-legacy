@@ -732,33 +732,6 @@ void A_MntrFloorFire(DActor *actor)
 */
 
 
-//---------------------------------------------------------------------------
-//
-// PROC P_DropItem
-//
-//---------------------------------------------------------------------------
-
-/*
-void P_DropItem(DActor *source, mobjtype_t type, int special, int chance)
-{
-	DActor *mo;
-
-	if(P_Random() > chance)
-	{
-		return;
-	}
-	mo = P_SpawnMobj(source->pos.x, source->pos.y,
-		source->pos.z+(source->height>>1), type);
-	mo->vel.x = P_SignedFRandom(8);
-	mo->vel.y = P_SignedFRandom(8);
-	mo->vel.z = 5+(P_Random()<<10);
-	mo->flags2 |= MF2_DROPPED;
-	mo->health = special;
-}
-*/
-
-
-
 //============================================================================
 //
 // A_SerpentUnHide
