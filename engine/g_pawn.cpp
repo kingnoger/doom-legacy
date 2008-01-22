@@ -1198,7 +1198,7 @@ void PlayerPawn::ProcessSpecialSector(sector_t *sector)
 	       (damage >= 20 && P_Random() < 5))
 	Damage(NULL, NULL, damage, dtype);
       
-      mp->SpawnSmoke(pos.x, pos.y, pos.z);
+      mp->SpawnSmoke(pos);
     }
 }
 
@@ -1247,7 +1247,7 @@ void PlayerPawn::PlayerInSpecialSector()
 	    {
 	      Damage(NULL, NULL, 10, dt_heat);
 	      S_StartSound(this, SFX_LAVA_SIZZLE);
-	      mp->SpawnSmoke(pos.x, pos.y, pos.z);
+	      mp->SpawnSmoke(pos);
 	      break;
 	    }
 	}

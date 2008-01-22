@@ -267,8 +267,8 @@ public:
 		      mobjtype_t chunk = MT_NONE, bool randtics = true); 
   DActor *SpawnBlood(const vec_t<fixed_t>& r, int damage);
   void SpawnBloodSplats(const vec_t<fixed_t>& r, int damage, fixed_t px, fixed_t py);
-  void SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype);
-  void SpawnSmoke(fixed_t x, fixed_t y, fixed_t z);
+  void SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype, bool hit_thing);
+  void SpawnSmoke(const vec_t<fixed_t>& r);
 
   void InsertIntoTIDmap(Actor *p, int tid);
   void RemoveFromTIDmap(Actor *p);

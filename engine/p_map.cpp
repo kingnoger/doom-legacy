@@ -1040,45 +1040,6 @@ static float bottomsine, topsine; // vertical aiming range
 
 mobjtype_t PuffType = MT_PUFF; ///< for Actor::LineAttack
 
-void Map::SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype)
-{
-  vec_t<fixed_t> p = r;
-  p.z += P_SignedFRandom(6);
-
-  DActor *puff = SpawnDActor(p, pufftype);
-
-  if (target_actor && puff->info->seesound)
-    S_StartSound(puff, puff->info->seesound); // Hit thing sound
-  else if (puff->info->attacksound)
-    S_StartSound(puff, puff->info->attacksound);
-
-
-  switch (pufftype)
-    {
-    case MT_PUFF:
-      puff->tics -= P_Random()&3;
-      if (puff->tics < 1)
-	puff->tics = 1;
-        
-      // don't make punches spark on the wall
-      if (trace.length == MELEERANGE)
-	puff->SetState(S_PUFF3);
-      // fallthru
-    case MT_PUNCHPUFF:
-    case MT_BEAKPUFF:
-    case MT_STAFFPUFF:
-      puff->vel.z = 1;
-      break;
-    case MT_HAMMERPUFF:
-    case MT_GAUNTLETPUFF1:
-    case MT_GAUNTLETPUFF2:
-      puff->vel.z = 0.8f;
-      break;
-    default:
-      break;
-    }
-}
-
 
 /// \brief Aiming up and down for missile attacks.
 /// \ingroup g_ptr
@@ -1457,7 +1418,7 @@ Actor *Actor::LineAttack(angle_t ang, float distance, float sine, int damage, in
     ipoint = trace.Point(trace.frac - 4.0 / trace.length);
 
   if (PuffType != MT_NONE)
-    mp->SpawnPuff(ipoint, PuffType);
+    mp->SpawnPuff(ipoint, PuffType, target_actor != NULL);
 
   return target_actor;
 

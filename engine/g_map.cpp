@@ -217,74 +217,12 @@ Actor *Map::SpawnActor(Actor *a, fixed_t spawnheight)
 }
 
 
-/// when something disturbs a liquid surface, we get a splash
-DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base, mobjtype_t chunk, bool randtics)
-{
-  // spawn a base splash
-  DActor *p = SpawnDActor(pos.x, pos.y, z, base);
-  S_StartSound(p, sound);
-
-  if (randtics)
-    {
-      p->tics -= P_Random() & 3;
-
-      if (p->tics < 1)
-	p->tics = 1;
-    }
-
-  if (chunk == MT_NONE)
-    return p;
-
-  // and possibly an additional chunk
-  p = SpawnDActor(pos.x, pos.y, z, chunk);
-  return p;
-}
-
-
-
-// spawn a blood sprite with falling z movement, at location
-// the duration and first sprite frame depends on the damage level
-// the more damage, the longer is the sprite animation
-DActor *Map::SpawnBlood(const vec_t<fixed_t>& r, int damage)
-{
-  DActor *th = SpawnDActor(r.x, r.y, r.z + P_SignedFRandom(6), MT_BLOOD);
-
-  th->vel.Set(P_SignedFRandom(4), P_SignedFRandom(4), fixed_t(2));
-  th->tics -= P_Random()&3;
-
-  if (th->tics < 1)
-    th->tics = 1;
-
-  if (damage <= 12 && damage >= 9)
-    th->SetState(S_BLOOD2);
-  else if (damage < 9)
-    th->SetState(S_BLOOD3);
-
-  return th;
-}
-
-
-
-/// when player gets hurt by lava/slime, spawn at feet
-void Map::SpawnSmoke(fixed_t x, fixed_t y, fixed_t z)
-{
-  x += (P_Random() & 8) - 4;
-  y += (P_Random() & 8) - 4;
-  z += P_Random() & 3;
-
-  DActor *th = SpawnDActor(x,y,z, MT_SMOK);
-  th->vel.z = 1;
-  th->tics -= P_Random() & 3;
-
-  if (th->tics < 1)
-    th->tics = 1;
-}
-
 
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, mobjtype_t t)
 {
   return SpawnDActor(nx, ny, nz, aid[t]);
 }
+
 
 /// Spawns and adds a DActor to a Map.
 DActor *Map::SpawnDActor(fixed_t nx, fixed_t ny, fixed_t nz, const ActorInfo *ai)

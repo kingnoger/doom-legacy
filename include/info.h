@@ -6514,10 +6514,10 @@ struct mobjinfo_t
   Uint32 flags;          ///< mobjflag_t flags.
   Uint32 flags2;         ///< mobjflag2_t flags.
 
-  int seesound;          ///< Played when thing sees an enemy.
+  int seesound;          ///< Played when thing sees an enemy / missile is launched
   int attacksound;       ///< Played when attacking.
-  int painsound;         ///< Played when hurt.
-  int deathsound;        ///< Played when thing dies.
+  int painsound;         ///< Played when hurt / missile bounces
+  int deathsound;        ///< Played when thing dies / missile explodes
   int activesound;       ///< Occasionally played when active.
 
   state_t *spawnstate;   ///< Initial state.

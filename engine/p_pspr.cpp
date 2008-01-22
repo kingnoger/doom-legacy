@@ -515,9 +515,9 @@ void A_Saw(PlayerPawn *p, pspdef_t *psp)
 
   // use meleerange + 1 se the puff doesn't skip the flash
   float sine;
-  p->AimLineAttack(angle, MELEERANGE+1, sine);
+  p->AimLineAttack(angle, MELEERANGE, sine);
   PuffType = MT_PUFF;
-  Actor *targ = p->LineAttack(angle, MELEERANGE+1, sine, damage, dt_cutting | dt_norecoil);
+  Actor *targ = p->LineAttack(angle, MELEERANGE, sine, damage, dt_cutting | dt_norecoil);
 
   if (!targ)
     {

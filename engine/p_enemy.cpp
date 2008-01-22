@@ -1242,7 +1242,7 @@ void A_Tracer(DActor *actor)
     return;
 
   // spawn a puff of smoke behind the rocket
-  m->SpawnPuff(actor->pos, MT_PUFF);
+  m->SpawnPuff(actor->pos, MT_PUFF, false);
 
   DActor *th = m->SpawnDActor(actor->pos.x - actor->vel.x, actor->pos.y - actor->vel.y, actor->pos.z, MT_SMOKE);
 
@@ -1299,16 +1299,13 @@ void A_SkelWhoosh(DActor  *actor)
 {
   if (!actor->target)
     return;
+
   A_FaceTarget (actor);
-  // judgecutor:
-  // CHECK ME!
   S_StartAttackSound(actor, sfx_skeswg);
 }
 
 void A_SkelFist(DActor  *actor)
 {
-  int         damage;
-
   if (!actor->target)
     return;
 
@@ -1316,7 +1313,7 @@ void A_SkelFist(DActor  *actor)
 
   if (actor->CheckMeleeRange())
     {
-      damage = ((P_Random()%10)+1)*6;
+      int damage = ((P_Random()%10)+1)*6;
       S_StartAttackSound(actor, sfx_skepch);
       actor->target->Damage(actor, actor, damage);
     }

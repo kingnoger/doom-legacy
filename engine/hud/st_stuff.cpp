@@ -1044,7 +1044,7 @@ void HUD::CreateHereticWidgets()
   // health sliders
   for (int k=0; k<MAX_GLVIEWPORTS; k++)
     {
-      sliders[k] = new HexenHudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
+      sliders[k] = new HudSlider(st_x, st_y+32, &st_health, 0, 100, Patch_ChainSlider);
       faces[k] = NULL;
     }
 

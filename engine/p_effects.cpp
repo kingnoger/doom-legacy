@@ -3,7 +3,7 @@
 //
 // $Id:$
 //
-// Copyright (C) 2007 by DooM Legacy Team.
+// Copyright (C) 2007-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -22,12 +22,117 @@
 
 #include "g_map.h"
 #include "g_mapinfo.h"
+#include "g_actor.h"
+#include "g_decorate.h"
 #include "p_effects.h"
 #include "p_spec.h"
 
 #include "m_random.h"
 #include "r_data.h"
 #include "sounds.h"
+
+
+
+/// When something disturbs a liquid surface, we get a splash.
+DActor *Map::SpawnSplash(const vec_t<fixed_t>& pos, fixed_t z, int sound, mobjtype_t base, mobjtype_t chunk, bool randtics)
+{
+  // spawn a base splash
+  DActor *p = SpawnDActor(pos.x, pos.y, z, base);
+  S_StartSound(p, sound);
+
+  if (randtics)
+    {
+      p->tics -= P_Random() & 3;
+
+      if (p->tics < 1)
+	p->tics = 1;
+    }
+
+  if (chunk == MT_NONE)
+    return p;
+
+  // and possibly an additional chunk
+  p = SpawnDActor(pos.x, pos.y, z, chunk);
+  return p;
+}
+
+
+/*!
+  Spawn a blood sprite with falling z movement, at given location.
+  The duration and first sprite frame depends on the damage level.
+  The more damage, the longer is the sprite animation
+*/
+DActor *Map::SpawnBlood(const vec_t<fixed_t>& r, int damage)
+{
+  DActor *th = SpawnDActor(r.x, r.y, r.z + 4*RandomS(), MT_BLOOD);
+
+  th->vel.Set(16*RandomS(), 16*RandomS(), 2.0f);
+  th->tics -= P_Random()&3;
+
+  if (th->tics < 1)
+    th->tics = 1;
+
+  if (damage <= 12 && damage >= 9)
+    th->SetState(S_BLOOD2);
+  else if (damage < 9)
+    th->SetState(S_BLOOD3);
+
+  return th;
+}
+
+
+/// When player gets hurt by lava/slime, spawn at feet.
+void Map::SpawnSmoke(const vec_t<fixed_t>& r)
+{
+  // x,y offsets were (P_Random() & 8) - 4, meaning either -4 or 4
+  DActor *th = SpawnDActor(r + vec_t<fixed_t>(8*Random()-4, 8*Random()-4, 3*Random()), MT_SMOK);
+  th->vel.z = 1;
+  th->tics -= P_Random() & 3;
+
+  if (th->tics < 1)
+    th->tics = 1;
+}
+
+
+/// Spawn a "puff" sprite denoting a weapon hitting a thing/wall.
+void Map::SpawnPuff(const vec_t<fixed_t>& r, mobjtype_t pufftype, bool hit_thing)
+{
+  vec_t<fixed_t> p = r;
+  p.z += 4*RandomS();
+
+  DActor *puff = SpawnDActor(p, pufftype);
+
+  if (hit_thing && puff->info->seesound)
+    S_StartSound(puff, puff->info->seesound); // Hit thing sound
+  else if (puff->info->attacksound)
+    S_StartSound(puff, puff->info->attacksound);
+
+
+  switch (pufftype)
+    {
+    case MT_PUFF:
+      puff->tics -= P_Random()&3;
+      if (puff->tics < 1)
+	puff->tics = 1;
+        
+      // TODO Doom fist puffs used this (smaller puff, avoid sparks): puff->SetState(S_PUFF3);
+      // fallthru
+    case MT_PUNCHPUFF:
+    case MT_BEAKPUFF:
+    case MT_STAFFPUFF:
+      puff->vel.z = 1;
+      break;
+    case MT_HAMMERPUFF:
+    case MT_GAUNTLETPUFF1:
+    case MT_GAUNTLETPUFF2:
+      puff->vel.z = 0.8f;
+      break;
+    default:
+      break;
+    }
+}
+
+
 
 
 //========================================================

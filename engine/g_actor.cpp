@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -92,6 +92,9 @@
   MF2_SEEKERMISSILE homes towards its target. If reflected from a MF2_REFLECTIVE target, owner becomes target and v.v.
 
   When a missile Touch:es an Actor and explodes, the Actor is stored in its target field.
+  Since missiles use different action functions than monsters, they also use their sounds a little differently.
+  seesound: launch, painsound: floor/wall bounce, deathsound: explosion/hit,
+  activesound: may be used through A_ActiveSound (since missiles rarely A_Chase)
 */
 
 /*!
@@ -437,7 +440,6 @@ void Actor::Think()
 	}
     }
 
-  // Z movement
   eflags &= ~(MFE_JUSTHITFLOOR | MFE_JUSTHITCEILING);
 
   if (flags2 & MF2_FLOATBOB)
@@ -594,30 +596,19 @@ void Actor::XYMovement()
 	  else if (flags & MF_MISSILE)
             {
 	      if (ccc->block_thing)
-		return; // explosions handled at Actor::Touch()
+		return; // explosions already handled at Actor::Touch()
 
 	      // must have been blocked by a line
 
-	      if ((flags2 & MF2_FULLBOUNCE))
+	      if (flags2 & MF2_FULLBOUNCE)
 		{
 		  // Struck a wall
 		  BounceWall(ptryx, ptryy);
 		  DActor *t = Inherits<DActor>();
-		  if (t)
-		    switch (t->type)
-		      {
-		      case MT_SORCBALL1:
-		      case MT_SORCBALL2:
-		      case MT_SORCBALL3:
-		      case MT_SORCFX1:
-			break;
-		      default:
-			if (t->info->seesound)
-			  S_StartSound(this, t->info->seesound);
-			break;
-		      }
+		  if (t && t->info->painsound)
+		    S_StartSound(t, t->info->painsound); // for missiles, this is the wall/floor bounce sound
 
-		  return; // no blow
+		  return; // no explosion
 		}
 
 
@@ -829,19 +820,16 @@ void Actor::ZMovement()
   // adjust z position
   pos.z += vel.z;
 
-  if ((flags & MF_FLOAT) && target)
+  if ((flags & MF_FLOAT) && target && !(eflags & (MFE_SKULLFLY | MFE_INFLOAT)))
     {
       // float down towards target if too close
-      if (!(eflags & (MFE_SKULLFLY | MFE_INFLOAT)))
-        {
-	  fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
-	  fixed_t delta = target->pos.z + (height >> 1) - pos.z; // assumed to be taller than target so this looks good...
+      fixed_t dist = P_AproxDistance(pos.x - target->pos.x, pos.y - target->pos.y);
+      fixed_t delta = target->pos.z + (height >> 1) - pos.z; // assumed to be taller than target so this looks good...
 
-	  if (delta < 0 && dist < -(delta*3) )
-	    pos.z -= FLOATSPEED;
-	  else if (delta > 0 && dist < (delta*3) )
-	    pos.z += FLOATSPEED;
-        }
+      if (delta < 0 && dist < -(delta*3) )
+	pos.z -= FLOATSPEED;
+      else if (delta > 0 && dist < (delta*3) )
+	pos.z += FLOATSPEED;
     }
 
   // was only for PlayerPawns, but why?
@@ -850,20 +838,113 @@ void Actor::ZMovement()
       pos.z += finesine[(FINEANGLES / 20 * mp->maptic >> 2) & FINEMASK];
     }
 
-  // clip z movement with floors and ceilings, add gravity
 
-  if (pos.z <= floorz)
+  // clip z movement with things
+  eflags &= ~MFE_ONMOBJ;
+
+  // check if new z position makes us hit things
+  if ((flags2 & MF2_NOPASSMOBJ)
+      || (flags & MF_NOCLIPTHING)
+      || (flags & MF_MISSILE)) // missiles explode at next XYMovement
+    ;
+  else
+    {
+      position_check_t *ccc = CheckPosition(pos, PC_THINGS);
+      Actor *thing = ccc->block_thing;
+
+      if (thing)
+	{
+	  extern const fixed_t MAXSTEP;
+
+	  // did we actually hit the thing from above or below?
+	  if (thing->Top() < Feet() - vel.z)
+	    {
+	      // from above
+	      //if (!(eflags & MFE_FLY))
+	      LandOnThing(thing);
+	      pos.z = thing->Top();
+
+	      eflags &= ~MFE_ONGROUND;
+	      eflags |= MFE_ONMOBJ;
+	    }
+	  else if (thing->Feet() > Top() - vel.z)
+	    {
+	      // from below
+	      LandOnThing(thing);
+	      pos.z = thing->Feet() - height;
+	    }
+	  else if ((flags & MF_PLAYER) && // only players climb voluntarily on other things
+		   thing->Top() <= Feet() + MAXSTEP)
+	    {
+	      // stepped on it TODO not correct, we may have large relative z speed too
+#warning TODO step up on things
+	      /*
+	      p->player->viewheight -= thing->Top() - Feet();
+	      p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
+	      */
+	      pos.z = thing->Top();
+	      vel.z = thing->vel.z;
+
+	      eflags &= ~MFE_ONGROUND;
+	      eflags |= MFE_ONMOBJ;
+	    }
+	}
+    }
+
+  // now ceilings and floors
+
+  if (Top() > ceilingz)
+    {
+      // hit the ceiling
+      // Did we actually hit the ceiling?
+      if ((flags & MF_MISSILE) || Top() - vel.z <= ceilingz)
+	{
+	  eflags |= MFE_JUSTHITCEILING;
+
+	  if (eflags & MFE_SKULLFLY)
+	    {
+	      vel.z = -vel.z; // skull slammed into ceiling
+	    }
+	  else if (flags & MF_SHOOTABLE) // usually player jumping
+	    {
+	      LandOnFloor(false);
+	    }
+	  else if (!(flags & MF_MISSILE))
+	    vel.z = 0;
+	}
+      else
+	vel.z = 0;
+
+      pos.z = ceilingz - height;
+    }
+
+  if (Feet() <= floorz)
     {
       // hit the floor
       // Did we actually fall to the ground?
       if ((flags & MF_MISSILE) || pos.z - vel.z > floorz)
 	{
 	  eflags |= MFE_JUSTHITFLOOR;
+	  HitFloor();
+
+	  if (eflags & MFE_SKULLFLY)
+	    {
+	      // the skull slammed into floor
+	      vel.z = -vel.z;
+	    }
+	  else if (flags & MF_SHOOTABLE) // usually player or blasted mobj falling
+	    {
+	      LandOnFloor(true);
+	    }
+	  else if (!(flags & MF_MISSILE))
+	    vel.z = 0; // if other things than missiles can bounce, we need to do it here!!!TODO
 	}
+      else
+	vel.z = 0;
 
       pos.z = floorz;
     }
-  else if (!(flags & MF_NOGRAVITY)) // Gravity!
+  else if (!(flags & MF_NOGRAVITY) && !(eflags & MFE_ONMOBJ)) // Gravity!
     {
       // TODO per-sector gravity
       fixed_t gravityadd = -cv_gravity.Get();
@@ -886,108 +967,10 @@ void Actor::ZMovement()
       vel.z += gravityadd;
     }
 
-  if (Top() > ceilingz)
-    {
-      // hit the ceiling
-      // Did we actually hit the ceiling?
-      if ((flags & MF_MISSILE) || Top() - vel.z <= ceilingz)
-	{
-	  eflags |= MFE_JUSTHITCEILING;
-	}
-
-      pos.z = ceilingz - height;
-    }
-
   // z friction in water
   if (!(flags & MF_MISSILE || eflags & MFE_SKULLFLY) && // no z friction for missiles and skulls
       (eflags & (MFE_TOUCHWATER | MFE_UNDERWATER)))
     vel.z *= friction_underwater;
-
-
-  // check if new z position makes us hit things
-  if ((flags2 & MF2_NOPASSMOBJ)
-      || (flags & MF_NOCLIPTHING)
-      || (flags & MF_MISSILE)) // missiles explode at next XYMovement
-    eflags &= ~MFE_ONMOBJ;
-  else
-    {
-      position_check_t *ccc = CheckPosition(pos, PC_THINGS);
-      if (ccc->xy_move_ok)
-	{
-	  eflags &= ~MFE_ONMOBJ;
-	  return;
-	}
-
-      extern const fixed_t MAXSTEP;
-      Actor *onmo = ccc->block_thing;
-
-      // did we actually hit the thing from above or below?
-      if (onmo->Top() < Feet() - vel.z)
-	{
-	  // from above
-	  //if (!(eflags & MFE_FLY))
-	  LandOnThing(onmo);
-	  pos.z = onmo->Top();
-
-	  eflags &= ~MFE_ONGROUND;
-	  eflags |= MFE_ONMOBJ;
-	}
-      else if (onmo->Feet() > Top() - vel.z)
-	{
-	  // from below
-	  LandOnThing(onmo);
-	  pos.z = onmo->Feet() - height;
-	}
-      else if ((flags & MF_PLAYER) && // only players climb voluntarily on other things
-	       onmo->Top() <= Feet() + MAXSTEP)
-	{
-	  // stepped on it TODO not correct, we may have large relative z speed too
-#warning TODO step up on things
-	  /*
-	  p->player->viewheight -= onmo->Top() - Feet();
-	  p->player->deltaviewheight = (cv_viewheight.value - p->player->viewheight) >> 3;
-	  */
-	  pos.z = onmo->Top();
-	  vel.z = onmo->vel.z;
-
-	  eflags &= ~MFE_ONGROUND;
-	  eflags |= MFE_ONMOBJ;
-	}                               
-
-      return; // cannot hit ceilings or floors since we encountered a thing first
-    }
-
-
-  if (eflags & MFE_JUSTHITFLOOR)
-    {
-      HitFloor();
-
-      if (eflags & MFE_SKULLFLY)
-	{
-	  // the skull slammed into floor
-	  vel.z = -vel.z;
-	}
-      else if (flags & MF_SHOOTABLE) // usually player or blasted mobj falling
-	{
-	  LandOnFloor(true);
-	}
-      else
-	vel.z = 0;
-    }
-
-  if (eflags & MFE_JUSTHITCEILING)
-    {
-      if (eflags & MFE_SKULLFLY)
-	{
-	  vel.z = -vel.z; // skull slammed into roof
-	}
-      else if (flags & MF_SHOOTABLE) // usually player jumping
-	{
-	  LandOnFloor(false);
-	}
-      else
-	vel.z = 0;
-    }
 }
 
 
@@ -1125,7 +1108,7 @@ int Actor::HitFloor()
 	    {
 	      p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_XSPLASHBASE, MT_XSPLASH, false);
 	      if (p)
-		p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 2 + P_FRandom(8));
+		p->vel.Set(RandomS(), RandomS(), 2 + Random());
 	    }
 	  break;
 
@@ -1140,7 +1123,7 @@ int Actor::HitFloor()
 	    {
 	      p = mp->SpawnSplash(pos, floorz, SFX_LAVA_SIZZLE, MT_XLAVASPLASH, MT_XLAVASMOKE, false);
 	      if (p)
-		p->vel.z = 1 + P_FRandom(9);
+		p->vel.z = 1 + 0.5*Random();
 	    }
 
 	  // FIXME Hexen lava damage
@@ -1161,7 +1144,7 @@ int Actor::HitFloor()
 	    {
 	      p = mp->SpawnSplash(pos, floorz, SFX_SLUDGE_GLOOP, MT_XSLUDGESPLASH, MT_XSLUDGECHUNK, false);
 	      if (p)
-		p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 1 + P_FRandom(8));
+		p->vel.Set(RandomS(), RandomS(), 1 + Random());
 	    }
 	  break;
 	}
@@ -1173,19 +1156,19 @@ int Actor::HitFloor()
 	case FLOOR_WATER:
 	  p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_SPLASHBASE, MT_HSPLASH, false);
 	  if (p)
-	    p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 2 + P_FRandom(8));
+	    p->vel.Set(RandomS(), RandomS(), 2 + Random());
 	  break;
 
 	case FLOOR_LAVA:
 	  p = mp->SpawnSplash(pos, floorz, sfx_burn, MT_LAVASPLASH, MT_LAVASMOKE, false);
 	  if (p)
-	    p->vel.z = 1 + P_FRandom(9);
+	    p->vel.z = 1 + 0.5*Random();
 	  break;
 
 	case FLOOR_SLUDGE:
 	  p = mp->SpawnSplash(pos, floorz, sfx_splash, MT_SLUDGESPLASH, MT_SLUDGECHUNK, false);
 	  if (p)
-	  p->vel.Set(P_SignedFRandom(8), P_SignedFRandom(8), 1 + P_FRandom(8));
+	  p->vel.Set(RandomS(), RandomS(), 1 + Random());
 	  break;
 	}
     }
@@ -1327,13 +1310,11 @@ void DActor::Think()
       if (type == MT_HOLY_FX)
 	{ // The spirit struck the ground
 	  vel.z = 0;
-	  HitFloor();
 	  return;
 	}
 
       if (!(flags & MF_NOCLIPLINE))
 	{
-	  // TODO HitFloor();
 	  ExplodeMissile();
 	}
 
@@ -1674,8 +1655,8 @@ void DActor::FloorBounceMissile()
       return;
     }
 
-  // most missiles sink
-  if (HitFloor() >= FLOOR_LIQUID)
+  // most missiles sink TODO into flag
+  if (subsector->sector->floortype >= FLOOR_LIQUID)
     {
       switch (type)
 	{
@@ -1721,6 +1702,6 @@ void DActor::FloorBounceMissile()
   vel.x *= 2.0f/3;
   vel.y *= 2.0f/3;
 
-  if (info->seesound)
-    S_StartSound(this, info->seesound);
+  if (info->painsound)
+    S_StartSound(this, info->painsound); // for missiles, this is the wall/floor bounce sound
 }
