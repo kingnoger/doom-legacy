@@ -52,23 +52,32 @@ class font_t
 #define TABWIDTH 32.0
 
 public:
-  float height, width;  ///< world dimensions of the character '0' in the font
+  float lineskip, advance; ///< Basically world dimensions of the character '0' in the font.
 
 public:
   virtual ~font_t();
 
-  /// Write a single ASCII character (draw WHITE if bit 7 set), return width
-  virtual float DrawCharacter(float x, float y, char c, int flags) = 0;
-  /// Write an UTF-8 string using the font, return string width.
-  virtual float DrawString(float x, float y, const char *str, int flags) = 0;
+  /// Draw a single UCS-4 character, return width.
+  virtual float DrawCharacter(float x, float y, int c, int flags) = 0;
+  /// Draw an unkerned UTF-8 string, return string width.
+  float DrawString(float x, float y, const char *str, int flags);
 
-  /// Returns the width of the UTF-8 string in unscaled pixels.
+  /// Returns the width of the unkerned UTF-8 string in world units.
   virtual float StringWidth(const char *str) = 0;
-  /// Returns the width of the first n characters of an UTF-8 string in unscaled pixels.
+  /// Returns the width of the first n characters of the unkerned UTF-8 string in world units.
   virtual float StringWidth(const char *str, int n) = 0;
-  /// Returns the height of the UTF-8 string in unscaled pixels.
-  virtual float StringHeight(const char *str) { return height; }
 
+  /// Returns the lineskip of the font in world units.
+  inline float Height() const { return lineskip; }
+  /// Returns the advance of the font in world units.
+  inline float Width() const { return advance; }
+
+  /// Advanced composition is available (kerning etc.).
+  virtual bool CanCompose() const { return false; }
+  /// Renders the UFT-8 string using kerning into a Material.
+  virtual class Material *ComposeString(const char *str) { return NULL; }
+
+  /// Initialize the font system.
   static void Init();
 };
 

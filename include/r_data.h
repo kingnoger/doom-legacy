@@ -130,7 +130,7 @@ protected:
 
 public:
   /// Creates an OpenGL texture if necessary, returns the handle. Uses the virtualized GLGetData().
-  GLuint GLPrepare();
+  virtual GLuint GLPrepare();
 
   /// Unloads the texture from OpenGL. 
   bool ClearGLTexture();
@@ -170,12 +170,12 @@ public:
 class LumpTexture : public Texture
 {
 protected:
-  virtual void GLGetData(); ///< Sets up pixels as RGBA row-major. Subclasses should redefine this.
+  virtual void GLGetData();
 
 public:
   LumpTexture(const char *name, int lump, int w, int h);
 
-  virtual byte *GetData(); ///< pixels to indexed column-major texture data. Subclasses should redefine this.
+  virtual byte *GetData();
   virtual void Draw(byte *dest_tl, byte *dest_tr, byte *dest_bl,
 		    fixed_t col, fixed_t row, fixed_t colfrac, fixed_t rowfrac, int flags);
   virtual void DrawFill(int x, int y, int w, int h);

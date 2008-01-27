@@ -480,7 +480,7 @@ static void WI_drawLF(const char *name)
   else if (big_font)
     {
       big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth(name))/2, y, name, FB);
-      y += (5*big_font->StringHeight(name))/4;
+      y += 5 * big_font->Height() / 4;
     }
 
   // draw "Finished!"
@@ -505,7 +505,7 @@ static void WI_drawEL(const char *nextname)
   else if (big_font)
     {
       big_font->DrawString((BASEVIDWIDTH - big_font->StringWidth("Entering"))/2, y, "Entering", FB);
-      y += (5*big_font->StringHeight("Entering"))/4;
+      y += 5 * big_font->Height() / 4;
     }
 
   // draw level
@@ -1081,7 +1081,7 @@ void Intermission::DrawCoopStats()
           if (dofrags)
             big_font->DrawString(NG_STATSX+4*NG_SPACINGX-big_font->StringWidth("Frgs"), NG_STATSY, "Frgs", FB);
 
-          y = NG_STATSY + big_font->StringHeight("Kills");
+          y = NG_STATSY + big_font->Height();
         }
       else
         {

@@ -45,7 +45,7 @@ ifdef LINUX
  platform  = -DLINUX
  interface = -DSDL $(shell sdl-config --cflags)
 # linker
- LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt
+ LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt  # -lSDL_ttf
  OPENGLLIBS = -lGL -lGLU
  LDFLAGS = -Wall
 # executable

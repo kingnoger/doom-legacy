@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -23,12 +23,11 @@
 #ifndef keys_h
 #define keys_h 1
 
-// These are the key event codes posted by the keyboard handler.
-// 0-127 are ascii codes, 128-255 are something else
-// The codes 256- are reserved for virtual keys.
+/// These are the key event codes posted by the keyboard handler, and closely match the SDLKey symbols.
+/// 0-127 are ASCII codes. The codes KEY_NUMKB- are reserved for virtual keys.
 enum key_input_e
 {
-  KEY_NULL = 0,       // null key, triggers nothing
+  KEY_NULL = 0, // null key, triggers nothing
 
   KEY_BACKSPACE  = 8,
   KEY_TAB        = 9,
@@ -44,26 +43,10 @@ enum key_input_e
   // small letters
   KEY_DELETE     = 127, // ascii ends here
 
-  // the rest are grouped as in SDL, but the groups are in arbitrary order
-  KEY_NUMLOCK = 128,
-  KEY_CAPSLOCK,
-  KEY_SCROLLLOCK,
-  KEY_RSHIFT,
-  KEY_LSHIFT,
-  KEY_RCTRL,
-  KEY_LCTRL,
-  KEY_RALT,
-  KEY_LALT,
-  KEY_unused1,
-  KEY_unused2,
-  KEY_LWIN,
-  KEY_RWIN,
-  KEY_MODE, // altgr
-  KEY_unused3,
+  // SDL international keys 160-255
 
-  KEY_MENU,
-
-  KEY_KEYPAD0,
+  // keypad
+  KEY_KEYPAD0 = 256,
   KEY_KEYPAD1,
   KEY_KEYPAD2,
   KEY_KEYPAD3,
@@ -80,6 +63,7 @@ enum key_input_e
   KEY_PLUSPAD,
   KEY_KPADENTER,
   KEY_KPADEQUALS,
+  // arrows + home/end pad
   KEY_UPARROW,
   KEY_DOWNARROW,
   KEY_RIGHTARROW,
@@ -89,6 +73,7 @@ enum key_input_e
   KEY_END,
   KEY_PGUP,
   KEY_PGDN,
+  // function keys
   KEY_F1,
   KEY_F2,
   KEY_F3,
@@ -102,7 +87,30 @@ enum key_input_e
   KEY_F11,
   KEY_F12,
 
-  KEY_NUMKB     = 256, // all real keyboard codes are under this value
+  // modifier keys
+  KEY_NUMLOCK = 300,
+  KEY_CAPSLOCK,
+  KEY_SCROLLLOCK,
+  KEY_RSHIFT,
+  KEY_LSHIFT,
+  KEY_RCTRL,
+  KEY_LCTRL,
+  KEY_RALT,
+  KEY_LALT,
+  KEY_unused1,
+  KEY_unused2,
+  KEY_LWIN,
+  KEY_RWIN,
+  KEY_MODE, // altgr
+  KEY_unused3,
+  // other function keys
+  KEY_HELP = 315,
+  KEY_PRINT,
+  KEY_SYSREQ,
+  KEY_BREAK,
+  KEY_MENU,
+
+  KEY_NUMKB, // all real keyboard codes are under this value
 
   // mouse and joystick buttons are handled as 'virtual' keys
   MOUSEBUTTONS =  8,

@@ -129,30 +129,9 @@ static char qwerty_shiftmap[128] =
 //
 static int xlatekey(SDLKey sym)
 {
-  // leave ASCII codes unchanged
-  if (sym >= SDLK_BACKSPACE && sym <= SDLK_DELETE)
+  // leave ASCII codes unchanged, as well as most other SDL keys
+  if (sym >= SDLK_BACKSPACE && sym <= SDLK_MENU)
     return sym;
-
-  // modifiers
-  if (sym >= SDLK_NUMLOCK && sym <= SDLK_COMPOSE)
-    return sym - SDLK_NUMLOCK + KEY_NUMLOCK;
-
-  // keypads, function keys
-  if (sym >= SDLK_KP0 && sym <= SDLK_F12)
-    return sym - SDLK_KP0 + KEY_KEYPAD0;
-
-  // unfortunately most international keys fall here!
-  if (sym >= SDLK_WORLD_0 && sym <= SDLK_WORLD_95)
-    return KEY_CONSOLE;
-
-  // some individual special keys
-  switch (sym)
-    {
-    case SDLK_MENU:  return KEY_MENU;
-    default:
-      break;
-      // unknown keys
-    }
 
   return KEY_NULL;
 }
@@ -207,8 +186,7 @@ void I_GetEvent()
 	  altdown = mod & KMOD_ALT;
 
 	  // Corresponding ASCII char, if applicable (for console etc.), otherwise zero.
-	  // Handles QWERTY-style keyboard shift mapping (temporary, should use the SDL Unicode feature for this...).
-	  event.data2 = (sym < 128) ? ((mod & KMOD_SHIFT) ? qwerty_shiftmap[sym] : sym) : 0;
+	  event.data2 = inputEvent.key.keysym.unicode; // SDL uses UCS-2 encoding (or maybe UTF-16???), we use UCS-4
 
 	  D_PostEvent(&event);
 	  }
@@ -546,6 +524,9 @@ void I_SysInit()
 
   // Window title
   SDL_WM_SetCaption(LEGACY_VERSION_BANNER, "Doom Legacy");
+
+  // Enable unicode key conversion
+  SDL_EnableUNICODE(1);
 
   // Initialize the joystick subsystem.
   I_JoystickInit();

@@ -230,7 +230,7 @@ int command_buffer_t::CheckParm(const char *check)
 //
 // Takes a null terminated string.  Does not need to be /n terminated.
 // breaks the string up into arg tokens.
-void command_buffer_t::COM_TokenizeString(char *text)
+void command_buffer_t::COM_TokenizeString(byte *text)
 {
   // clear the args from the last string
   for (int i=0 ; i<com_argc ; i++)
@@ -260,7 +260,7 @@ void command_buffer_t::COM_TokenizeString(char *text)
         return;
 
       if (com_argc == 1)
-        com_args = text;
+        com_args = reinterpret_cast<char *>(text);
 
       text = COM_Parse(text);
       if (!text)
@@ -350,7 +350,7 @@ void command_buffer_t::COM_ExecuteString(char *text)
   xcommand_t  *cmd;
   cmdalias_t *a;
 
-  COM_TokenizeString(text);
+  COM_TokenizeString(reinterpret_cast<byte*>(text)); // UTF-8 is easier to handle using unsigned chars
 
   // execute the command line
   if (!Argc())
@@ -401,7 +401,7 @@ void command_buffer_t::COM_ExecuteString(char *text)
 
 //  Parse a token out of a string, handles script files too
 //  returns the data pointer after the token
-char *command_buffer_t::COM_Parse(char *data)
+byte *command_buffer_t::COM_Parse(byte *data)
 {
   if (!data)
     return NULL;

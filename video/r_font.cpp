@@ -31,8 +31,55 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-
 #define NO_TTF 1 // TrueType fonts off by default
+
+/// ucs2 because SDL_ttf currently only understands Unicode codepoints within the BMP.
+static int utf8_to_ucs2(const char *utf8, Uint16 *ucs2)
+{
+  int ch = *(const byte *)utf8;
+
+  // TODO check that in multibyte seqs bytes other than first start with bits 10, otherwise give error
+
+  if (ch < 0x80)
+    {
+      *ucs2 = ch;
+      return 1;
+    }
+
+  int n = strlen(utf8);
+
+  if (ch < 0xe0) // >= 0xc0)
+    {
+      if (n < 2)
+	return 0;
+      ch  = int(utf8[0] & 0x1f) << 6;
+      ch |= int(utf8[1] & 0x3f);
+      *ucs2 = ch;
+      return 2;
+    }
+  else if (ch < 0xf0)
+    {
+      if (n < 3)
+	return 0;
+      ch  = int(utf8[0] & 0x0f) << 12;
+      ch |= int(utf8[1] & 0x3f) << 6;
+      ch |= int(utf8[2] & 0x3f);
+      *ucs2 = ch;
+      return 3;
+    }
+  else
+    {
+      if (n < 4)
+	return 0;
+      ch  = int(utf8[0] & 0x07) << 18;
+      ch |= int(utf8[1] & 0x3f) << 12;
+      ch |= int(utf8[2] & 0x3f) << 6;
+      ch |= int(utf8[3] & 0x3f);
+      *ucs2 = ch;
+      return 4;
+    }
+}
+
 
 
 #define HU_FONTSTART    '!'     // the first font character
@@ -52,7 +99,7 @@
 // FONTB01-58 : large red font, some symbols empty
 
 font_t *hud_font;
-font_t *big_font; // TODO used width-1 instead of width...
+font_t *big_font;
 
 
 font_t::~font_t()
@@ -74,11 +121,7 @@ public:
   rasterfont_t(int startlump, int endlump, char firstchar = '!');
   virtual ~rasterfont_t();
 
-  /// Write a single character (draw WHITE if bit 7 set)
-  virtual float DrawCharacter(float x, float y, char c, int flags);
-  /// Write a string using the font.
-  virtual float DrawString(float x, float y, const char *str, int flags);
-  /// Returns the width of the string in unscaled pixels
+  virtual float DrawCharacter(float x, float y, int c, int flags);
   virtual float StringWidth(const char *str);
   virtual float StringWidth(const char *str, int n);
 };
@@ -110,25 +153,27 @@ rasterfont_t::rasterfont_t(int startlump, int endlump, char firstchar)
   // use the character '0' as a "prototype" for the font
   if (start <= '0' && '0' <= end)
     {
-      height = font['0' - start]->worldheight + 1;
-      width = font['0' - start]->worldwidth;
+      lineskip = font['0' - start]->worldheight + 1;
+      advance  = font['0' - start]->worldwidth;
     }
   else
     {
-      height = font[0]->worldheight + 1;
-      width = font[0]->worldwidth;
+      lineskip = font[0]->worldheight + 1;
+      advance  = font[0]->worldwidth;
     }
 }
 
 
 rasterfont_t::~rasterfont_t()
 {
-  // TODO release font materials
+  for (int i = start; i <= end; i++)
+    font[i - start]->Release();
+
+  font.clear();
 }
 
 
-// Writes a single ASCII character
-float rasterfont_t::DrawCharacter(float x, float y, char c, int flags)
+float rasterfont_t::DrawCharacter(float x, float y, int c, int flags)
 {
   if (flags & V_WHITEMAP)
     {
@@ -136,9 +181,9 @@ float rasterfont_t::DrawCharacter(float x, float y, char c, int flags)
       flags |= V_MAP;
     }
 
-  c = toupper(c & 0x7f); // just ASCII
+  c = toupper(c & 0x7f); // just ASCII here
   if (c < start || c > end)
-    return 0;
+    return 4; // render a little space for unknown chars in DrawString
 
   Material *m = font[c - start];
   m->Draw(x, y, flags);
@@ -150,14 +195,8 @@ float rasterfont_t::DrawCharacter(float x, float y, char c, int flags)
 
 //  Draw a string using the font
 //  NOTE: the text is centered for screens larger than the base width
-float rasterfont_t::DrawString(float x, float y, const char *str, int flags)
+float font_t::DrawString(float x, float y, const char *str, int flags)
 {
-  if (flags & V_WHITEMAP)
-    {
-      current_colormap = whitemap;
-      flags |= V_MAP;
-    }
-
   float dupx = 1;
   float dupy = 1;
 
@@ -195,13 +234,16 @@ float rasterfont_t::DrawString(float x, float y, const char *str, int flags)
   // cursor coordinates
   float cx = x;
   float cy = y;
-  float rowheight = height * dupy;
+  float rowheight = lineskip * dupy;
 
-  while (1)
+  while (*str)
     {
-      int c = *str++;
-      if (!c)
+      Uint16 c;
+      int skip = utf8_to_ucs2(str, &c);
+      if (!skip) // bad ucs-8 string
         break;
+
+      str += skip;
 
       if (c == '\n')
         {
@@ -210,17 +252,7 @@ float rasterfont_t::DrawString(float x, float y, const char *str, int flags)
           continue;
         }
 
-      c = toupper(c);
-      if (c < start || c > end)
-        {
-          cx += 4*dupx;
-          continue;
-        }
-
-      Material *m = font[c - start];
-      m->Draw(cx, cy, flags);
-
-      cx += m->worldwidth * dupx;
+      cx += dupx * DrawCharacter(cx, cy, c, flags);
     }
 
   return cx - x;
@@ -232,9 +264,16 @@ float rasterfont_t::StringWidth(const char *str)
 {
   float w = 0;
 
-  for (int i = 0; str[i]; i++)
+  while (*str)
     {
-      int c = toupper(str[i]);
+      Uint16 c;
+      int skip = utf8_to_ucs2(str, &c);
+      if (!skip) // bad ucs-8 string
+        return 0;
+
+      str += skip;
+
+      c = toupper(c & 0x7f); // just ASCII
       if (c < start || c > end)
         w += 4;
       else
@@ -250,9 +289,16 @@ float rasterfont_t::StringWidth(const char *str, int n)
 {
   float w = 0;
 
-  for (int i = 0; i<n && str[i]; i++)
+  for ( ; *str && n > 0; n--)
     {
-      int c = toupper(str[i]);
+      Uint16 c;
+      int skip = utf8_to_ucs2(str, &c);
+      if (!skip) // bad ucs-8 string
+        return 0;
+
+      str += skip;
+
+      c = toupper(c & 0x7f); // just ASCII
       if (c < start || c > end)
         w += 4;
       else
@@ -264,85 +310,235 @@ float rasterfont_t::StringWidth(const char *str, int n)
 
 
 
-
-
 //======================================================================
 //                         TRUETYPE FONTS
 //======================================================================
 
 #ifndef NO_TTF
+#include <GL/glu.h>
 #include "SDL_ttf.h"
+
+
+#define SCALE 3.0f
 
 /// \brief TrueType font
 class ttfont_t : public font_t
 {
 protected:
+  byte     *data; ///< Raw contents of the .ttf file.
   TTF_Font *font;
+
+  int ascent; ///< max ascent of all glyphs in the font in texels
+
+  struct glyph_t
+  {
+    int minx, maxx, miny, maxy, advance;
+    Material *mat;
+  };
+
+  glyph_t glyphcache[256]; ///< Prerendered glyphs for Latin-1 chars to improve efficiency.
 
 public:
   ttfont_t(int lump)
   {
-    byte *data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_DAVE));
-    font = TTF_OpenFontRW(SDL_RWFromConstMem(data, fc.LumpLength(lump)), true, 16);
-    Z_Free(data);
+    data = static_cast<byte*>(fc.CacheLumpNum(lump, PU_DAVE));
+    font = TTF_OpenFontRW(SDL_RWFromConstMem(data, fc.LumpLength(lump)), true, 24);
+    //font = TTF_OpenFont("font.ttf", 16); // TEST
 
-    height = TTF_FontLineSkip(font); // monospace the font in y direction
-    width = 0;
+    ascent = TTF_FontAscent(font);
+    lineskip = TTF_FontLineSkip(font)/SCALE; // monospace the font in y direction
+    int ad = 0;
+    TTF_GlyphMetrics(font, '0', NULL, NULL, NULL, NULL, &ad);
+    advance = ad/SCALE;
+
+    for (int k=0; k<256; k++)
+      glyphcache[k].mat = NULL;
   }
 
   virtual ~ttfont_t()
   {
     TTF_CloseFont(font);
     font = NULL;
+    Z_Free(data);
+    data = NULL;
+
+    for (int k=0; k<256; k++)
+      {
+	glyphcache[k].mat->Release();
+	glyphcache[k].mat = NULL;
+      }
   }
 
   const char *GetFaceFamilyName() { return TTF_FontFaceFamilyName(font); }
   const char *GetFaceStyleName() { return TTF_FontFaceStyleName(font); }
 
-  /// Returns the width of the UTF-8 string in unscaled pixels.
   virtual float StringWidth(const char *str)
   {
     int w, h;
-    return TTF_SizeUTF8(font, str, &w, &h) ? 0 : w;
+    return TTF_SizeUTF8(font, str, &w, &h) ? 0 : w/SCALE;
   }
 
-  /// Returns the width of the first n characters of an UTF-8 string in unscaled pixels.
   virtual float StringWidth(const char *str, int n)
   {
-    char temp[n+1];
-    strncpy(temp, str, n);
-    temp[n] = 0;
-    int w, h;
-    return TTF_SizeUTF8(font, temp, &w, &h) ? 0 : w;
-  }
-
-  /// Write a single ASCII character, return width
-  virtual float DrawCharacter(float x, float y, char c, int flags)
-  {
-    char temp[2] = {c, 0};
-    return DrawString(x, y, temp, flags);
-    //TTF_RenderGlyph_Solid(font, c, color);
-  }
-
-  /// Write an UTF-8 string using the font, return string width.
-  virtual float DrawString(float x, float y, const char *str, int flags)
-  {
-    SDL_Color c = {255, 255, 255}; // white
-    SDL_Surface *text = TTF_RenderUTF8_Solid(font, str, c);
-    //SDL_Surface *text32 = TTF_RenderUTF8_Blended(font, str, c);
-    if (!text)
+    int len = 0;
+    Uint16 c;
+    // count how many bytes the n letters comprise
+    for (int k=0; k<n && str[len]; k++)
       {
-	CONS_Printf("TTF rendering error: %s\n", TTF_GetError());
-	return 0;
+	int skip = utf8_to_ucs2(&str[len], &c);
+	if (!skip) // bad ucs-8 string
+	  return 0;
+	len += skip;
       }
 
-    float w = text->w;
-    SDL_Rect dest = {int(x), int(y)};
-    SDL_BlitSurface(text, NULL, vidSurface, dest);
-    SDL_FreeSurface(text);
-    return w;
+    char temp[len+1];
+    strncpy(temp, str, len);
+    temp[len] = 0;
+    int w, h;
+    return TTF_SizeUTF8(font, temp, &w, &h) ? 0 : w/SCALE;
   }
+
+  virtual float DrawCharacter(float x, float y, int c, int flags);
+
+  /*
+  virtual bool CanCompose() const { return true; }
+  /// Renders the UFT-8 string using kerning into a Material.
+  virtual class Material *ComposeString(const char *str)
+  {
+    SDL_Surface *text = TTF_RenderUTF8_Solid(font, str, c);
+    SDL_Surface *text = TTF_RenderUTF8_Blended(font, str, c);
+  }
+  */
 };
+
+
+
+/// SDL_Surface -based Texture
+class SDLTexture : public LumpTexture
+{
+protected:
+  SDL_Surface *surf;
+
+  virtual void GLGetData() {} ///< Sets up pixels.
+
+public:
+  virtual GLuint GLPrepare()
+  {
+    if (gl_id == NOTEXTURE)
+    {
+      glGenTextures(1, &gl_id);
+      glBindTexture(GL_TEXTURE_2D, gl_id);
+      // default params
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+      glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+      gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, width, height, gl_format, GL_UNSIGNED_BYTE, pixels);
+
+      //  CONS_Printf("Created GL texture %d for %s.\n", gl_id, name);
+      // do not free pixels!!
+    }
+
+    return gl_id;
+  }
+
+  SDLTexture(const char *n, SDL_Surface *s)
+    : LumpTexture(n, -1, s->w, s->h)
+  {
+    surf = s;
+    pixels = static_cast<byte*>(surf->pixels);
+
+    // For some strange reason SDL_ttf uses BGRA order.
+    gl_format = GL_BGRA;
+  }
+
+  virtual ~SDLTexture()
+  {
+    SDL_FreeSurface(surf);
+    surf = NULL;
+    pixels = NULL;
+  }
+
+  virtual byte *GetData() { return pixels; }
+  /*
+  {
+  if (!pixels)
+    {
+      Z_Malloc(width*height, PU_TEXTURE, (void **)(&pixels));
+
+      // transposed to col-major order
+      int dest = 0;
+      for (int i=0; i<len; i++)
+	{
+	  pixels[dest] = temp[i];
+	  dest += height;
+	  if (dest >= len)
+	    dest -= len - 1; // next column
+	}
+      Z_Free(temp);
+
+      // do a palette conversion if needed
+      byte *colormap = materials.GetPaletteConv(lump >> 16);
+      if (colormap)
+	for (int i=0; i<len; i++)
+	  pixels[i] = colormap[pixels[i]];
+
+      // convert to high color
+      // short pix16 = ((color8to16[*data++] & 0x7bde) + ((i<<9|j<<4) & 0x7bde))>>1;
+    }
+
+  return pixels;
+}
+*/
+};
+
+
+
+float ttfont_t::DrawCharacter(float x, float y, int c, int flags)
+{
+  static SDL_Color white = {255, 255, 255, 0};
+  static SDL_Color red   = {255,   0,   0, 0};
+  
+  if (flags & V_WHITEMAP)
+    {
+    }
+
+  if (c < 32 || c >= 256)
+    return 0; // TODO for now just Latin-1
+      
+  glyph_t &g = glyphcache[c];
+  if (!g.mat)
+    {
+      // not found, render and insert into glyph cache
+      TTF_GlyphMetrics(font, c, &g.minx, &g.maxx, &g.miny, &g.maxy, &g.advance);
+
+      SDL_Surface *glyph = TTF_RenderGlyph_Blended(font, c, red);
+      if (!glyph)
+	{
+	  CONS_Printf("TTF rendering error: %s\n", TTF_GetError());
+	  return 0;
+	}
+
+      string name("glyph ");
+      name += c;
+
+      Texture *t = new SDLTexture(name.c_str(), glyph);
+      t->topoffs = g.maxy - ascent; // clever!
+      t->leftoffs = -g.minx;
+
+      Material *m = new Material(name.c_str()); // create a new Material
+      Material::TextureRef &r = m->tex[0];
+      r.t = t;
+      r.xscale = r.yscale = SCALE;
+
+      m->Initialize();
+
+      g.mat = m;
+    }
+
+  g.mat->Draw(x, y, flags);
+  return g.advance / SCALE;
+}
+
+
 #endif
 
 
@@ -352,7 +548,6 @@ public:
 void font_t::Init()
 {
   int startlump, endlump;
-  // TODO add legacy default font (in legacy.wad) (truetype!)
 
   // "hud font"
   switch (game.mode)
@@ -386,7 +581,12 @@ void font_t::Init()
       return;
     }
 
-  ttfont_t *tt = new ttfont_t(fc.GetNumForName("TTF_TEST"));
+  int lump = fc.FindNumForName("TTF_TEST");
+  if (lump < 0)
+    {
+      I_Error("font_t::Init: Default TrueType font not found!\n");
+    }
+  ttfont_t *tt = new ttfont_t(lump);
 
   const char *p = tt->GetFaceFamilyName();
   if (p)
@@ -397,5 +597,6 @@ void font_t::Init()
     CONS_Printf("TT font face style name: %s\n", p);
 
   // TTF_Quit();
+  hud_font = tt; // TEST
 #endif
 }

@@ -59,8 +59,8 @@ public:
 
 protected:
   void  COM_ExecuteString(char *text);
-  void  COM_TokenizeString(char *text);
-  char *COM_Parse(char *data);
+  void  COM_TokenizeString(byte *text);
+  byte *COM_Parse(byte *data);
 
 public:
   /// Constructor
@@ -72,14 +72,11 @@ public:
   void AddCommand(const char *name, com_func_t func);
 
 
-  //COM_BufAddText
   /// Add text to the end of the command buffer
   void AppendText(const char *text);
-  //COM_BufInsertText
   /// Add text to the beginning of the command buffer
   void PrependText(const char *text);
 
-  //COM_BufExecute
   /// Execute commands in buffer, flush them.
   void BufExecute();
 

@@ -799,7 +799,8 @@ void G_Controldefault()
 
   // common game keys
   commoncontrols[gk_talk][0]    = 't';
-  commoncontrols[gk_console][0] = KEY_CONSOLE;
+  commoncontrols[gk_console][0] = KEY_CONSOLE;   // This works out-of-the-box in US keyboads, not in others.
+  commoncontrols[gk_console][1] = KEY_BACKSPACE; // Hence this.
   commoncontrols[gk_scores][0]  = 'f';
 }
 

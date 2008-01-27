@@ -1398,7 +1398,7 @@ void AutoMap::Drawer()
   {
     const char *mapname = mp->info->nicename.c_str();
     int y = vid.height - hud.stbarheight - 30;
-    hud_font->DrawString(22*vid.dupx, y - hud_font->StringHeight(mapname), mapname, V_SSIZE);
+    hud_font->DrawString(22*vid.dupx, y - hud_font->Height(), mapname, V_SSIZE);
   }
 
   //CONS_Printf("AM::Drawer n\n");

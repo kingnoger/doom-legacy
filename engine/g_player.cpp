@@ -55,7 +55,7 @@
 LocalPlayerInfo LocalPlayers[NUM_LOCALPLAYERS] =
 {
   // these constructors are required only define correct control key sets for the human players, otherwise the default constructor is enough
-  LocalPlayerInfo("Batman", 0), LocalPlayerInfo("Robin", 1), LocalPlayerInfo("Alfred", 2), LocalPlayerInfo("Barbara", 3)
+  LocalPlayerInfo("Bruce", 0), LocalPlayerInfo("Dick", 1), LocalPlayerInfo("Alfred", 2), LocalPlayerInfo("Barbara", 3)
 };
 
 /// Locally observed players (multiple viewports...)

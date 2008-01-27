@@ -86,7 +86,7 @@ extern Menu MainMenuDef, SinglePlayerDef, MultiPlayerDef, SetupPlayerDef,
   NetOptionDef, VideoOptionsDef, OpenGLOptionDef, MouseOptionsDef, Mouse2OptionsDef, ServerOptionsDef;
 
 
-static void M_DrawTextBox(int x, int y, int columns, int lines);
+static void M_DrawTextBox(int x, int y, int width, int height);
 
 static short (*setup_gc)[2] = commoncontrols; // pointer to the gamecontrols of the player being edited
 static int controltochange;
@@ -239,7 +239,7 @@ public:
 
 private:
   bool  active;
-  int   x, y, rows, columns;
+  int   x, y, width, height; // in screen coordinates (320x200)
   char *text;
   msgbox_t type;
   union
@@ -304,12 +304,11 @@ void MsgBox::SetText(const char *str)
   // draw a textbox around the message
   // compute max rowlength and the number of lines
 
-  rows = 1;
-  columns = 0;
+  int rows = 1;
+  int columns = 0;
 
   int rowlength = 0;
-  char *start;
-  for (start = text; *start; start++)
+  for (char *start = text; *start; start++)
     {
       if (*start == '\n')
         {
@@ -332,8 +331,8 @@ void MsgBox::SetText(const char *str)
       return;
     }
 
-  int height = int(rows * hud_font->height);
-  int width  = int((columns + 1) * hud_font->width);
+  height = 16*ceil(rows * hud_font->Height()/16);
+  width  = 16*ceil(columns * hud_font->Width()/16);
 
   x = (BASEVIDWIDTH - width)/2;
   y = (BASEVIDHEIGHT - height)/2;
@@ -345,9 +344,9 @@ void MsgBox::Draw()
   char *p;
   char *s = text;
   int slength;
-  int ytemp = y;
+  float ytemp = y;
 
-  M_DrawTextBox(x-8, y-8, columns + 1, rows);
+  M_DrawTextBox(x, y, width, height);
 
   for (p = text; *p; p++)
     {
@@ -356,8 +355,8 @@ void MsgBox::Draw()
           slength = p-s;
 
           *p = '\0';
-          hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s, V_SCALE);
-          ytemp += int(hud_font->height);
+          hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->Width())/2, ytemp, s, V_SCALE);
+          ytemp += hud_font->Height();
           s = p+1;
           *p = '\n';
         }
@@ -365,7 +364,7 @@ void MsgBox::Draw()
 
   // last line
   slength = p-s;
-  hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->width)/2, ytemp, s, V_SCALE);
+  hud_font->DrawString((BASEVIDWIDTH - slength * hud_font->Width())/2, ytemp, s, V_SCALE);
 }
 
 
@@ -645,19 +644,13 @@ void M_DrawSelCell(Menu *menu, int item)
 
 ///  Draw a textbox, like Quake does, because sometimes it's difficult
 ///  to read the text with all the stuff in the background...
-static void M_DrawTextBox(int x, int y, int columns, int lines)
+static void M_DrawTextBox(int x, int y, int width, int height)
 {
-  int      cx, cy;
-  int      n;
-  int      step,boff;
+  // the parameters give the position and size of the text area, the borders are drawn around it
+  int step, boff;
 
   if (game.mode >= gm_heretic)
     {
-      // humf.. border will stand if we do not adjust size ...
-      x+=4;
-      y+=4;
-      lines = (lines+1)/2;
-      columns = (columns+1)/2;
       step = 16;
       boff = 4; // borderoffset
     }
@@ -668,40 +661,26 @@ static void M_DrawTextBox(int x, int y, int columns, int lines)
     }
 
   // draw left side
-  cx = x;
-  cy = y;
-  window_border[BRDR_TL]->Draw(cx, cy, 0 | V_SCALE);
-  cy += boff;
-  for (n = 0; n < lines; n++)
-    {
-      window_border[BRDR_L]->Draw(cx, cy, 0 | V_SCALE);
-      cy += step;
-    }
-  window_border[BRDR_BL]->Draw(cx, cy, 0 | V_SCALE);
+  int cx = x-boff;
+  int cy = y-boff;
+  window_border[BRDR_TL]->Draw(cx, cy, V_SCALE);
+  for (cy = y; cy < y+height; cy += step)
+    window_border[BRDR_L]->Draw(cx, cy, V_SCALE);
+  window_border[BRDR_BL]->Draw(cx, cy, V_SCALE);
 
   // draw middle
-  window_background->DrawFill(x+boff, y+boff, columns*step, lines*step);
-
-  cx += boff;
-  cy = y;
-  while (columns > 0)
+  window_background->DrawFill(x, y, width, height);
+  for (cx = x; cx < x+width; cx += step)
     {
-      window_border[BRDR_T]->Draw(cx, cy, 0 | V_SCALE);
-      window_border[BRDR_B]->Draw(cx, y+boff+lines*step, 0 | V_SCALE);
-      columns--;
-      cx += step;
+      window_border[BRDR_T]->Draw(cx, y-boff, V_SCALE);
+      window_border[BRDR_B]->Draw(cx, cy, V_SCALE);
     }
 
   // draw right side
-  cy = y;
-  window_border[BRDR_TR]->Draw(cx, cy, 0 | V_SCALE);
-  cy += boff;
-  for (n = 0; n < lines; n++)
-    {
-      window_border[BRDR_R]->Draw(cx, cy, 0 | V_SCALE);
-      cy += step;
-    }
-  window_border[BRDR_BR]->Draw(cx, cy, 0 | V_SCALE);
+  window_border[BRDR_TR]->Draw(cx, y-boff, V_SCALE);
+  for (cy = y; cy < y+height; cy += step)
+    window_border[BRDR_R]->Draw(cx, cy, V_SCALE);
+  window_border[BRDR_BR]->Draw(cx, cy, V_SCALE);
 }
 
 
@@ -718,8 +697,8 @@ void Menu::DrawTitle()
 {
   if (font && title)
     {
-      int xtitle = int((BASEVIDWIDTH - font->StringWidth(title)) / 2);
-      int ytitle = int((y - font->StringHeight(title)) / 2);
+      float xtitle = (BASEVIDWIDTH - font->StringWidth(title)) / 2;
+      float ytitle = (y - font->Height()) / 2;
       if (xtitle < 0) xtitle=0;
       if (ytitle < 0) ytitle=0;
 
@@ -924,7 +903,7 @@ void M_QuitDOOM(int choice)
   // We pick index 0 which is language sensitive,
   //  or one at random, between 1 and maximum number.
   static char s[200];
-  sprintf(s, text[TXT_QUIT_OS_Y], text[TXT_QUITMSG + (game.tic % NUM_QUITMESSAGES)]);
+  sprintf(s, text[TXT_QUIT_OS_Y], text[TXT_QUITMSG + 5]); //FIXME(game.tic % NUM_QUITMESSAGES)]);
   mbox.Set(s, M_QuitResponse, MsgBox::YESNO);
 }
 

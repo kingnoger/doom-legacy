@@ -46,26 +46,28 @@
 /// returns the number of bytes in the UTF-8 char beginning at p
 static int utf8_numbytes(const char *p)
 {
+  //const byte *p = reinterpret_cast<const byte*>(q);
+
   if (!(p[0] & 0x80))
     return 1; // ASCII
 
-  int b;
-  for (b=1; (p[b] & 0xc0) == 0xc0; b++);
+  int n;
+  for (n=1; (p[n] & 0xc0) == 0x80; n++);
 
-  return b; // multibyte encoding
+  return n; // multibyte encoding
 }
 
 static int utf8_sync(const char *p)
 {
   int n = 0;
-  while ((p[n] & 0xc0) == 0xc0) // if two high bits are 10, this is not a lead byte
+  while ((p[n] & 0xc0) == 0x80) // if two high bits are 10, this is not a lead byte
     n++;
 
   return n;
 }
 
 /// Converts a single UCS-4 wide char into an UTF-8 string, returns the string length.
-int ucs4_to_utf8(int c, char *p)
+static int ucs4_to_utf8(int c, char *p)
 {
   if (c < 0x80) // max 7 bits
     {
@@ -96,6 +98,41 @@ int ucs4_to_utf8(int c, char *p)
 
   return 0; // fail
 }
+
+
+/// Converts a single UCS-4 wide char into an UTF-8 string, returns the string length.
+static int ucs4_to_utf8(int c, string &out)
+{
+  if (c < 0x80) // max 7 bits
+    {
+      out.push_back(c);
+      return 1;
+    }
+  else if (c < 0x800) // max 11 bits
+    {
+      out.push_back(0xc0 | (c >> 6));
+      out.push_back(0x80 | c & 0x3f);
+      return 2;
+    }
+  else if (c < 0x10000) // max 16 bits
+    {
+      out.push_back(0xe0 | (c >> 12));
+      out.push_back(0x80 | ((c >> 6) & 0x3f));
+      out.push_back(0x80 | (c & 0x3f));
+      return 3;
+    }
+  else if (c < 0x200000) // max 21 bits
+    {
+      out.push_back(0xf0 | (c >> 18));
+      out.push_back(0x80 | ((c >> 12) & 0x3f));
+      out.push_back(0x80 | ((c >> 6) & 0x3f));
+      out.push_back(0x80 | (c & 0x3f));
+      return 4;
+    }
+
+  return 0; // fail
+}
+
 
 
 
@@ -314,7 +351,7 @@ void Console::Init()
   con_lborder = materials.Get("CBLEFT");
   con_rborder = materials.Get("CBRIGHT");
 
-  con_lineheight = hud_font->StringHeight(NULL);
+  con_lineheight = hud_font->Height();
 
   cons_msgtimeout.Reg();
   cons_speed.Reg();
@@ -658,9 +695,17 @@ bool Console::Responder(event_t *ev)
     {
       string &input_line = input_history[input_browse];
 
-      if (!input_line.empty())
-	input_line.erase(input_line.end() - 1);
+      string::iterator start = input_line.begin();
+      string::iterator t = input_line.end();
+      while (t != start)
+	{
+	  // go back until we get a byte beginning with either 0 or 11
+	  t--;
+	  if (!(*t & 0x80) || (*t & 0xc0) == 0xc0)
+	    break;
+	}
 
+      input_line.erase(t, input_line.end());
       return true;
     }
 
@@ -693,13 +738,14 @@ bool Console::Responder(event_t *ev)
     }
 
   // enter a char into the command prompt
-  if (c < 32 || c > 127)
+  if (c < 32) // ignore control characters
     return false;
 
   // add key to cmd line here
   string &input_line = input_history[input_browse];
+
   if (input_line.length() < CON_MAXINPUT)
-    input_line.push_back(c);
+    ucs4_to_utf8(c, input_line);
 
   return true;
 }
@@ -736,32 +782,33 @@ void Console::Print(char *msg)
 
   while (*msg)
     {
-      if (*msg <= ' ') // control chars or space
+      byte c = *msg;
+      if (c <= ' ') // control chars or space
 	{
-	  if (*msg == ' ')
+	  if (c == ' ')
             {
               con_line[con_cx++] = ' ';
 	      width += hud_font->StringWidth(" ", 1);
             }
-	  else if (*msg == '\2')  // set white color
+	  else if (c == '\2')  // set white color
 	    {
 	      con_line[con_cx++] = '\2';
 	    }
-	  else if (*msg == '\a') // sound
+	  else if (c == '\a') // sound
 	    {
 	      S_StartLocalAmbSound(sfx_message);
 	    }
-	  else if (*msg == '\r') // carriage return
+	  else if (c == '\r') // carriage return
             {
               con_cy--;
               Linefeed(p);
             }
-          else if (*msg == '\n')
+          else if (c == '\n')
 	    {
 	      con_line[con_cx++] = '\n';
 	      Linefeed(p);
 	    }
-          else if (*msg == '\t')
+          else if (c == '\t')
             {
               // tabs for nice layout in console
               con_line[con_cx++] = '\t';
@@ -777,16 +824,17 @@ void Console::Print(char *msg)
 
       // printable character(s)
 
-      int k; // count word length and width, keep them below max values
+      int k; // count word length and width, keep them below max values for a single line
       float w;
-      for (k=0, w=0.0; msg[k] > ' ' && k < CON_MAXLINECHARS && w < con_width; )
+      for (k=0, w=0.0; (c > ' ') && (k < CON_MAXLINECHARS) && (w < con_width); )
 	{
 	  w += hud_font->StringWidth(&msg[k], 1);
 	  k += utf8_numbytes(&msg[k]); // pick full utf-8 chars
+	  c = msg[k];
 	}
 
       // word wrap
-      if (con_cx + k > CON_MAXLINECHARS || width + w > con_width)
+      if (con_cx + k >= CON_MAXLINECHARS || width + w > con_width)
         Linefeed(p);
 
       // a word at a time
@@ -809,7 +857,7 @@ void Console::Print(char *msg)
 // draw the last lines of console text to the top of the screen
 void Console::DrawHudlines()
 {
-  float y = (hud.chat_on) ? hud_font->StringHeight(NULL) : 0; // leave place for chat input in the first row of text
+  float y = hud.chat_on ? hud_font->Height() : 0; // leave place for chat input in the first row of text
 
   for (int i = con_cy - CON_HUDLINES + 1; i <= con_cy; i++)
     {
@@ -821,7 +869,7 @@ void Console::DrawHudlines()
 
       // FIXME lineowner! use viewport locations!
       hud_font->DrawString(0, y, con_buffer[i % CON_LINES], 0);
-      y += hud_font->StringHeight(NULL);
+      y += hud_font->Height();
     }
 
   // top screen lines that might need clearing when view is reduced
