@@ -18,7 +18,7 @@
 
 <p>In order to compile Doom Legacy 2.0 SDL you'll need to have several
 libraries installed on your system.<br/>
-Make sure you install the "developer" packages of the
+Make sure you install the <b>developer</b> packages of the
 libraries, which include both the runtime libraries (DLLs) and
 the stuff required during compilation (header files and import libraries).</p>
 <p>
@@ -28,13 +28,14 @@ precompiled packages, with the exception of OpenTNL.
 
 <table>
 <tr><th>Library</th><th>Version</th><th>Ubuntu/Debian package</th><th>Description</th></tr>
-<tr><td><a href="http://www.libsdl.org/">SDL</a></td> <td>1.2.10+</td> <td>libsdl1.2-dev</td>
+<tr><td><a href="http://www.libsdl.org/download-1.2.php">SDL</a></td> <td>1.2.10+</td> <td>libsdl1.2-dev</td>
  <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td></tr>
 <tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td>
 <td>1.2.7+</td> <td>libsdl-mixer1.2-dev</td>
  <td>A multichannel mixer library based on SDL.</td></tr>
-<tr><td><a href="http://opengl.org/">OpenGL</a></td> <td>1.3+</td> <td>(several)</td>
- <td>The standard cross-platform graphics library. GLSL shaders require OpenGL 2.0+.</td></tr>
+<tr><td>OpenGL</td> <td>1.3+</td> <td>(several)</td>
+ <td>The standard cross-platform graphics library, usually comes with
+ the OS. GLSL shaders require OpenGL 2.0+.</td></tr>
 <tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td> <td>zlib1g-dev</td>
  <td>A free compression library.</td></tr>
 <tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td>
@@ -56,7 +57,7 @@ You will require the following programs during the build process:
 a free C/C++ compiler.<br/>
 Linux systems most likely already have it installed.<br/>
 Windows users should install <a href="http://www.mingw.org/">MinGW</a>, a
-GCC port, and <a href="http://www.mingw.org/msys.shtml">MSYS</a>, a
+GCC port, and <a href="http://www.mingw.org/node/18">MSYS</a>, a
 collection of POSIX utilities for Win32.</li>
 
 <li><a href="http://flex.sourceforge.net/">GNU flex</a>, a scanner generator.</li>
