@@ -208,7 +208,7 @@ void A_PotteryExplode(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos, MT_POTTERYBIT1);
       mo->SetState(mo->info->spawnstate + (P_Random() % 5));
       if (mo)
-	mo->vel = vec_t<fixed_t>(((P_Random() & 7) + 5)*0.75f, P_SignedFRandom(6), P_SignedFRandom(6));
+	mo->vel = vec_t<fixed_t>(Random(3.75, 9), RandomS()*4, RandomS()*4);
     }
 
   if (mo)
@@ -291,8 +291,8 @@ void A_CorpseExplode(DActor *actor)
       if (mo)
 	{
 	  mo->vel = vec_t<fixed_t>(((P_Random()&7) + 5)*0.75f,
-				   P_SignedFRandom(6),
-				   P_SignedFRandom(6));
+				   RandomS()*4,
+				   RandomS()*4);
 	}
     }
   // Spawn a skull
@@ -301,8 +301,8 @@ void A_CorpseExplode(DActor *actor)
   if(mo)
     {
       mo->vel = vec_t<fixed_t>(((P_Random()&7) + 5)*0.75f,
-			       P_SignedFRandom(6),
-			       P_SignedFRandom(6));
+			       RandomS()*4,
+			       RandomS()*4);
       S_StartSound(mo, SFX_FIRED_DEATH);
     }
   actor->Remove();
@@ -324,7 +324,7 @@ void A_LeafSpawn(DActor *actor)
       DActor *mo = actor->mp->SpawnDActor(temp, mobjtype_t(MT_LEAF1 + (P_Random() & 1)));
       if (mo)
 	{
-	  mo->Thrust(actor->yaw, P_FRandom(7) + 3);
+	  mo->Thrust(actor->yaw, Random(3,5));
 	  mo->owner = actor;
 	  mo->special1 = 0;
 	}
@@ -342,7 +342,7 @@ void A_LeafThrust(DActor *actor)
   if (P_Random() > 96)
     return;
 
-  actor->vel.z += P_FRandom(7) + 1;
+  actor->vel.z += Random(1, 3);
 }
 
 //============================================================================
@@ -363,12 +363,12 @@ void A_LeafCheck(DActor *actor)
   if (P_Random() > 64)
     {
       if (!actor->vel.x && !actor->vel.y)
-	actor->Thrust(actor->owner->yaw, P_FRandom(7) + 1);
+	actor->Thrust(actor->owner->yaw, Random(1, 3));
       return;
     }
   actor->SetState(S_LEAF1_8);
-  actor->vel.z = P_FRandom(7) + 1;
-  actor->Thrust(actor->owner->yaw, P_FRandom(7) + 2);
+  actor->vel.z = Random(1, 3);
+  actor->Thrust(actor->owner->yaw, Random(2, 4));
   actor->flags |= MF_MISSILE;
 }
 
@@ -944,7 +944,7 @@ void P_SpawnDirt(DActor *actor, fixed_t radius)
 {
   angle_t angle = P_Random()<<5;		// <<24 >>19
   vec_t<fixed_t> r(actor->pos);
-  r += vec_t<fixed_t>(radius*finecosine[angle], radius*finesine[angle], P_FRandom(7) + 1);
+  r += vec_t<fixed_t>(radius*finecosine[angle], radius*finesine[angle], Random(1, 3));
   //	x = actor->x + ((P_Random()-P_Random())%radius)<<FRACBITS;
   //	y = actor->y + ((P_Random()-P_Random()<<FRACBITS)%radius);
 
@@ -972,7 +972,7 @@ void P_SpawnDirt(DActor *actor, fixed_t radius)
     }
   Actor *mo = actor->mp->SpawnDActor(r, dtype);
   if (mo)
-    mo->vel.z = P_FRandom(6);
+    mo->vel.z = Random(0, 4);
 }
 
 
@@ -1068,14 +1068,12 @@ void A_SoAExplode(DActor *actor)
   DActor *mo;
   for (int i = 0; i < 10; i++)
     {
-      fixed_t x = P_SFRandom(4);
-      fixed_t y = P_SFRandom(4);
-      vec_t<fixed_t> temp(x, y, (P_Random()*actor->height) >> 8);
+      vec_t<fixed_t> temp(Random(-8,8), Random(-8,8), Random()*actor->height);
       temp += actor->pos;
       mo = actor->mp->SpawnDActor(temp, MT_ZARMORCHUNK);
       mo->SetState(mo->info->spawnstate + i);
       if (mo)
-	mo->vel = vec_t<fixed_t>((P_Random() & 7) + 5, P_SignedFRandom(6), P_SignedFRandom(6));
+	mo->vel = vec_t<fixed_t>((P_Random() & 7) + 5, RandomS()*4, RandomS()*4);
     }
 
   if (actor->args[0])

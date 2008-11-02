@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Portions Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -19,7 +19,7 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Pseudorandom numbers
+/// \brief Pseudorandom numbers.
 
 
 #ifndef m_random_h
@@ -29,36 +29,24 @@
 #include "m_fixed.h"
 
 /// Uniformly distributed pseudo-random numbers in the range [0,1).
-float Random();
+float RandomUniform();
+inline float Random() { return RandomUniform(); }
+/// Uniformly distributed pseudo-random numbers in the range [min,max).
+inline float Random(float min, float max) { return RandomUniform()*(max-min) + min; }
 
 /// Pseudo-random numbers following a pyramid distribution in the range (-1,1).
 float RandomS();
 
-/// N(0,1) normally distributed pseudo-random numbers .
+/// N(0,1) normally distributed pseudo-random numbers.
 float RandomGauss();
 
-// Returns a number from 0 to 255,
-// from a lookup table.
+
+/// Returns a number from 0 to 255, from a lookup table.
 byte M_Random();
 
-//#define DEBUGRANDOM
-
-#ifdef DEBUGRANDOM
-#define P_Random() P_Random2(__FILE__,__LINE__)
-#define P_SignedRandom() P_SignedRandom2(__FILE__,__LINE__)
-byte P_Random2 (char *a,int b);
-int P_SignedRandom2 (char *a,int b);
-#else
-// As M_Random, but used only by the play simulation.
+/// As M_Random, but used only by the play simulation.
 byte P_Random();
 int P_SignedRandom();
-inline fixed_t P_FRandom(int shift) { return fixed_t(P_Random()) >> shift; }
-
-/// NOTE: pyramid and uniform probability distributions!
-inline fixed_t P_SignedFRandom(int shift) { return fixed_t(P_SignedRandom()) >> shift; }
-inline fixed_t P_SFRandom(int shift) { return fixed_t(P_Random() - 128) >> shift; }
-#endif
-
 
 
 // Fix randoms for demos.

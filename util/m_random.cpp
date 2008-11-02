@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2004 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -15,7 +15,6 @@
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
-//
 //
 //-----------------------------------------------------------------------------
 
@@ -118,7 +117,7 @@ void P_SetRandIndex(byte rindex)
 
 
 
-float Random()
+float RandomUniform()
 {
   return drand48(); // Could be something else as well, this function is from SVID.
 }
@@ -130,6 +129,6 @@ float RandomS()
 
 float RandomGauss()
 {
-  return RandomS(); // TODO real gaussian
+  return RandomS(); // FIXME real gaussian
 }
 

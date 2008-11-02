@@ -926,7 +926,7 @@ static void P_DropItem(Actor *source, mobjtype_t type, int amount, int chance, b
 
   // add a little bounce
   if (!onfloor)
-    item->vel = vec_t<fixed_t>(RandomS(), RandomS(), 5 + 4*Random());
+    item->vel = vec_t<fixed_t>(RandomS(), RandomS(), Random(5, 9));
 
   item->flags |= MF_DROPPED;
   item->health = amount;
@@ -1892,8 +1892,8 @@ void A_BrainScream(DActor *mo)
   fixed_t y = mo->pos.y - 320;
   for (fixed_t x = mo->pos.x - 196; x < mo->pos.x + 320; x += 8)
     {
-      DActor *th = mo->mp->SpawnDActor(x, y, 128 + P_Random()*2, MT_ROCKET);
-      th->vel.z = 2*Random();
+      DActor *th = mo->mp->SpawnDActor(x, y, Random(128, 640), MT_ROCKET);
+      th->vel.z = Random(0, 2);
 
       th->SetState(S_BRAINEXPLODE1);
 
@@ -1909,8 +1909,8 @@ void A_BrainScream(DActor *mo)
 
 void A_BrainExplode(DActor *mo)
 {
-  DActor *th = mo->mp->SpawnDActor(mo->pos.x + 8*RandomS(), mo->pos.y, 128 + P_Random()*2, MT_ROCKET);
-  th->vel.z = 2*Random();
+  DActor *th = mo->mp->SpawnDActor(mo->pos.x + 8*RandomS(), mo->pos.y, Random(128, 640), MT_ROCKET);
+  th->vel.z = Random(0, 2);
 
   th->SetState(S_BRAINEXPLODE1);
 

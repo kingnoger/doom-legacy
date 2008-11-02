@@ -632,7 +632,7 @@ static void P_GunShot(PlayerPawn *p, bool accurate)
   if (!accurate)
     {
       angle += P_SignedRandom() << 18;
-      sine += P_SignedFRandom(12).Float(); // TEST vertical scatter
+      sine += RandomGauss()/16; // TEST vertical scatter
     }
 
   PuffType = MT_PUFF;
@@ -691,7 +691,7 @@ void A_FireShotgun2(PlayerPawn *p, pspdef_t *psp)
 
   for (int i=0 ; i<20 ; i++)
     {
-      float sine = bulletsine + P_SignedFRandom(11).Float();
+      float sine = bulletsine + RandomS()/8;
       int damage = 5*(P_Random ()%3+1);
       angle_t angle = p->yaw + (P_SignedRandom() << 19);
       p->LineAttack(angle, MISSILERANGE, sine, damage);

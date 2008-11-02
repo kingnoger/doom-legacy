@@ -44,7 +44,7 @@ void A_AddPlayerCorpse(DActor *actor) {}
 void P_MinotaurSlam(Actor *source, Actor *target)
 {
   angle_t angle = R_PointToAngle2(source->pos, target->pos);
-  fixed_t thrust = 16 + P_FRandom(6);
+  fixed_t thrust = Random(16, 20);
   target->vel.x += thrust * Cos(angle);
   target->vel.y += thrust * Sin(angle);
   target->Damage(NULL, NULL, HITDICE(6)); // FIXME Hexen minotaur HITDICE(4)
@@ -58,8 +58,8 @@ void P_MinotaurSlam(Actor *source, Actor *target)
 bool P_TouchWhirlwind(Actor *target)
 {
   target->yaw += P_SignedRandom()<<20;
-  target->vel.x += P_SignedFRandom(6);
-  target->vel.y += P_SignedFRandom(6);
+  target->vel.x += RandomS()*4;
+  target->vel.y += RandomS()*4;
   if (target->mp->maptic & 16 && !(target->flags2 & MF2_BOSS))
     {
       fixed_t randVal = P_Random();
@@ -92,8 +92,8 @@ void A_DripBlood(DActor *actor)
   r = P_SignedRandom() >> 5;
   s = P_SignedRandom() >> 5;
   mo = actor->mp->SpawnDActor(actor->pos.x + r, actor->pos.y + s, actor->pos.z, MT_BLOOD);
-  mo->vel.x = P_SignedFRandom(6);
-  mo->vel.y = P_SignedFRandom(6);
+  mo->vel.x = RandomS()*4;
+  mo->vel.y = RandomS()*4;
   mo->flags2 |= MF2_LOGRAV;
 }
 
@@ -137,12 +137,12 @@ void A_ImpExplode(DActor *actor)
   DActor *mo;
 
   mo = actor->mp->SpawnDActor(actor->pos, MT_IMPCHUNK1);
-  mo->vel.x = P_SignedFRandom(6);
-  mo->vel.y = P_SignedFRandom(6);
+  mo->vel.x = RandomS()*4;
+  mo->vel.y = RandomS()*4;
   mo->vel.z = 9;
   mo = actor->mp->SpawnDActor(actor->pos, MT_IMPCHUNK2);
-  mo->vel.x = P_SignedFRandom(6);
-  mo->vel.y = P_SignedFRandom(6);
+  mo->vel.x = RandomS()*4;
+  mo->vel.y = RandomS()*4;
   mo->vel.z = 9;
   if (actor->special1 == 666)
     { // Extreme death crash
@@ -161,9 +161,9 @@ void A_BeastPuff(DActor *actor)
   if(P_Random() > 64)
     {
       fixed_t r,s,t;
-      r = P_SignedFRandom(6);
-      s = P_SignedFRandom(6);
-      t = P_SignedFRandom(6);
+      r = RandomS()*4;
+      s = RandomS()*4;
+      t = RandomS()*4;
         
       actor->mp->SpawnDActor(actor->pos + vec_t<fixed_t>(r,s,t), MT_PUFFY);
     }
@@ -369,7 +369,6 @@ void A_ChicPain(DActor *actor)
 
 void A_Feathers(DActor *actor)
 {
-  int i;
   int count;
   DActor *mo;
 
@@ -381,13 +380,13 @@ void A_Feathers(DActor *actor)
     { // Death
       count = 5+(P_Random()&3);
     }
-  for(i = 0; i < count; i++)
+  for (int i = 0; i < count; i++)
     {
       mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+20, MT_FEATHER);
       mo->target = actor;
-      mo->vel.x = P_SignedFRandom(8);
-      mo->vel.y = P_SignedFRandom(8);
-      mo->vel.z = 1 + P_FRandom(7);
+      mo->vel.x = RandomS();
+      mo->vel.y = RandomS();
+      mo->vel.z = Random(1,3);
       mo->SetState(statenum_t(S_FEATHER1+(P_Random()&7)));
     }
 }
@@ -660,9 +659,9 @@ void A_BlueSpark(DActor *actor)
   for(i = 0; i < 2; i++)
     {
       mo = actor->mp->SpawnDActor(actor->pos, MT_SOR2FXSPARK);
-      mo->vel.x = P_SignedFRandom(7);
-      mo->vel.y = P_SignedFRandom(7);
-      mo->vel.z = 1 + P_FRandom(8);
+      mo->vel.x = RandomS()*2;
+      mo->vel.y = RandomS()*2;
+      mo->vel.z = Random(1, 2);
     }
 }
 
@@ -906,13 +905,8 @@ void A_MinotaurAtk3(DActor *actor)
 
 void A_MntrFloorFire(DActor *actor)
 {
-  DActor *mo;
-  fixed_t r,s;
-    
   actor->pos.z = actor->floorz;
-  r = P_SignedFRandom(6);
-  s = P_SignedFRandom(6);
-  mo = actor->mp->SpawnDActor(actor->pos.x + r, actor->pos.y + s, ONFLOORZ, MT_MNTRFX3);
+  DActor *mo = actor->mp->SpawnDActor(actor->pos.x + RandomS()*4, actor->pos.y + RandomS()*4, ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
   mo->vel.x = 1; // Force block checking
   mo->CheckMissileSpawn();
@@ -1266,9 +1260,9 @@ void A_PodPain(DActor *actor)
       goo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y,
 			actor->pos.z+48, MT_PODGOO);
       goo->target = actor;
-      goo->vel.x = P_SignedFRandom(7);
-      goo->vel.y = P_SignedFRandom(7);
-      goo->vel.z = 0.5f + P_FRandom(7);
+      goo->vel.x = RandomS()*2;
+      goo->vel.y = RandomS()*2;
+      goo->vel.z = Random(0.5, 2.5);
     }
 }
 
@@ -1435,23 +1429,16 @@ void A_VolcanoSet(DActor *volcano)
 
 void A_VolcanoBlast(DActor *volcano)
 {
-  int i;
-  int count;
-  angle_t angle;
-
-  count = 1+(P_Random()%3);
-  for(i = 0; i < count; i++)
+  int count = 1+(P_Random()%3);
+  for(int i = 0; i < count; i++)
     {
-      DActor *blast = volcano->mp->SpawnDActor(volcano->pos.x, volcano->pos.y,
-	volcano->pos.z+44, MT_VOLCANOBLAST); // MT_VOLCANOBLAST
-      //blast->target = volcano;
+      DActor *blast = volcano->mp->SpawnDActor(volcano->pos.x, volcano->pos.y, volcano->pos.z+44, MT_VOLCANOBLAST); // MT_VOLCANOBLAST
       blast->owner = volcano;
-      angle = P_Random()<<24;
+      angle_t angle = P_Random()<<24;
       blast->yaw = angle;
-      angle >>= ANGLETOFINESHIFT;
-      blast->vel.x = finecosine[angle];
-      blast->vel.y = finesine[angle];
-      blast->vel.z = 2.5f + P_FRandom(6);
+      blast->vel.x = Cos(angle);
+      blast->vel.y = Sin(angle);
+      blast->vel.z = Random(2.5, 6.5);
       S_StartSound(blast, sfx_volsht);
       blast->CheckMissileSpawn();
     }
@@ -1465,11 +1452,7 @@ void A_VolcanoBlast(DActor *volcano)
 
 void A_VolcBallImpact(DActor *ball)
 {
-  int i;
-  DActor *tiny;
-  angle_t angle;
-
-  if(ball->pos.z <= ball->floorz)
+  if (ball->pos.z <= ball->floorz)
     {
       ball->flags |= MF_NOGRAVITY;
       ball->flags2 &= ~MF2_LOGRAV;
@@ -1477,16 +1460,15 @@ void A_VolcBallImpact(DActor *ball)
       //ball->vel.z = 3;
     }
   ball->RadiusAttack(ball->owner, 25);
-  for(i = 0; i < 4; i++)
+  for (int i = 0; i < 4; i++)
     {
-      tiny = ball->mp->SpawnDActor(ball->pos, MT_VOLCANOTBLAST);
+      DActor *tiny = ball->mp->SpawnDActor(ball->pos, MT_VOLCANOTBLAST);
       tiny->owner = ball;
-      angle = i*ANG90;
+      angle_t angle = i*ANG90;
       tiny->yaw = angle;
-      angle >>= ANGLETOFINESHIFT;
-      tiny->vel.x = 0.7f * finecosine[angle];
-      tiny->vel.y = 0.7f * finesine[angle];
-      tiny->vel.z = 1 + P_FRandom(7);
+      tiny->vel.x = 0.7f * Cos(angle);
+      tiny->vel.y = 0.7f * Sin(angle);
+      tiny->vel.z = Random(1, 3);
       tiny->CheckMissileSpawn();
     }
 }
@@ -1507,9 +1489,9 @@ void A_SkullPop(DActor *actor)
   DActor *mo = p->mp->SpawnDActor(p->pos.x, p->pos.y, p->pos.z+48, MT_BLOODYSKULL);
 
   mo->owner = p;
-  mo->vel.x = P_SignedFRandom(7);
-  mo->vel.y = P_SignedFRandom(7);
-  mo->vel.z = 2 + P_FRandom(10);
+  mo->vel.x = RandomS()*2;
+  mo->vel.y = RandomS()*2;
+  mo->vel.z = Random(2, 2.25);
 
   // Attach player mobj to bloody skull
   // Nope.

@@ -583,7 +583,6 @@ void A_XMinotaurAtk1(DActor *actor)
 
 void A_XMinotaurDecide(DActor *actor)
 {
-  angle_t angle;
   Actor *target = actor->target;
 
   if (!target) return;
@@ -599,9 +598,8 @@ void A_XMinotaurDecide(DActor *actor)
       actor->SetState(S_XMNTR_ATK4_1, false);
       actor->eflags |= MFE_SKULLFLY;
       A_FaceTarget(actor);
-      angle = actor->yaw>>ANGLETOFINESHIFT;
-      actor->vel.x = MNTR_CHARGE_SPEED * finecosine[angle];
-      actor->vel.y = MNTR_CHARGE_SPEED * finesine[angle];
+      actor->vel.x = MNTR_CHARGE_SPEED * Cos(actor->yaw);
+      actor->vel.y = MNTR_CHARGE_SPEED * Sin(actor->yaw);
       actor->args[4] = 35/2; // Charge duration
     }
   else if(target->pos.z == target->floorz
@@ -726,7 +724,7 @@ void A_MntrFloorFire(DActor *actor)
   DActor *mo;
 
   actor->pos.z = actor->floorz;
-  mo = actor->mp->SpawnDActor(actor->pos.x + P_SignedFRandom(6), actor->pos.y + P_SignedFRandom(6), ONFLOORZ, MT_MNTRFX3);
+  mo = actor->mp->SpawnDActor(actor->pos.x + RandomS()*4, actor->pos.y + RandomS()*4, ONFLOORZ, MT_MNTRFX3);
   mo->target = actor->target;
   mo->vel.x = 1; // Force block checking
   mo->CheckMissileSpawn();
@@ -1173,31 +1171,31 @@ void A_SerpentSpawnGibs(DActor *actor)
 {
   DActor *mo;
 
-  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
-		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
+  mo = actor->mp->SpawnDActor(actor->pos.x+Random(-8,8), 
+		   actor->pos.y+Random(-8,8), actor->floorz+1,
 		   MT_SERPENT_GIB1);	
   if(mo)
     {
-      mo->vel.x = P_SFRandom(10);
-      mo->vel.y = P_SFRandom(10);
+      mo->vel.x = Random(-0.125, 0.125);
+      mo->vel.y = Random(-0.125, 0.125);
       mo->floorclip = 6;
     }
-  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
-		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
+  mo = actor->mp->SpawnDActor(actor->pos.x+Random(-8,8), 
+		   actor->pos.y+Random(-8,8), actor->floorz+1,
 		   MT_SERPENT_GIB2);	
   if(mo)
     {
-      mo->vel.x = P_SFRandom(10);
-      mo->vel.y = P_SFRandom(10);
+      mo->vel.x = Random(-0.125, 0.125);
+      mo->vel.y = Random(-0.125, 0.125);
       mo->floorclip = 6;
     }
-  mo = actor->mp->SpawnDActor(actor->pos.x+P_SFRandom(4), 
-		   actor->pos.y+P_SFRandom(4), actor->floorz+1,
+  mo = actor->mp->SpawnDActor(actor->pos.x+Random(-8,8), 
+		   actor->pos.y+Random(-8,8), actor->floorz+1,
 		   MT_SERPENT_GIB3);	
   if(mo)
     {
-      mo->vel.x = P_SFRandom(10);
-      mo->vel.y = P_SFRandom(10);
+      mo->vel.x = Random(-0.125, 0.125);
+      mo->vel.y = Random(-0.125, 0.125);
       mo->floorclip = 6;
     }
 }
@@ -1306,9 +1304,9 @@ void A_CentaurDropStuff(DActor *actor)
   if(mo)
     {
       angle = actor->yaw+ANG90;
-      mo->vel.z = 8 + P_FRandom(6);
-      mo->vel.x = (P_SFRandom(5)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_SFRandom(5)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.z = Random(8, 12);
+      mo->vel.x = Random(-3, 5) * Cos(angle);
+      mo->vel.y = Random(-3, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+45, 
@@ -1316,9 +1314,9 @@ void A_CentaurDropStuff(DActor *actor)
   if(mo)
     {
       angle = actor->yaw-ANG90;
-      mo->vel.z = 8+P_FRandom(6);
-      mo->vel.x = (P_SFRandom(5)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_SFRandom(5)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.z = Random(8, 12);
+      mo->vel.x = Random(-3, 5) * Cos(angle);
+      mo->vel.y = Random(-3, 5) * Sin(angle);
       mo->owner = actor;
     }
 }
@@ -1541,9 +1539,9 @@ void A_BishopPainBlur(DActor *actor)
       actor->SetState(S_BISHOP_BLUR1);
       return;
     }
-  mo = actor->mp->SpawnDActor(actor->pos.x+P_SignedFRandom(4),
-			      actor->pos.y+P_SignedFRandom(4),
-			      actor->pos.z+P_SignedFRandom(5),
+  mo = actor->mp->SpawnDActor(actor->pos.x+RandomS()*16,
+			      actor->pos.y+RandomS()*16,
+			      actor->pos.z+RandomS()*8,
 			      MT_BISHOPPAINBLUR);
   if(mo)
     {
@@ -1748,8 +1746,8 @@ void A_DragonFX2(DActor *actor)
 
   for (int i = 1 + (P_Random()&3); i; i--)
     {
-      DActor *mo = actor->mp->SpawnDActor(actor->pos.x + P_SFRandom(2), 
-	actor->pos.y + P_SFRandom(2), actor->pos.z + P_SFRandom(4), MT_DRAGON_FX2);
+      DActor *mo = actor->mp->SpawnDActor(actor->pos.x + Random(-32, 32), 
+	actor->pos.y + Random(-32, 32), actor->pos.z + Random(-8,8), MT_DRAGON_FX2);
 
       if (mo)
 	{
@@ -1843,8 +1841,8 @@ void A_DemonDeath(DActor *actor)
     {
       angle = actor->yaw+ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK2);
@@ -1852,8 +1850,8 @@ void A_DemonDeath(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK3);
@@ -1861,8 +1859,8 @@ void A_DemonDeath(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK4);
@@ -1870,8 +1868,8 @@ void A_DemonDeath(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMONCHUNK5);
@@ -1879,8 +1877,8 @@ void A_DemonDeath(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
 }
@@ -1903,8 +1901,8 @@ void A_Demon2Death(DActor *actor)
     {
       angle = actor->yaw+ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK2);
@@ -1912,8 +1910,8 @@ void A_Demon2Death(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK3);
@@ -1921,8 +1919,8 @@ void A_Demon2Death(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK4);
@@ -1930,8 +1928,8 @@ void A_Demon2Death(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
   mo = actor->mp->SpawnDActor(pp, MT_DEMON2CHUNK5);
@@ -1939,8 +1937,8 @@ void A_Demon2Death(DActor *actor)
     {
       angle = actor->yaw-ANG90;
       mo->vel.z = 8;
-      mo->vel.x = (P_FRandom(6)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-      mo->vel.y = (P_FRandom(6)+1) * finesine[angle>>ANGLETOFINESHIFT];
+      mo->vel.x = Random(1, 5) * Cos(angle);
+      mo->vel.y = Random(1, 5) * Sin(angle);
       mo->owner = actor;
     }
 }
@@ -2095,8 +2093,8 @@ void A_WraithFX2(DActor *actor)
 	      angle = actor->yaw-(P_Random()<<22);
 	    }
 	  mo->vel.z = 0;
-	  mo->vel.x = (P_FRandom(9)+1) * finecosine[angle>>ANGLETOFINESHIFT];
-	  mo->vel.y = (P_FRandom(9)+1) * finesine[angle>>ANGLETOFINESHIFT];
+	  mo->vel.x = Random(1, 1.5) * Cos(angle);
+	  mo->vel.y = Random(1, 1.5) * Sin(angle);
 	  mo->owner = actor;
 	  mo->floorclip = 10;
 	}
@@ -2116,9 +2114,9 @@ void A_WraithFX3(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX3);
       if(mo)
 	{
-	  mo->pos.x += P_SFRandom(5);
-	  mo->pos.y += P_SFRandom(5);
-	  mo->pos.z += P_FRandom(6);
+	  mo->pos.x += Random(-4, 4);
+	  mo->pos.y += Random(-4, 4);
+	  mo->pos.z += Random(0, 4);
 	  mo->owner = actor;
 	}
     }
@@ -2157,9 +2155,9 @@ void A_WraithFX4(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX4);
       if(mo)
 	{
-	  mo->pos.x += P_SFRandom(4);
-	  mo->pos.y += P_SFRandom(4);
-	  mo->pos.z += P_FRandom(6);
+	  mo->pos.x += Random(-8,8);
+	  mo->pos.y += Random(-8,8);
+	  mo->pos.z += Random(0, 4);
 	  mo->owner = actor;
 	}
     }
@@ -2168,9 +2166,9 @@ void A_WraithFX4(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos, MT_WRAITHFX5);
       if(mo)
 	{
-	  mo->pos.x += P_SFRandom(5);
-	  mo->pos.y += P_SFRandom(5);
-	  mo->pos.z += P_FRandom(6);
+	  mo->pos.x += Random(-4, 4);
+	  mo->pos.y += Random(-4, 4);
+	  mo->pos.z += Random(0, 4);
 	  mo->owner = actor;
 	}
     }
@@ -2221,9 +2219,9 @@ void A_DropMace(DActor *actor)
 			      actor->Center(), MT_ETTIN_MACE);
   if (mo)
     {
-      mo->vel.x = P_SFRandom(5);
-      mo->vel.y = P_SFRandom(5);
-      mo->vel.z = 10+P_FRandom(6);
+      mo->vel.x = Random(-4, 4);
+      mo->vel.y = Random(-4, 4);
+      mo->vel.z = Random(10, 14);
       mo->owner = actor;
     }
 }
@@ -2261,16 +2259,16 @@ void A_FiredSpawnRock(DActor *actor)
       break;
     }
 
-  x = actor->pos.x + P_SFRandom(4);
-  y = actor->pos.y + P_SFRandom(4);
-  z = actor->pos.z + P_FRandom(5);
+  x = actor->pos.x + Random(-8,8);
+  y = actor->pos.y + Random(-8,8);
+  z = actor->pos.z + Random(0, 8);
   mo = actor->mp->SpawnDActor(x,y,z,rtype);
   if (mo)
     {
       mo->owner = actor;
-      mo->vel.x = P_SFRandom(6);
-      mo->vel.y = P_SFRandom(6);
-      mo->vel.z = P_FRandom(6);
+      mo->vel.x = Random(-2, 2);
+      mo->vel.y = Random(-2, 2);
+      mo->vel.z = Random(0, 4);
       mo->special1 = 2;		// Number bounces
     }
 
@@ -2299,7 +2297,7 @@ void A_SmBounce(DActor *actor)
 {
   // give some more momentum (x,y,&z)
   actor->pos.z = actor->floorz + 1;
-  actor->vel.z = 2 + P_FRandom(6);
+  actor->vel.z = Random(2, 6);
   actor->vel.x = P_Random() % 3;
   actor->vel.y = P_Random() % 3;
 }
@@ -2400,16 +2398,16 @@ void A_FiredSplotch(DActor *actor)
   mo = actor->mp->SpawnDActor(actor->pos, MT_FIREDEMON_SPLOTCH1);
   if (mo)
     {
-      mo->vel.x = P_SFRandom(5);
-      mo->vel.y = P_SFRandom(5);
-      mo->vel.z = 3 + P_FRandom(6);
+      mo->vel.x = Random(-4, 4);
+      mo->vel.y = Random(-4, 4);
+      mo->vel.z = Random(3, 7);
     }
   mo = actor->mp->SpawnDActor(actor->pos, MT_FIREDEMON_SPLOTCH2);
   if (mo)
     {
-      mo->vel.x = P_SFRandom(5);
-      mo->vel.y = P_SFRandom(5);
-      mo->vel.z = 3 + P_FRandom(6);
+      mo->vel.x = Random(-4, 4);
+      mo->vel.y = Random(-4, 4);
+      mo->vel.z = Random(3, 7);
     }
 }
 
@@ -3501,29 +3499,29 @@ void A_FreezeDeathChunks(DActor *actor)
 
   for(i = 12+(P_Random()&15); i >= 0; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
+      mo = actor->mp->SpawnDActor(actor->pos.x + Random(-1, 1)*actor->radius,
+				  actor->pos.y + Random(-1, 1)*actor->radius,
+				  actor->pos.z + Random()*actor->height, MT_ICECHUNK);
       mo->SetState(mo->info->spawnstate + (P_Random()%3));
       if(mo)
 	{
 	  mo->vel.z = ((mo->pos.z - actor->pos.z) / actor->height) << 2;
-	  mo->vel.x = P_SignedFRandom(7);
-	  mo->vel.y = P_SignedFRandom(7);
+	  mo->vel.x = RandomS()*2;
+	  mo->vel.y = RandomS()*2;
 	  A_IceSetTics(mo); // set a random tic wait
 	}
     }
   for(i = 12+(P_Random()&15); i >= 0; i--)
     {
-      mo = actor->mp->SpawnDActor(actor->pos.x+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->pos.y+(((P_Random()-128)*actor->radius)>>7), 
-		       actor->pos.z+(P_Random()*actor->height/255), MT_ICECHUNK);
+      mo = actor->mp->SpawnDActor(actor->pos.x + Random(-1, 1)*actor->radius,
+				  actor->pos.y + Random(-1, 1)*actor->radius,
+				  actor->pos.z + Random()*actor->height, MT_ICECHUNK);
       mo->SetState(mo->info->spawnstate + (P_Random()%3));
       if(mo)
 	{
 	  mo->vel.z = ((mo->pos.z-actor->pos.z) / actor->height) << 2;
-	  mo->vel.x = P_SignedFRandom(7);
-	  mo->vel.y = P_SignedFRandom(7);
+	  mo->vel.x = RandomS()*2;
+	  mo->vel.y = RandomS()*2;
 	  A_IceSetTics(mo); // set a random tic wait
 	}
     }
@@ -3533,8 +3531,8 @@ void A_FreezeDeathChunks(DActor *actor)
       mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+VIEWHEIGHT, MT_ICECHUNK);
       mo->SetState(S_ICECHUNK_HEAD);
       mo->vel.z = FixedDiv(mo->pos.z-actor->pos.z, actor->height)<<2;
-      mo->vel.x = P_SignedFRandom(7);
-      mo->vel.y = P_SignedFRandom(7);
+      mo->vel.x = RandomS()*2;
+      mo->vel.y = RandomS()*2;
       mo->flags2 |= MF2_ICEDAMAGE; // used to force blue palette
       mo->flags2 &= ~MF2_FLOORCLIP;
       mo->player = actor->player;
@@ -3971,7 +3969,6 @@ void A_KSpiritSeeker(DActor *actor, angle_t thresh, angle_t turnMax)
 {
   int dir;
   angle_t delta;
-  angle_t angle;
   fixed_t newZ;
   fixed_t deltaZ;
 
@@ -3996,9 +3993,8 @@ void A_KSpiritSeeker(DActor *actor, angle_t thresh, angle_t turnMax)
     { // Turn counter clockwise
       actor->yaw -= delta;
     }
-  angle = actor->yaw>>ANGLETOFINESHIFT;
-  actor->vel.x = actor->info->speed * finecosine[angle];
-  actor->vel.y = actor->info->speed * finesine[angle];
+  actor->vel.x = actor->info->speed * Cos(actor->yaw);
+  actor->vel.y = actor->info->speed * Sin(actor->yaw);
 
   if(!(game.tic & 15) 
      || actor->Feet() > target->Top()

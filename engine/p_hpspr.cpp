@@ -757,13 +757,11 @@ void A_FireCrossbowPL2(PlayerPawn *p, pspdef_t *psp)
 
 void A_BoltSpark(DActor *bolt)
 {
-  DActor *spark;
-    
-  if(P_Random() > 50)
+  if (P_Random() > 50)
     {
-      spark = bolt->mp->SpawnDActor(bolt->pos, MT_CRBOWFX4);
-      spark->pos.x += P_SignedFRandom(6);
-      spark->pos.y += P_SignedFRandom(6);
+      DActor *spark = bolt->mp->SpawnDActor(bolt->pos, MT_CRBOWFX4);
+      spark->pos.x += RandomS()*4;
+      spark->pos.y += RandomS()*4;
     }
 }
 
@@ -1044,12 +1042,8 @@ void A_FirePhoenixPL2(PlayerPawn *p, pspdef_t *psp)
     }
 
   angle_t angle = p->yaw;
-  fixed_t x = P_SignedFRandom(7);
-  fixed_t y = P_SignedFRandom(7);
-  vec_t<fixed_t> r(x, y, 26 + Tan(p->pitch) - p->floorclip); // TEST approximate
-  r += p->pos;
-
-  DActor *mo = p->mp->SpawnDActor(r, MT_PHOENIXFX2);
+  vec_t<fixed_t> r(RandomS()*2, RandomS()*2, 26 + Tan(p->pitch) - p->floorclip); // TEST approximate
+  DActor *mo = p->mp->SpawnDActor(p->pos + r, MT_PHOENIXFX2);
   mo->owner = p;
   mo->yaw = angle;
   fixed_t temp = mo->info->speed * Cos(p->pitch);

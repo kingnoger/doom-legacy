@@ -1482,7 +1482,7 @@ static bool PTR_BloodTraverse(intercept_t *in)
   if (in->isaline)
     {
       line_t *li = in->line;
-      fixed_t z = bloodthing->pos.z + P_SignedFRandom(3);
+      fixed_t z = bloodthing->pos.z + RandomS()*32;
       if (li->flags & ML_TWOSIDED)
 	{
 	  line_opening_t *open = line_opening_t::Get(li, bloodthing);
@@ -1908,8 +1908,8 @@ static bool PIT_ChangeSector(Actor *thing)
 	  // spray blood in a random direction
 	  DActor *mo = thing->mp->SpawnDActor(thing->pos.x, thing->pos.y, thing->Center(), MT_BLOOD);
             
-	  mo->vel.x  = P_SignedFRandom(4);
-	  mo->vel.y  = P_SignedFRandom(4);
+	  mo->vel.x  = RandomS()*16;
+	  mo->vel.y  = RandomS()*16;
         }
     }
 

@@ -225,10 +225,7 @@ void A_FSwordFlames(DActor *actor)
 {
   for (int i = 1+(P_Random()&3); i; i--)
     {
-      fixed_t x = P_SFRandom(4);
-      fixed_t y = P_SFRandom(4);
-      fixed_t z = P_SFRandom(5);
-      vec_t<fixed_t> temp(x,y,z);
+      vec_t<fixed_t> temp(Random(-8, 8), Random(-8, 8), Random(-4, 4));
       temp += actor->pos;
       actor->mp->SpawnDActor(temp, MT_FSWORD_FLAME);
     }
