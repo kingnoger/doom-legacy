@@ -43,7 +43,7 @@ precompiled packages, with the exception of OpenTNL.
  <td>The official PNG reference library.</td></tr>
 <tr><td><a href="http://www.ijg.org/">libjpeg</a></td> <td>6b</td> <td>libjpeg62-dev</td>
  <td>The unofficial JPEG reference library.</td></tr>
-<tr><td><a href="http://www.opentnl.org/">OpenTNL</a></td> <td>HEAD revision</td> <td>-</td>
+<tr><td><a href="http://sourceforge.net/projects/opentnl/">OpenTNL</a></td> <td>HEAD revision</td> <td>-</td>
  <td>A free game networking library based on the Torque Network Library.<br/>
  The OpenTNL distribution contains <b>libtomcrypt</b>, which provides strong encryption.</td></tr>
 </table>
@@ -82,14 +82,14 @@ From now on, your local copy of this directory will be referred to as <b>TRUNK</
 <li>Download the latest OpenTNL source from the CVS:
 <div class="code">cvs -z3 -d:pserver:anonymous@opentnl.cvs.sourceforge.net:/cvsroot/opentnl co -P tnl</div>
 </li>
-<li>Go to the TRUNK, say '<b>make tnl TNL=/absolute/path/to/tnl_source</b>' to build
+<li>Go to the <b>TRUNK</b>, say '<b>make tnl TNL=/absolute/path/to/tnl_source</b>' to build
 libtomcrypt.a and libtnl.a.</li>
 </ol>
 
 <h3>Compiling Legacy</h3>
 
 <ol>
-<li>Open a shell window. Go to the TRUNK.</li>
+<li>Open a shell window. Go to the <b>TRUNK</b>.</li>
 <li>Say '<b>make depend</b>' to create the dependency files.</li>
 <li>Say '<b>make OPT=1</b>' or just '<b>make</b>' to build the executable.<br/>
  Omitting the 'OPT=1' parameter adds debugging symbols to the
