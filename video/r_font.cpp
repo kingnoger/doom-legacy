@@ -3,7 +3,7 @@
 //
 // $Id:$
 //
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2009 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define NO_TTF 1 // TrueType fonts off by default
+#define NO_TTF // TrueType fonts off by default
 
 /// ucs2 because SDL_ttf currently only understands Unicode codepoints within the BMP.
 static int utf8_to_ucs2(const char *utf8, Uint16 *ucs2)
@@ -319,7 +319,7 @@ float rasterfont_t::StringWidth(const char *str, int n)
 #include "SDL_ttf.h"
 
 
-#define SCALE 3.0f
+#define SCALE 1.0f
 
 /// \brief TrueType font
 class ttfont_t : public font_t
@@ -334,9 +334,23 @@ protected:
   {
     int minx, maxx, miny, maxy, advance;
     Material *mat;
+
+    ~glyph_t()
+    {
+      // The glyph textures nor the materials are in the main cache, so we destroy them directly.
+      if (mat)
+	{
+	  delete mat->tex[0].t;
+	  mat->tex.clear(); // so the Material destructor won't cause trouble...
+	  delete mat;
+	  mat = NULL;
+	}
+    }
   };
 
   glyph_t glyphcache[256]; ///< Prerendered glyphs for Latin-1 chars to improve efficiency.
+
+  bool BuildGlyph(glyph_t &g, int c, SDL_Color color);
 
 public:
   ttfont_t(int lump)
@@ -361,12 +375,7 @@ public:
     font = NULL;
     Z_Free(data);
     data = NULL;
-
-    for (int k=0; k<256; k++)
-      {
-	glyphcache[k].mat->Release();
-	glyphcache[k].mat = NULL;
-      }
+    // the glyph_t's destroy themselves
   }
 
   const char *GetFaceFamilyName() { return TTF_FontFaceFamilyName(font); }
@@ -386,7 +395,7 @@ public:
     for (int k=0; k<n && str[len]; k++)
       {
 	int skip = utf8_to_ucs2(&str[len], &c);
-	if (!skip) // bad ucs-8 string
+	if (!skip) // bad utf8 string
 	  return 0;
 	len += skip;
       }
@@ -492,6 +501,36 @@ public:
 
 
 
+bool ttfont_t::BuildGlyph(glyph_t &g, int c, SDL_Color color)
+{
+  TTF_GlyphMetrics(font, c, &g.minx, &g.maxx, &g.miny, &g.maxy, &g.advance);
+
+  SDL_Surface *glyph = TTF_RenderGlyph_Blended(font, c, color);
+  if (!glyph)
+    {
+      CONS_Printf("TTF rendering error: %s\n", TTF_GetError());
+      return false;
+    }
+
+  string name("glyph ");
+  name += c;
+
+  Texture *t = new SDLTexture(name.c_str(), glyph);
+  t->topoffs = g.maxy - ascent; // clever!
+  t->leftoffs = -g.minx;
+
+  Material *m = new Material(name.c_str()); // create a new Material
+  Material::TextureRef &r = m->tex[0];
+  r.t = t;
+  r.xscale = r.yscale = SCALE;
+
+  m->Initialize();
+
+  g.mat = m;
+  return true;
+}
+
+
 float ttfont_t::DrawCharacter(float x, float y, int c, int flags)
 {
   static SDL_Color white = {255, 255, 255, 0};
@@ -501,41 +540,36 @@ float ttfont_t::DrawCharacter(float x, float y, int c, int flags)
     {
     }
 
-  if (c < 32 || c >= 256)
-    return 0; // TODO for now just Latin-1
-      
-  glyph_t &g = glyphcache[c];
-  if (!g.mat)
+  float ret;
+
+
+  // TODO glyphcache into a std::map
+  if (c < 32) // control chars
+    return 0;
+  else if (c < 256) // Latin-1
     {
-      // not found, render and insert into glyph cache
-      TTF_GlyphMetrics(font, c, &g.minx, &g.maxx, &g.miny, &g.maxy, &g.advance);
-
-      SDL_Surface *glyph = TTF_RenderGlyph_Blended(font, c, red);
-      if (!glyph)
+      glyph_t &g = glyphcache[c];
+      if (!g.mat)
 	{
-	  CONS_Printf("TTF rendering error: %s\n", TTF_GetError());
-	  return 0;
+	  // not found, render and insert into glyph cache
+	  if (!BuildGlyph(g, c, red))
+	    return 0;
 	}
+      g.mat->Draw(x, y, flags);
+      ret = g.advance / SCALE;
+    }
+  else
+    {
+      glyph_t temp;
+      if (!BuildGlyph(temp, c, red))
+	return 0;
 
-      string name("glyph ");
-      name += c;
-
-      Texture *t = new SDLTexture(name.c_str(), glyph);
-      t->topoffs = g.maxy - ascent; // clever!
-      t->leftoffs = -g.minx;
-
-      Material *m = new Material(name.c_str()); // create a new Material
-      Material::TextureRef &r = m->tex[0];
-      r.t = t;
-      r.xscale = r.yscale = SCALE;
-
-      m->Initialize();
-
-      g.mat = m;
+      temp.mat->Draw(x, y, flags);
+      ret = temp.advance / SCALE;
+      // TODO temp is deleted, incredibly wasteful!!!
     }
 
-  g.mat->Draw(x, y, flags);
-  return g.advance / SCALE;
+  return ret;
 }
 
 
