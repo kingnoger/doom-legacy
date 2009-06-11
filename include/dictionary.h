@@ -24,12 +24,7 @@
 #ifndef dictionary_h
 #define dictionary_h 1
 
-#if (__GNUC__ != 2)
-# include <ext/hash_map>
-#else
-# include <hash_map>
-#endif
-
+#include <unordered_map>
 #include "functors.h"
 
 
@@ -41,13 +36,8 @@ template<typename T>
 class HashDictionary
 {
 protected:
-  // annoying namespace declarations, because hash_map is an extension...
-#if (__GNUC__ != 2)
-  typedef typename __gnu_cxx::hash_map<const char*, T*, __gnu_cxx::hash<const char*>, equal_cstring> dict_map_t;
-#else
-  typedef typename            hash_map<const char*, T*, hash<const char*>, equal_cstring> dict_map_t;
-#endif
-
+  typedef const char* dict_key_t;
+  typedef std::unordered_map<dict_key_t, T*, std::hash<dict_key_t>, equal_cstring> dict_map_t;
   typedef typename dict_map_t::iterator dict_iter_t;
   dict_map_t dict_map; ///< hash_map from object names to corresponding object pointers.
 
@@ -80,7 +70,7 @@ public:
 
   /// Remove the named element, if it exists.
   /// \return Number of elements removed (0 or 1).
-  inline int Remove(const char *name)
+  inline int Remove(dict_key_t name)
   {
     return dict_map.erase(name); // erase the old instance by key
   }
@@ -88,7 +78,7 @@ public:
 
   /// Tries to find the named item from the dictionary.
   /// \return The element associated with the key name, or NULL if none is found.
-  inline T *Find(const char *name)
+  inline T *Find(dict_key_t name)
   {
     dict_iter_t s = dict_map.find(name);
 

@@ -859,6 +859,7 @@ void material_cache_t::SetDefaultItem(const char *name)
 
   default_item = new Material(name);
   default_item->tex[0].t = t;
+  default_item->Initialize();  
 }
 
 
@@ -1836,7 +1837,7 @@ fadetable_t *R_CreateColormap(char *p1, char *p2, char *p3)
         if((unsigned int)p < fadestart)
           continue;
 
-#define ABS2(x) (x) < 0 ? -(x) : (x)
+#define ABS2(x) ((x) < 0 ? -(x) : (x))
 
         if(ABS2(cmap[i][0] - cdestr) > ABS2(deltas[i][0]))
           cmap[i][0] -= deltas[i][0];

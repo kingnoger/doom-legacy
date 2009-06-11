@@ -496,7 +496,7 @@ static void TestAnims()
 
       s = info->spawnstate;
       spr = s->sprite;
-      printf("\n%d: %s\n", i, sprnames[spr]);
+      printf("\n%d: %s\n", i, spritenames[spr]);
 
       for (j = 0; j<9; j++)
 	seq[j] = info->*seqptr[j];
@@ -521,7 +521,7 @@ static void TestAnims()
 
 	      if (n->sprite != spr)
 		{
-		  printf("! name: %s: ", sprnames[n->sprite]);
+		  printf("! name: %s: ", spritenames[n->sprite]);
 		  spr = n->sprite;
 		}
 
@@ -574,7 +574,7 @@ void R_ServerInit()
 
   // set the default items for sprite and model caches
   CONS_Printf("Initializing sprites and models...\n");
-  R_InitSprites(sprnames);
+  R_InitSprites();
 }
 
 

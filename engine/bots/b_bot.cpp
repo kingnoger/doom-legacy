@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2005 by DooM Legacy Team.
+// Copyright (C) 2004-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -85,6 +85,7 @@ BotAI::BotAI()
 
 
 /*
+  TODO bot dlls
   find the dlls in the bots directory
   open them, store the bot types into a vector (if the dll version is ok)
   addbot <type> x y z... : find <type> in the vector, re-load the dll if necessary,
@@ -97,45 +98,67 @@ BotAI::BotAI()
 // add bots to game
 void Command_AddBot_f()
 {
-  // TODO addbot command
+  // Client-side bots are supposed to be in principle indistinguishable from human players to the server.
+  // TODO syntax: "addbot [bottype] [name] [team] [parameters]..."
 
-  // TODO syntax: "addbot [bottype] [team] [parameters]..."
-  // default: ACBot
-  int n, i;
+  int i;
+  int n = COM.Argc();
+  
+  // parse common parameters
+  if (n < 2)
+    ; // default: ACBot
 
-  for (i=0; i<NUM_LOCALBOTS; i++)
-    if (LocalPlayers[NUM_LOCALHUMANS + i].ai == NULL)
-      break;
+  const char *name;
+  if (n < 3)
+    name = botnames[P_Random() % NUMBOTNAMES];
+  else
+    name = COM.Argv(2);
 
-  if (i == NUM_LOCALBOTS)
+  int team = 0;
+  if (n >= 4)
+    team = atoi(COM.Argv(3));
+
+#if 0
+
+  if (!game.server) // clients
     {
-      CONS_Printf("Only %d bots per client.\n", NUM_LOCALBOTS);
-      return;
-    }
+      for (i=0; i<NUM_LOCALBOTS; i++)
+	if (LocalPlayers[NUM_LOCALHUMANS + i].ai == NULL)
+	  break;
 
-  LocalPlayerInfo *p = &LocalPlayers[NUM_LOCALHUMANS + i];
-
-  //n = COM_Argc(); TODO read params
-
-  p->name = botnames[P_Random() % NUMBOTNAMES];
-  p->ai = new ACBot(game.skill);
-
-  Map *m = com_player ? com_player->mp : NULL;
-  if (!m)
-    return;
-  //p->requestmap = m->info->mapnumber;
-
-  if (!m->botnodes)
-    m->botnodes = new BotNodes(m);
-
-  if (game.server)
-    {
-      p->info = game.AddPlayer(new PlayerInfo(p));
-      if (!p->info) 
+      if (i == NUM_LOCALBOTS)
 	{
-	  CONS_Printf("Cannot add any more players.\n");
-	  return; 
+	  CONS_Printf("Only %d bots per client.\n", NUM_LOCALBOTS);
+	  return;
+	}
+
+      LocalPlayerInfo *p = &LocalPlayers[NUM_LOCALHUMANS + i];
+
+      p->ai = new ACBot(game.skill);
+      p->name = name;
+      // FIXME ask server to add a new player... change joining protocol in n_connection.cpp
+    }
+  else
+    {
+      // FIXME broken, fix bot joining and botnodes creation
+      // serverside bot
+      Map *m = com_player ? com_player->mp : NULL;
+      if (!m)
+	return;
+      //p->requestmap = m->info->mapnumber;
+
+      if (!m->botnodes)
+	m->botnodes = new BotNodes(m);
+
+      if (game.server)
+	{
+	  p->info = game.AddPlayer(new PlayerInfo(p));
+	  if (!p->info) 
+	    {
+	      CONS_Printf("Cannot add any more players.\n");
+	      return; 
+	    }
 	}
     }
-  // TODO otherwise ask server to add a new player...
+#endif
 }

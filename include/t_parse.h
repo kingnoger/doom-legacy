@@ -151,10 +151,10 @@ struct operator_t
 extern operator_t operators[];
 extern int num_operators;
 
-enum
+enum operator_dir_e
 {
-  forward,
-  backward
+  opdir_forward,
+  opdir_backward
 };
 
 void parse_data(char *data, char *end);

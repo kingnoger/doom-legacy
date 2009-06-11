@@ -96,7 +96,7 @@ export CXX = g++
 # NO_MIXER   : do not include SDL_mixer in the build
 
 
-export CF += -Wall $(platform) $(interface) $(linkage)
+export CF += -std=c++0x -Wall $(platform) $(interface) $(linkage)
 
 INCLUDES = -Iinclude
 CFLAGS = $(CF) $(INCLUDES)

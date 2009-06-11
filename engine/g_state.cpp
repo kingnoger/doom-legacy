@@ -387,10 +387,12 @@ void GameInfo::EndIntermission()
     {
       PlayerInfo *p = LocalPlayers[i].info;
       if (p && p->playerstate == PST_INTERMISSION)
-	if (server)
-	  p->playerstate = PST_NEEDMAP;
-	else
-	  p->c2sIntermissionDone();
+	{
+	  if (server)
+	    p->playerstate = PST_NEEDMAP;
+	  else
+	    p->c2sIntermissionDone();
+	}
     }
 }
 

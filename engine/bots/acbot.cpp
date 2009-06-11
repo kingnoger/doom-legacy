@@ -40,6 +40,7 @@
 #include "p_maputl.h"
 #include "r_defs.h"
 
+#include "m_random.h"
 #include "tables.h"
 //#include "m_dll.h"
 
@@ -757,7 +758,7 @@ void ACBot::ChangeWeapon()
 
       if (sum > 0)
 	{
-	  float r = (std::rand() * sum) / RAND_MAX;
+	  float r = Random() * sum;
 
 	  for (i=0; i<NUMWEAPONS; i++)
 	    if (weapon_usable[i] && r < ai_weapon_data[i].value)
@@ -771,7 +772,7 @@ void ACBot::ChangeWeapon()
       else
 	; // no usable weapons! Should not happen.
 
-      weaponchangetimer = (std::rand() << 11) / RAND_MAX + 1000; // how long until I next change my weapon
+      weaponchangetimer = Random()*2048 + 1000; // how long until I next change my weapon
     }
   else
     weaponchangetimer--;
@@ -863,7 +864,7 @@ void ACBot::AimWeapon()
 
       cmd->pitch = int(atan(((temp.z - pawn->pos.z + (dest->height - pawn->height)/2) / dist).Float()) * (ANG180 / M_PI)) >> 16;
 
-      int spread = (rand() - rand())*ANG45 / RAND_MAX; // was P_SignedRandom()<<21;
+      int spread = RandomS()*ANG45; // was P_SignedRandom()<<21;
 
       if (P_AproxDistance(dest->vel.x, dest->vel.y) > 8) //enemy is moving reasonably fast, so not perfectly acurate
 	{
@@ -1179,7 +1180,7 @@ void ACBot::BuildInput(PlayerInfo *p, int elapsed)
       else
 	{
 	  straferight = !straferight;
-	  strafetimer = (std::rand()*85) / RAND_MAX;
+	  strafetimer = Random()*85;
 	}
     }
 

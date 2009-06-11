@@ -77,7 +77,7 @@ static int ucs4_to_utf8(int c, char *p)
   else if (c < 0x800) // max 11 bits
     {
       p[0] = 0xc0 | (c >> 6);
-      p[1] = 0x80 | c & 0x3f;
+      p[1] = 0x80 | (c & 0x3f);
       return 2;
     }
   else if (c < 0x10000) // max 16 bits
@@ -111,7 +111,7 @@ static int ucs4_to_utf8(int c, string &out)
   else if (c < 0x800) // max 11 bits
     {
       out.push_back(0xc0 | (c >> 6));
-      out.push_back(0x80 | c & 0x3f);
+      out.push_back(0x80 | (c & 0x3f));
       return 2;
     }
   else if (c < 0x10000) // max 16 bits

@@ -23,6 +23,7 @@
 #ifndef m_archive_h
 #define m_archive_h 1
 
+#include <string>
 #include <vector>
 #include <map>
 
@@ -120,7 +121,7 @@ public:
   LArchive &operator<<(fixed_t& c);
 
   template<typename U>
-  LArchive &operator<<(vec_t<U>& v)
+  inline LArchive &operator<<(vec_t<U>& v)
   {
     operator<<(v.x);
     operator<<(v.y);

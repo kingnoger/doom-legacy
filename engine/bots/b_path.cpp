@@ -21,6 +21,8 @@
 /// \file
 /// \brief Pathing system for client-side bots
 
+#include <algorithm>
+
 #include "b_bot.h"
 #include "b_path.h"
 

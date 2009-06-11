@@ -4,7 +4,7 @@
 // $Id$
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -28,11 +28,6 @@
 
 #include "command.h"
 #include "console.h"
-#include "cvars.h"
-
-#include "dstrings.h"
-#include "info.h"
-#include "p_setup.h"
 
 #include "g_game.h"
 #include "d_event.h"
@@ -56,6 +51,8 @@
 void GenerateTables();
 void SV_Init();
 void CL_Init();
+void PrepareGameData();
+
 
 #ifndef SVN_REV
 #define SVN_REV "none"
@@ -485,60 +482,6 @@ void D_SetPaths()
 }
 
 
-static void DoomPatchEngine()
-{
-  cv_jumpspeed.Set("6.0");
-  cv_fallingdamage.Set("0");
-
-  // hacks: teleport fog, blood, gibs
-  mobjinfo[MT_TFOG].spawnstate = &states[S_TFOG];
-  mobjinfo[MT_IFOG].spawnstate = &states[S_IFOG];
-  sprnames[SPR_BLUD] = "BLUD";
-  states[S_GIBS].sprite = SPR_POL5;
-
-  // linedef conversions
-  int lump = fc.GetNumForName("XDOOM");
-  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
-  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
-}
-
-
-static void HereticPatchEngine()
-{
-  cv_jumpspeed.Set("6.0");
-  cv_fallingdamage.Set("0");
-
-  // hacks
-  mobjinfo[MT_TFOG].spawnstate = &states[S_HTFOG1];
-  mobjinfo[MT_IFOG].spawnstate = &states[S_HTFOG1];
-  sprnames[SPR_BLUD] = "BLOD";
-  states[S_GIBS].sprite = SPR_BLOD;
-
-  int lump = fc.GetNumForName("XHERETIC");
-  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
-  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
-
-  // Above, good. Below, bad.
-  text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
-
-  text[TXT_GOTBLUECARD] = "BLUE KEY";
-  text[TXT_GOTYELWCARD] = "YELLOW KEY";
-  text[TXT_GOTREDCARD] = "GREEN KEY";
-}
-
-
-static void HexenPatchEngine()
-{
-  cv_jumpspeed.Set("9.0");
-  cv_fallingdamage.Set("23");
-
-  // hacks
-  mobjinfo[MT_TFOG].spawnstate = &states[S_XTFOG1];
-  mobjinfo[MT_IFOG].spawnstate = &states[S_XTFOG1];
-  sprnames[SPR_BLUD] = "BLOD";
-  states[S_GIBS].sprite = SPR_GIBS;
-}
-
 
 
 //
@@ -617,7 +560,7 @@ bool D_DoomMain()
   // "developement parameter"
   devparm = M_CheckParm("-devparm");
   if (devparm)
-    CONS_Printf(D_DEVSTR);
+    CONS_Printf("Development mode on.\n");
 
   // add any files specified on the command line with -file to the wad list
   if (M_CheckParm("-file"))
@@ -657,21 +600,9 @@ bool D_DoomMain()
   if (!game.dedicated) 
     CL_Init();
 
-  switch (game.mode)
-    {
-    case gm_hexen:
-      HexenPatchEngine();
-      break;
-    case gm_heretic:
-      HereticPatchEngine();
-      break;
-    default:
-      DoomPatchEngine();
-    }
-
-  // Convert mobjinfo table to DECORATE class dictionary.
-  // NOTE: After this mobjinfo is not used at all! Hence DEHACKED patches etc. must be applied before this.
-  ConvertMobjInfo();
+  // Convert old static game data structures into dynamic ones.
+  // DEHACKED patches etc. must be applied before this.
+  PrepareGameData();
 
   // all consvars are now registered
   //------------------------------------- CONFIG.CFG

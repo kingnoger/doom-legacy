@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1993-1996 by Raven Software, Corp.
-// Copyright (C) 1998-2006 by DooM Legacy Team.
+// Copyright (C) 1998-2008 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -32,8 +32,8 @@
 #include "a_functions.h" // prototypes
 
 
-/// Sprite numbers to sprite names
-const char *sprnames[NUMSPRITES+1] =
+/// Mapping from sprite numbers to sprite names. For each sprite name we reserve four chars plus terminating NUL here.
+char orig_sprnames[NUMSPRITES][5] =
 {   "NONE", // no sprite
     "TROO","SHTG","PUNG","PISG","PISF","SHTF","SHT2","CHGG","CHGF","MISG",
     "MISF","SAWG","PLSG","PLSF","BFGG","BFGF","BLUD","PUFF","BAL1","BAL2",
@@ -94,9 +94,7 @@ const char *sprnames[NUMSPRITES+1] =
     "BPFX","DRAG","DRFX", "ARM1","ARM2", "ARM3","ARM4","MAN2","MAN3","KEY1",
     "KEY2","KEY3","KEY4","KEY5","KEY6","KEY7","KEY8","KEY9","KEYA","KEYB",
     "ETTN","ETTB","FDMN","FDMB","ICEY","ICPR","ICWS","SORC","SBMP","SBS4",
-    "SBMB","SBS3","SBMG","SBS1","SBS2","SBFX","RADE","WATR","KORX","ABAT",
-
-    NULL // shit! 19990907 by Kin
+    "SBMB","SBS3","SBMG","SBS1","SBS2","SBFX","RADE","WATR","KORX","ABAT"
 };
 
 

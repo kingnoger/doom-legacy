@@ -663,7 +663,7 @@ svalue_t evaluate_expression(int start, int stop)
       // done backwards for left-to-right reading: eg so
       // 5-3-2 is (5-3)-2 not 5-(3-2)
 
-      if( -1 != (n = (operators[i].direction==forward ?
+      if( -1 != (n = (operators[i].direction == opdir_forward ?
                 find_operator_backwards : find_operator)
                  (start, stop, operators[i].str)) )
         {

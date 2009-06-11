@@ -43,7 +43,8 @@
 
 dehacked_t DEH; // one global instance
 
-static char   **savesprnames;
+extern char orig_sprnames[NUMSPRITES][5];
+static char save_sprnames[NUMSPRITES][5];
 static actionf_p1 *d_actions;
 static actionf_p2 *w_actions;
 
@@ -865,10 +866,9 @@ void dehacked_t::Read_Text(int len1, int len2)
   if (len1 == 4 && len2 == 4)
     {
       for (i=0; i<NUMSPRITES; i++)
-	if (!strncmp(savesprnames[i], s, len1))
+	if (!strncmp(save_sprnames[i], s, 4))
 	  {
-	    strncpy(sprnames[i], &s[len1], len2);
-	    sprnames[i][len2] = '\0';
+	    strncpy(orig_sprnames[i], &s[len1], 4);
 	    return;
 	  }
     }
@@ -1264,7 +1264,6 @@ bool dehacked_t::LoadDehackedLump(int lump)
   // original values
   d_actions = (actionf_p1 *)Z_Malloc(int(NUMSTATES) * sizeof(actionf_p1), PU_STATIC, NULL);
   w_actions = (actionf_p2 *)Z_Malloc(int(NUMWEAPONSTATES) * sizeof(actionf_p2), PU_STATIC, NULL);
-  savesprnames = (char **)Z_Malloc(int(NUMSPRITES) * sizeof(char *), PU_STATIC, NULL);
 
   int i;
 
@@ -1274,8 +1273,8 @@ bool dehacked_t::LoadDehackedLump(int lump)
   for (i=0; i<NUMWEAPONSTATES; i++)
     w_actions[i] = weaponstates[i].action;
 
-  for (i=0; i<NUMSPRITES; i++)
-    savesprnames[i] = sprnames[i];
+  memcpy(save_sprnames, orig_sprnames, sizeof(save_sprnames));
+
 
   p.RemoveComments('#', true);
   while (p.NewLine())
@@ -1337,7 +1336,7 @@ bool dehacked_t::LoadDehackedLump(int lump)
 		      int k;
 		      k = (FindValue() - 151328) / 8;
 		      if (k >= 0 && k < NUMSPRITES)
-			sprnames[i] = savesprnames[k];
+			strncpy(orig_sprnames[i], save_sprnames[k], 4);
 		      else
 			error("Sprite %i : offset out of bound\n", i);
 		    }

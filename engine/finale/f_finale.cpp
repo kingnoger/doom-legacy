@@ -304,13 +304,13 @@ castinfo_t castorder[] =
   {NULL, (mobjtype_t)0}
 };
 
-int             castnum;
-int             casttics;
-state_t*        caststate;
-bool         castdeath;
-int             castframes;
-int             castonmelee;
-bool         castattacking;
+static int          castnum;
+static int          casttics;
+static state_t*     caststate;
+static bool         castdeath;
+static int          castframes;
+static int          castonmelee;
+static bool         castattacking;
 
 
 void F_StartCast(int dummy)
@@ -474,7 +474,7 @@ void F_CastDrawer(int dummy)
   F_CastPrint(castorder[castnum].name);
 
   // draw the current frame in the middle of the screen
-  sprite_t *sprdef = sprites.Get(sprnames[caststate->sprite]);
+  sprite_t *sprdef = sprites.Get(spritenames[caststate->sprite]);
   spriteframe_t *sprframe = &sprdef->spriteframes[ caststate->frame & TFF_FRAMEMASK];
   Material *t = sprframe->tex[0];
   bool flip = sprframe->flip[0];

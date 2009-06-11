@@ -3,7 +3,7 @@
 //
 // $Id:$
 //
-// Copyright (C) 2007 by DooM Legacy Team.
+// Copyright (C) 2007-2009 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@
 /// BEX/DECORATE DActor action function mnemonics
 struct dactor_mnemonic_t
 {
-  char  *name;
+  const char *name;
   void (*ptr)(class DActor *actor);
 };
 
@@ -39,7 +39,7 @@ extern dactor_mnemonic_t BEX_DActorMnemonics[];
 /// BEX/DECORATE weapon action function mnemonics
 struct weapon_mnemonic_t
 {
-  char  *name;
+  const char *name;
   void (*ptr)(class PlayerPawn *player, struct pspdef_t *psp);
 };
 

@@ -27,9 +27,8 @@
 #ifndef info_h
 #define info_h 1
 
+#include <vector>
 #include "m_fixed.h"
-
-void ConvertMobjInfo();
 
 
 /// \brief Sprite enumeration, for combining weapon and THING states with sprite names.
@@ -6539,9 +6538,8 @@ struct mobjinfo_t
 
 extern state_t       states[NUMSTATES];
 extern weaponstate_t weaponstates[NUMWEAPONSTATES];
-extern const char   *sprnames[NUMSPRITES+1];
 extern mobjinfo_t    mobjinfo[NUMMOBJTYPES];
-
+extern std::vector<const char *> spritenames;
 
 
 /// \brief THING frame flags

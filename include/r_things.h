@@ -56,7 +56,7 @@ void R_SortVisSprites();
 void R_AddSprites(struct sector_t* sec, int lightlevel);
 void R_AddPSprites();
 //void R_DrawSprite(vissprite_t* spr);
-void R_InitSprites(char** namelist);
+void R_InitSprites();
 void R_ClearSprites();
 void R_DrawSprites();  //draw all vissprites
 //void R_DrawMasked();

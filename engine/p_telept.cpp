@@ -251,9 +251,9 @@ bool Map::EV_SilentLineTeleport(unsigned lineid, line_t *line, Actor *thing, boo
         // Make sure we are on correct side of exit linedef.
         while (P_PointOnLineSide(p.x, p.y, l) != side && --fudge>=0)
           if (abs(l->dx) > abs(l->dy))
-            p.y -= l->dx < 0 != side ? -fixed_epsilon : fixed_epsilon;
+            p.y -= (l->dx < 0) != side ? -fixed_epsilon : fixed_epsilon;
           else
-            p.x += l->dy < 0 != side ? -fixed_epsilon : fixed_epsilon;
+            p.x += (l->dy < 0) != side ? -fixed_epsilon : fixed_epsilon;
 
 	return thing->Teleport(p, thing->yaw + angle, true);
       }

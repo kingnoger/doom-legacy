@@ -1266,7 +1266,7 @@ static void CHolySeekerMissile(DActor *actor, angle_t thresh, angle_t turnMax)
   actor->vel.y = actor->info->speed * finesine[angle];
   if (!(game.tic & 15) || actor->Feet() > target->Top() || actor->Top() < target->Feet())
     {
-      fixed_t newZ = target->Feet() + (P_Random() * target->height) >> 8;
+      fixed_t newZ = target->Feet() + ((P_Random() * target->height) >> 8);
       fixed_t deltaZ = newZ - actor->Feet();
 
       if (abs(deltaZ) > 15)

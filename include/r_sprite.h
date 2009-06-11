@@ -143,11 +143,11 @@ struct skin_t : public cacheitem_t
     NUMSKINSOUNDS
   };
 
-#define ST_NUMFACES 42
+#define SKIN_NUMFACES 42
 
   sprite_t *sprite;
   char      faceprefix[4];      ///< 3 chars+'\0', default is "STF"
-  Material *faces[ST_NUMFACES]; ///< marine face graphics
+  Material *faces[SKIN_NUMFACES]; ///< marine face graphics
   Material *faceback;           ///< face background
 
   // specific sounds per skin

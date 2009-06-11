@@ -22,17 +22,27 @@
 
 #include <stdarg.h>
 #include "doomdef.h"
+#include "dstrings.h"
 #include "g_game.h"
 #include "g_actor.h"
 #include "g_map.h"
 #include "g_decorate.h"
+#include "info.h"
+#include "p_setup.h"
 #include "mnemonics.h" // flags are shared with BEX
 #include "sounds.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "command.h"
+#include "cvars.h"
+
 
 ActorInfoDictionary aid;
+
+extern char orig_sprnames[NUMSPRITES][5]; // Four chars plus terminating NUL.
+vector<const char *> spritenames;
+
 
 bool Read_DECORATE(int lump);
 
@@ -270,16 +280,20 @@ void ActorInfo::AddStates(const char *spr, const char *frames, int tics, const c
   else
     f = NULL;
 
-  // find sprite num TODO if not found, create!
-  spritenum_t spr_num = SPR_NONE;
-  for (int i=0; i<NUMSPRITES; i++)
-    if (!strcasecmp(sprnames[i], spr))
-      {
-	spr_num = static_cast<spritenum_t>(i);
-	break;
-      }
+  // find sprite num
+  int i, n = spritenames.size();
+  for (i=0; i<n; i++)
+    if (!strcasecmp(spritenames[i], spr))
+      break;
 
-  state_t s = {spr_num, 0, tics, f, NULL};
+  if (i == n) // not found
+    {
+      // FIXME if not found, create!
+      //spritenames.push_back();
+      i = SPR_NONE;
+    }
+
+  state_t s = {static_cast<spritenum_t>(i), 0, tics, f, NULL};
 
   for ( ; *frames; frames++)
     {
@@ -517,7 +531,7 @@ void ActorInfo::PrintDECORATEclass()
   if (spawnstate)
     {
       printf("  Spawn:\n");
-      printf("    %s %s %d %s\n", sprnames[s->sprite], temp, s->tics, BEX_DActorMnemonics[i].name);
+      printf("    %s %s %d %s\n", spritenames[s->sprite], temp, s->tics, BEX_DActorMnemonics[i].name);
     }
   printf("  }\n");
   */
@@ -565,10 +579,89 @@ public:
 
 
 
-void ConvertMobjInfo()
+
+
+
+
+
+
+static void DoomPatchEngine()
 {
+  cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
+
+  // hacks: teleport fog, blood, gibs
+  mobjinfo[MT_TFOG].spawnstate = &states[S_TFOG];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_IFOG];
+  strcpy(orig_sprnames[SPR_BLUD], "BLUD");
+  states[S_GIBS].sprite = SPR_POL5;
+
+  // linedef conversions
+  int lump = fc.GetNumForName("XDOOM");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
+}
+
+
+static void HereticPatchEngine()
+{
+  cv_jumpspeed.Set("6.0");
+  cv_fallingdamage.Set("0");
+
+  // hacks
+  mobjinfo[MT_TFOG].spawnstate = &states[S_HTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_HTFOG1];
+  strcpy(orig_sprnames[SPR_BLUD], "BLOD");
+  states[S_GIBS].sprite = SPR_BLOD;
+
+  int lump = fc.GetNumForName("XHERETIC");
+  linedef_xtable = (xtable_t *)fc.CacheLumpNum(lump, PU_STATIC);
+  linedef_xtable_size = fc.LumpLength(lump) / sizeof(xtable_t);
+
+  // Above, good. Below, bad.
+  text[TXT_PD_REDK] = "YOU NEED A GREEN KEY TO OPEN THIS DOOR";
+
+  text[TXT_GOTBLUECARD] = "BLUE KEY";
+  text[TXT_GOTYELWCARD] = "YELLOW KEY";
+  text[TXT_GOTREDCARD] = "GREEN KEY";
+}
+
+
+static void HexenPatchEngine()
+{
+  cv_jumpspeed.Set("9.0");
+  cv_fallingdamage.Set("23");
+
+  // hacks
+  mobjinfo[MT_TFOG].spawnstate = &states[S_XTFOG1];
+  mobjinfo[MT_IFOG].spawnstate = &states[S_XTFOG1];
+  strcpy(orig_sprnames[SPR_BLUD], "BLOD");
+  states[S_GIBS].sprite = SPR_GIBS;
+}
+
+
+/// Convert static game data structures into dynamic ones. DECORATE scripts are processed after the conversion.
+void PrepareGameData()
+{
+  switch (game.mode)
+    {
+    case gm_hexen:
+      HexenPatchEngine();
+      break;
+    case gm_heretic:
+      HereticPatchEngine();
+      break;
+    default:
+      DoomPatchEngine();
+    }
+
   int i;
   ActorInfo *ai;
+
+  // prepare spritename mapping
+  spritenames.resize(NUMSPRITES);
+  for (i=0; i<NUMSPRITES; i++)
+    spritenames[i] = orig_sprnames[i];
 
   if (devparm)
     {
@@ -579,6 +672,9 @@ void ConvertMobjInfo()
 	    printf(" %s\n", mobjinfo[i].classname);
 	}
     }
+
+  // convert mobjinfo table to DECORATE class dictionary
+  // TODO: after this mobjinfo should not be used at all! fix
 
   for (i = MT_LEGACY; i <= MT_LEGACY_S_END; i++)
     {

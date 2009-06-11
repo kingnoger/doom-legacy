@@ -717,7 +717,7 @@ void Rend::R_DrawPSprite(pspdef_t *psp)
 {
   // decide which patch to use
 
-  sprite_t *sprdef = sprites.Get(sprnames[psp->state->sprite]);
+  sprite_t *sprdef = sprites.Get(spritenames[psp->state->sprite]);
   spriteframe_t *sprframe = &sprdef->spriteframes[psp->state->frame & TFF_FRAMEMASK];
 
 #ifdef PARANOIA

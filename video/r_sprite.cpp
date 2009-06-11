@@ -49,7 +49,7 @@
 static void R_InitSkins();
 
 /// Initialize sprite system. Called at program start.
-void R_InitSprites(char** namelist)
+void R_InitSprites()
 {
   for (int i=0 ; i<MAXVIDWIDTH ; i++)
     negonearray[i] = -1;
@@ -142,7 +142,7 @@ skin_t::~skin_t()
 {
   sprite->Release();
 
-  for (int i=0; i<ST_NUMFACES; i++)
+  for (int i=0; i<SKIN_NUMFACES; i++)
     faces[i]->Release();
 
   faceback->Release();
@@ -714,9 +714,9 @@ void spritepres_t::SetFrame(const state_t *st)
   // FIXME for now the name of SPR_NONE is "NONE", fix it when we have the default sprite
 
   // some sprites change name during animation (!!!)
-  char *name = sprnames[st->sprite];
+  const char *name = spritenames[st->sprite];
 
-  if (!spr || spr->iname != *reinterpret_cast<Sint32 *>(name))
+  if (!spr || spr->iname != *reinterpret_cast<const Sint32 *>(name))
     {
       if (spr)
 	spr->Release();
