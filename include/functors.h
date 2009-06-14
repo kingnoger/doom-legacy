@@ -15,7 +15,7 @@
 
 #include <string.h>
 
-
+/*
 struct equal_pointer
 {
   bool operator()(const void* p1, const void* p2) const
@@ -28,7 +28,7 @@ struct less_pointer
   bool operator()(const void* p1, const void* p2) const
   { return p1 < p2; }
 };
-
+*/
 
 struct equal_cstring
 {
@@ -44,7 +44,24 @@ struct less_cstring
 };
 
 
+struct hash_cstring
+{
+  size_t operator()(const char* s) const
+  { 
+    // 64-bit FNV-1a hash
+    size_t res = static_cast<size_t>(14695981039346656037ULL); 
+    for ( ; *s; ++s)
+      {
+	res ^= static_cast<size_t>(*s);
+	res *= static_cast<size_t>(1099511628211ULL);
+      }
+  
+    return res;
+  }
+};
 
+
+/*
 struct equal_cstring8
 {
   bool operator()(const char* s1, const char* s2) const
@@ -55,12 +72,17 @@ struct hash_cstring8
 {
   size_t operator()(const char* s) const
   {
-    unsigned long h = 0; 
+    // 64-bit FNV-1a hash
+    size_t res = static_cast<size_t>(14695981039346656037ULL); 
     for (int i=0; s[i] && i < 8; ++i)
-      h = 5*h + s[i];
+      {
+	res ^= static_cast<size_t>(s[i]);
+	res *= static_cast<size_t>(1099511628211ULL);
+      }
   
-    return size_t(h);
+    return res;
   }
 };
+*/
 
 #endif

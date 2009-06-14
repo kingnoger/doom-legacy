@@ -288,6 +288,9 @@ consvar_t cv_grabinput = {"grabinput", "1", CV_SAVE | CV_CALL, CV_OnOff, GrabInp
 
 void I_GrabMouse()
 {
+  if (devparm)
+    return; // we don't want to hog input when debugging
+
   if (cv_grabinput.value && SDL_WM_GrabInput(SDL_GRAB_QUERY) == SDL_GRAB_OFF)
     SDL_WM_GrabInput(SDL_GRAB_ON);
 

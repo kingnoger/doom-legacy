@@ -37,7 +37,8 @@ class HashDictionary
 {
 protected:
   typedef const char* dict_key_t;
-  typedef std::unordered_map<dict_key_t, T*, std::hash<dict_key_t>, equal_cstring> dict_map_t;
+  // the bastards changed semantics when they replaced hash_map with unordered_map! we need to have our own hash functor!
+  typedef std::unordered_map<dict_key_t, T*, hash_cstring, equal_cstring> dict_map_t;
   typedef typename dict_map_t::iterator dict_iter_t;
   dict_map_t dict_map; ///< hash_map from object names to corresponding object pointers.
 
