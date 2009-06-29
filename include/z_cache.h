@@ -151,8 +151,18 @@ public:
       delete default_item;
   }
 
-  /// Inserts an item into the cache. Alternative to Get().
+  /// Inserts an item into the cache. Manual alternative to Get().
   bool Insert(T *t) { return source.Insert(t); }
+
+  /// Returns true if the named data item exists in the cache, false otherwise.
+  bool Exists(const char *name) const
+  {
+    if (!name)
+      return false;
+
+    return source.Count(name);
+  }
+
 
   /// Returns the requested data item (incrementing refcount) if it is in cache, otherwise NULL.
   T *Find(const char *name)
@@ -173,6 +183,7 @@ public:
     else
       return p;
   }
+
 
   /// Caches and returns the requested data item, or, if not found, the default_item.
   /// Checks if item is already in cache. If so, increments refcount and returns it.

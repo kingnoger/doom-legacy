@@ -108,8 +108,11 @@ def ::= mat_type mat_name L_BRACE mat_props R_BRACE.
     // Material definition finished
     if (d->m)
     {
+      if (d->m->tex.size() < 1)
+	I_Error("No textures given."); // FIXME proper check
+
       CONS_Printf(" Built material '%s'.\n", d->m->GetName());
-      d->m->Initialize();
+      d->m->InitializeMaterial();
     }
   }
 

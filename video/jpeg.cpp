@@ -38,7 +38,7 @@ JPEGTexture::JPEGTexture(const char *n, int l)
   : LumpTexture(n, l, 0, 0)
 {
   ReadData(false, false); // read the header (height, width)
-  Initialize();
+  InitializeTexture();
 }
 
 

@@ -519,14 +519,7 @@ bool ttfont_t::BuildGlyph(glyph_t &g, int c, SDL_Color color)
   t->topoffs = g.maxy - ascent; // clever!
   t->leftoffs = -g.minx;
 
-  Material *m = new Material(name.c_str()); // create a new Material
-  Material::TextureRef &r = m->tex[0];
-  r.t = t;
-  r.xscale = r.yscale = SCALE;
-
-  m->Initialize();
-
-  g.mat = m;
+  g.mat = new Material(name.c_str(), t, SCALE, SCALE); // create a new Material
   return true;
 }
 

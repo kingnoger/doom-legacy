@@ -95,6 +95,15 @@ public:
       }
   }
 
+
+  /// Number of items with given name in the dictionary.
+  /// \return Number of items found (0 or 1).
+  inline unsigned Count(dict_key_t name) const
+  {
+    return dict_map.count(name);
+  }
+
+
   /// Dictionary size.
   /// \return The number of items in the dictionary.
   inline unsigned Size() const { return dict_map.size(); }

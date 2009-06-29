@@ -995,14 +995,10 @@ void CONS_Printf(const char *fmt, ...)
   vsprintf(txt, fmt, argptr);
   va_end(argptr);
 
-  if (!con.graphic)
-    {
-      I_OutputMsg("%s", txt); // This function MUST be found in EVERY interface / platform in i_system.c
-      return;
-    }
+  I_OutputMsg("%s", txt); // send copies of console messages to stdout for debugging
 
-  if (devparm)
-    I_OutputMsg("%s", txt); // send copies of console messages to stdout for debugging
+  if (!con.graphic)
+    return;
 
   con.Print(txt); // write message in con text buffer
 

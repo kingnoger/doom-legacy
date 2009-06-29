@@ -75,6 +75,7 @@ short*   hicolormaps;           // test a 32k colormap remaps high -> high
 //   Texture cache
 //==================================================================
 
+
 /// Generates a Texture from a single data lump, deduces format.
 Texture *texture_cache_t::Load(const char *name)
 {
@@ -384,7 +385,7 @@ LumpTexture::LumpTexture(const char *n, int l, int w, int h)
 {
   width = w;
   height = h;
-  Initialize();
+  InitializeTexture();
 }
 
 
@@ -507,7 +508,7 @@ PatchTexture::PatchTexture(const char *n, int l)
   leftoffs = SHORT(p.leftoffset);
   topoffs = SHORT(p.topoffset);
 
-  Initialize();
+  InitializeTexture();
   // nothing more is needed until the texture is Generated.
 
   patch_data = NULL;
@@ -603,7 +604,7 @@ DoomTexture::DoomTexture(const char *n, int l, const maptexture_t *mtex)
   width  = SHORT(mtex->width);
   height = SHORT(mtex->height);
 
-  Initialize();
+  InitializeTexture();
   widthmask = (1 << w_bits) - 1;
 
   patch_data = NULL;
@@ -660,7 +661,7 @@ patch_t *DoomTexture::GeneratePatch()
 	{
 	  CONS_Printf("masked tex '%s' too wide\n", name);
 	  width = p->width;
-	  Initialize();
+	  InitializeTexture();
 	  widthmask = (1 << w_bits) - 1;
 	}
 
@@ -766,8 +767,26 @@ Material::Material(const char *name)
 {
   id_number = -1;
   shader = NULL;
-  tex.resize(1); // at least one Texture
-  // The rest are taken care of by Initialize() later when Textures have been attached.
+  // The rest are taken care of by InitializeMaterial() later when Textures have been attached.
+}
+
+
+// Single-texture Materials. tex.size() guaranteed to be 1 after this constructor.
+Material::Material(const char *name, Texture *t, float xs, float ys)
+  : cacheitem_t(name)
+{
+  id_number = -1;
+  shader = NULL;
+
+  tex.resize(1);
+  tex[0].t = t;
+  tex[0].xscale = xs;
+  tex[0].yscale = ys;
+
+  // t is used by this material, so
+  t->AddRef(); // NOTE: we don't currently use links for Textures, this functionality is subsumed in material_cache_t::Get
+
+  InitializeMaterial();  
 }
 
 
@@ -857,9 +876,7 @@ void material_cache_t::SetDefaultItem(const char *name)
   if (!t)
     I_Error("Material_Cache: New default_item '%s' not found!\n", name);
 
-  default_item = new Material(name);
-  default_item->tex[0].t = t;
-  default_item->Initialize();  
+  default_item = new Material(name, t);
 }
 
 
@@ -926,7 +943,6 @@ Material *material_cache_t::Edit(const char *name, material_class_t mode, bool c
 
   if (!t && create)
     {
-      // FIXME
       Material *m = new Material(name);
       if (mode == TEX_sprite)
 	sprite_tex.Insert(m);
@@ -948,42 +964,59 @@ Material *material_cache_t::BuildMaterial(Texture *t, cachesource_t<Material> &s
   if (!t)
     return NULL;
 
-  // insert Texture into cache, change name if it is already taken (namespace overlaps, just a few)
+  // insert Texture into cache, change name if it is already taken (HACK for namespace overlaps, just a few)
   string name = t->GetName(); // char* won't do since we may change the Texture's name
-  if (textures.Find(name.c_str()))
-    t->SetName((name + "_xxx").c_str());
+  if (textures.Exists(name.c_str()))
+    {
+      CONS_Printf("Overlap in Texture names '%s'!\n", name.c_str());
+      t->SetName((name + "_xxx").c_str());
+    }
 
   if (!textures.Insert(t))
-    CONS_Printf("Overlapping Texture names '%s'!\n", t->GetName());
+    CONS_Printf("Error: Overlapping Texture names '%s'!\n", t->GetName());
+
 
   // see if we already have a Material with this name
   Material *m = source.Find(name.c_str());
-  if (!m)
+
+  if (h_start) // H_START blocks work a bit differently
     {
-      if (h_start)
+      if (!m)
 	return NULL; // no original with same name, ignore
 
-      m = new Material(name.c_str()); // create a new Material
-      source.Insert(m);
-      Register(m);
-    }
-
-  Material::TextureRef &r = m->tex[0];
-  r.t = t; // replace Texture
-
-  if (h_start)
-    {
       // take over the original, scale so that worldsize stays the same
+      Material::TextureRef &r = m->tex[0];
+
+      // replace Texture
+      r.t->Release();
+      t->AddRef();
+      r.t = t;
       r.xscale = t->width / r.worldwidth;
       r.yscale = t->height / r.worldheight;
     }
   else
     {
-      r.xscale = 1;
-      r.yscale = 1;
+      // normal material
+      if (!m)
+	{
+	  m = new Material(name.c_str(), t); // create a new Material
+	  source.Insert(m);
+	  Register(m);
+	}
+      else
+	{
+	  // replace Texture in an existing Material (assume it has just one)
+	  Material::TextureRef &r = m->tex[0];
+
+	  r.t->Release();
+	  t->AddRef();
+	  r.t = t;
+	  r.xscale = 1;
+	  r.yscale = 1;
+	  m->InitializeMaterial();
+	}
     }
 
-  m->Initialize();
   return m;
 }
 
@@ -1071,6 +1104,8 @@ Material *material_cache_t::Get(const char *name, material_class_t mode)
       // We use a special cacheitem_t to link their names to the default item.
       t = new Material(name);
       t->MakeLink();
+      // This is a dummy Material which has no textures attached, so the tex vector remains empty.
+      // Direct pointers to dummy Materials must not be passed outside material_cache_t.
 
       // NOTE insertion to cachesource only, not to id-map
       if (mode == TEX_sprite)
@@ -1276,10 +1311,10 @@ int material_cache_t::ReadTextures()
 
 	Material *m = BuildMaterial(tex, doom_tex);
 
-	// ZDoom extension, scaling.
+	// ZDoom extension, scaling. FIXME this could be done more gracefully (params to BuildMaterial?)
 	m->tex[0].xscale = mtex->xscale ? mtex->xscale / 8.0 : 1;
 	m->tex[0].yscale = mtex->yscale ? mtex->yscale / 8.0 : 1;
-	m->Initialize();
+	m->InitializeMaterial(); // again...
       }
 
     Z_Free(maptex1);

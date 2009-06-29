@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2009 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -112,7 +112,7 @@ public:
   byte   w_bits, h_bits; ///< largest power-of-two sizes <= actual bitmap size
 
   /// To be called after bitmap size is known
-  inline void Initialize()
+  inline void InitializeTexture()
   {
     for (w_bits = 0; 1 << (w_bits+1) <= width;  w_bits++);
     for (h_bits = 0; 1 << (h_bits+1) <= height; h_bits++);
@@ -308,6 +308,7 @@ public:
   Texture *LoadLump(const char *name, int lump);
 };
 
+
 extern texture_cache_t textures;
 
 
@@ -339,7 +340,7 @@ public:
     TextureRef();
 
     /// To be called after bitmap size and scale are known
-    inline void Initialize()
+    inline void InitializeTexRef()
     {
       worldwidth  = t->width / xscale;
       worldheight = t->height / yscale;
@@ -352,11 +353,11 @@ public:
   std::vector<TextureRef> tex; ///< allow several textures per material
   class ShaderProg *shader;
 
-  void Initialize()
+  void InitializeMaterial()
   {
     int n = tex.size();
     for (int k=0; k < n; k++)
-      tex[k].Initialize();
+      tex[k].InitializeTexRef();
 
     TextureRef &tr = tex[0];
 
@@ -367,7 +368,9 @@ public:
   };
 
 public:
-  Material(const char *name);
+  Material(const char *name); ///< Create a Material with no Textures. Requires a call to InitializeMaterial when Textures have been attached.
+  Material(const char *name, Texture *t, float xscale = 1, float yscale = 1); ///< Create a single-Texture Material.
+
   virtual ~Material();
 
   /// \name Software renderer functions, these are wrappers for tex[0].
@@ -434,7 +437,7 @@ protected:
   }
 
 
-  /// Creates a Material from the Texture, also inserts it to the given source.
+  /// Creates a Material from the Texture, inserts it to the given source, inserts the Texture to texturecache.
   Material *BuildMaterial(Texture *t, cachesource_t<Material> &source, bool h_start = false);
 
   /// sw renderer: colormaps for palette conversions (one for each resource file)

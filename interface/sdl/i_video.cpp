@@ -66,7 +66,7 @@ const static Uint32 surfaceFlags = SDL_SWSURFACE | SDL_HWPALETTE;
 
 // maximum number of windowed modes (see windowedModes[][])
 #if !defined(__MACOS__) && !defined(__APPLE_CC__)
-#define MAXWINMODES (8)
+#define MAXWINMODES (9)
 #else
 #define MAXWINMODES (12)
 #endif
@@ -98,13 +98,14 @@ static vidmode_t windowedModes[MAXWINMODES] =
   {320, 200}
 #else
   {MAXVIDWIDTH /*1600*/, MAXVIDHEIGHT/*1200*/},
-  {1280, 1024},
-  {1024, 768},
-  {800, 600},
-  {640, 480},
-  {512, 384},
-  {400, 300},
-  {320, 200}
+  {1280, 1024}, // 1.25
+  {1024, 768}, // 1.3_
+  {800, 600}, // 1.3_
+  {640, 480}, // 1.3_
+  {640, 400}, // 1.6
+  {512, 384}, // 1.3_
+  {400, 300}, // 1.3_
+  {320, 200}  // original Doom resolution (pixel ar 1.6), meant for 1.3_ aspect ratio monitors (nonsquare pixels!)
 #endif
 };
 

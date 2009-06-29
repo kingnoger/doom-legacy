@@ -111,45 +111,49 @@ Map::Map(MapInfo *i)
 // destructor
 Map::~Map()
 {
-  Z_Free(vertexes);
-  Z_Free(lines);
-  Z_Free(sides);
-  Z_Free(sectors);
-  Z_Free(subsectors);
-  Z_Free(nodes);
-  Z_Free(segs);
-  if (polyobjs)
+  if (vertexes) // geometry loaded
     {
-      for (int i=0; i < NumPolyobjs; i++)
+      Z_Free(vertexes);
+      Z_Free(lines);
+      Z_Free(sides);
+      Z_Free(sectors);
+      Z_Free(subsectors);
+      Z_Free(nodes);
+      Z_Free(segs);
+      if (polyobjs)
 	{
-	  if (polyobjs[i].segs)
-	    Z_Free(polyobjs[i].segs);
+	  for (int i=0; i < NumPolyobjs; i++)
+	    {
+	      if (polyobjs[i].segs)
+		Z_Free(polyobjs[i].segs);
 
-	  if (polyobjs[i].base_points)
-	    Z_Free(polyobjs[i].base_points);
+	      if (polyobjs[i].base_points)
+		Z_Free(polyobjs[i].base_points);
 
-	  if (polyobjs[i].current_points)
-	    Z_Free(polyobjs[i].current_points);
+	      if (polyobjs[i].current_points)
+		Z_Free(polyobjs[i].current_points);
+	    }
+
+	  Z_Free(polyobjs);
 	}
+      Z_Free(linebuffer);
 
-      Z_Free(polyobjs);
+      // Remove GL nodes if they exist.
+      if (glvertexes)
+	Z_Free(glvertexes);
+      if (glvis)
+	Z_Free(glvis);
+
+      delete blockmap;
+      Z_Free(rejectmatrix);
+
+      FS_ClearScripts();
+
+      if (ACS_base)
+	Z_Free(ACS_base);
+
+      Z_Free(mapthings);
     }
-  Z_Free(linebuffer);
-  // Remove GL nodes if they exist.
-  if (glvertexes)
-    Z_Free(glvertexes);
-  if(glvis)
-    Z_Free(glvis);
-
-  delete blockmap;
-  Z_Free(rejectmatrix);
-
-  FS_ClearScripts();
-
-  if (ACS_base)
-    Z_Free(ACS_base);
-
-  Z_Free(mapthings);
 
   if (effects)
     delete effects;

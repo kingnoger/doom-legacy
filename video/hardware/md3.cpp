@@ -138,7 +138,7 @@ TGATexture::TGATexture(const char *n, int l)
       return;
     }
 	
-  Initialize();
+  InitializeTexture();
 }
 
 

@@ -54,6 +54,42 @@ extern trace_t trace;
 void MD3_InitNormLookup();
 
 
+/*!
+  \defgroup g_opengl OpenGL renderer
+
+  Definitions:
+    s: physical screen dimensions
+    p: physical pixel dimensions
+    r: screen resolution in pixels
+    Screen aspect ratio:     a_s := w_s/h_s
+    Pixel aspect ratio:      a_p := w_p/h_p
+    Resolution aspect ratio: a_r := w_r/h_r
+
+    Fundamental equalities:  w_s = w_r*w_p, h_s = h_r*h_p
+
+    From these we get   a_s = a_p * a_r
+
+
+  Doom was originally meant to be rendered on a CRT display with a_s = 4/3 aspect ratio and 320x200 resolution,
+  which gives a_r = 320/200 = 1.6 = 16/10 and a_p = 5/6. Hence the pixels are not supposed to be square, but a little
+  stretched in the vertical direction.
+
+  Modern display equipment almost invariably has square pixels, i.e. a_p = 1. A "standard" display still has a_s = 4/3,
+  whereas a widescreen display has a_s = 16/10.
+
+  And herein we have a problem. If we want to draw a 2D Doom graphic on a modern screen, we'll have to scale it in the
+  y direction by a factor of 6/5 or it'll look squashed. However, if we want to use nearest-pixel sampling for a crisp,
+  sharp image, the scaling factors in both x and y directions should be integers to avoid visual artefacts.
+  The lowest resolution where this can be perfectly accomplished even for full-screen images is 1600x1200 (sx = 5, sy = 6).
+  For smaller images, e.g. menu graphics, we could use the perfect scaling but draw the images closer together to fit them on screen?
+  Additionally, with a widescreen display 1/6 of the screen area is unused (the sides).
+  NOTE: At the moment we do no such y-scaling, so the 2D images ARE squashed. TODO 3D?
+
+  The 3D view does not cause such problems, because all the textures need to be scaled anyway depending on the viewing angle and distance.
+*/
+
+
+
 OGLRenderer::OGLRenderer()
 {
   workinggl = false;
