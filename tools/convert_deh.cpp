@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 1998-2007 by DooM Legacy Team.
+// Copyright (C) 1998-2009 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -24,6 +24,7 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <string.h>
 
 #include "mnemonics.h"
@@ -60,7 +61,7 @@ public:
 
   dehacked_t();
   bool LoadDehackedLump(const char *buf, int len);
-  void error(char *first, ...);
+  void error(const char *first, ...);
 
   int   idfa_armor;
   float idfa_armorfactor;
@@ -419,7 +420,7 @@ dehacked_t::dehacked_t()
 }
 
 
-void dehacked_t::error(char *first, ...)
+void dehacked_t::error(const char *first, ...)
 {
   va_list argptr;
 

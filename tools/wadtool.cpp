@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2007 by DooM Legacy Team.
+// Copyright (C) 2004-2009 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -150,7 +150,7 @@ void Wad::ListItems(bool lumps)
   for (int i = 0; i < numitems; i++, p++)
     {
       strncpy(name8, p->name, 8);
-      printf(" %-8s: %10d bytes\n", name8, p->size);
+      printf(" %4d  %-8s: %10d bytes\n", i, name8, p->size);
     }
 }
 
@@ -464,12 +464,12 @@ int main(int argc, char *argv[])
 {
   if (argc < 3 || argv[1][0] != '-')
     {
-      printf("This program lists WAD file contents, constructs them\n"
-	     "or extracts their contents into the current directory.\n"
+      printf("\nWADtool: Simple commandline tool for manipulating WAD files.\n"
+	     "Copyright 2004-2009 Doom Legacy Team.\n\n"
 	     "Usage:\n"
 	     "  wadtool -l <wadfile>\t\t\tLists the contents of the WAD.\n"
 	     "  wadtool -c <wadfile> <inventoryfile>\tConstructs a new WAD using the given inventory file.\n"
-	     "  wadtool -x <wadfile> [<lumpname> ...]\tExtracts the given lumps.\n"
+	     "  wadtool -x <wadfile> [<lumpname> ...]\tExtracts the given lumps into current directory.\n"
 	     "    If no lumpnames are given, extracts the entire contents of the WAD.\n");
       return -1;
     }
