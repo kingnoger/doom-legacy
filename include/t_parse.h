@@ -172,12 +172,12 @@ char *get_tokens(char *r);
 
 enum tokentype_t
 {
-  to_name,   // a name, eg 'count1' or 'frag'
-  to_number,
-  to_oper,
-  to_string,
-  to_unset,
-  to_function          // function name
+  TO_name,   // a name, eg 'count1' or 'frag'
+  TO_number,
+  TO_oper,
+  TO_string,
+  TO_unset,
+  TO_function          // function name
 };
 
 

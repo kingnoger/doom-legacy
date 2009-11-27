@@ -49,8 +49,7 @@
 #include "hardware/oglshaders.h"
 
 
-extern byte gammatable[5][256];
-
+const byte *R_BuildGammaTable();
 static int R_TransmapNumForName(const char *name);
 
 
@@ -230,12 +229,12 @@ static byte *R_CreatePaletteConversionColormap(int wadnum)
   if (fc.LumpLength(i) < int(256 * sizeof(RGB_t)))
     I_Error("Bad PLAYPAL lump in file %d!\n", wadnum);
 
-  byte *usegamma = gammatable[cv_usegamma.value];
   byte *colormap = static_cast<byte*>(Z_Malloc(256, PU_STATIC, NULL));
   RGB_t *pal = static_cast<RGB_t*>(fc.CacheLumpNum(i, PU_STATIC));
+  const byte *gamma_table = R_BuildGammaTable();
 
   for (i=0; i<256; i++)
-    colormap[i] = NearestColor(usegamma[pal[i].r], usegamma[pal[i].g], usegamma[pal[i].b]);
+    colormap[i] = NearestColor(gamma_table[pal[i].r], gamma_table[pal[i].g], gamma_table[pal[i].b]);
 
   Z_Free(pal);
   return colormap;
@@ -1143,7 +1142,7 @@ Material *material_cache_t::GetMaterialOrColormap(const char *name, fadetable_t*
   if (name[0] == '-')
     {
       cmap = NULL;
-      return 0;
+      return NULL;
     }
 
   fadetable_t *temp = R_FindColormap(name); // check C_*... lists
@@ -1152,7 +1151,7 @@ Material *material_cache_t::GetMaterialOrColormap(const char *name, fadetable_t*
     {
       // it is a colormap lumpname, not a texture
       cmap = temp;
-      return 0;
+      return NULL;
     }
 
   cmap = NULL;
@@ -1170,7 +1169,7 @@ Material *material_cache_t::GetMaterialOrTransmap(const char *name, int& map_num
   if (name[0] == '-')
     {
       map_num = -1;
-      return 0;
+      return NULL;
     }
 
   int temp = R_TransmapNumForName(name);
@@ -1179,7 +1178,7 @@ Material *material_cache_t::GetMaterialOrTransmap(const char *name, int& map_num
     {
       // it is a transmap lumpname, not a texture
       map_num = temp;
-      return 0;
+      return NULL;
     }
 
   map_num = -1;

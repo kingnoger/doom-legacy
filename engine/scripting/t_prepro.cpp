@@ -329,7 +329,7 @@ void script_t::dry_run()
       if(killscript) break;
       if(!num_tokens) continue;
       
-      if(current_section && tokens[0].type == to_function)
+      if(current_section && tokens[0].type == TO_function)
 	{
 	  if(!strcmp(tokens[0].v, "if"))
 	    {

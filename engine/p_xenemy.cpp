@@ -2727,7 +2727,8 @@ void A_SorcDeath(DActor *actor)
 {
   // At this point the sorcerer death action is already executed.
   // special3 is the script number to execute, in current map, with zero args
-  byte argh[7] = {actor->special3, 0, 0, 0, 0, 0, 0};
+  byte argh[7] = {0, 0, 0, 0, 0, 0, 0};
+  argh[0] = actor->special3;
   actor->mp->ACS_StartScript(argh[0], &argh[2], actor, NULL, 0);
 }
 

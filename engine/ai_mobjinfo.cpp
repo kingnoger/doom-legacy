@@ -42,6 +42,8 @@
 #define FLAGS2_missile_nt  (MF2_NOTELEPORT)
 #define FLAGS2_monster     (MF2_PUSHWALL | MF2_MCROSS)
 
+#define INF_MASS 1e10
+
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 {
@@ -4428,7 +4430,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_POISONCLOUD
   {
-    -1, 1000, 8, 0, 0, 1, 1, MAXINT, 0 | dt_poison,
+    -1, 1000, 8, 0, 0, 1, 1, INF_MASS, 0 | dt_poison,
     MF_NOGRAVITY|MF_NOBLOCKMAP|MF_SHADOW|MF_NOCLIPLINE|MF_NOCLIPTHING|MF_DROPOFF,
     MF2_NODMGTHRUST,
     sfx_None, sfx_None, sfx_None, SFX_POISONSHROOM_DEATH, sfx_None,
@@ -4670,7 +4672,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_TREEDESTRUCTIBLE
   {
-    8062, 70, 8, 0, 0, 15, 180, MAXINT, 0,
+    8062, 70, 8, 0, 0, 15, 180, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, sfx_None, SFX_TREE_BREAK, sfx_None,
@@ -5660,7 +5662,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZSHRUB1
   {
-    8101, 20, 8, 0, 0, 8, 24, MAXINT, 0,
+    8101, 20, 8, 0, 0, 8, 24, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, sfx_None, SFX_TREE_EXPLODE, sfx_None,
@@ -5671,7 +5673,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZSHRUB2
   {
-    8102, 10, 8, 0, 0, 16, 40, MAXINT, 0,
+    8102, 10, 8, 0, 0, 16, 40, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, sfx_None, SFX_TREE_EXPLODE, sfx_None,
@@ -5693,7 +5695,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZPOISONSHROOM
   {
-    8104, 30, 8, 255, 0, 6, 20, MAXINT, 0,
+    8104, 30, 8, 255, 0, 6, 20, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, SFX_POISONSHROOM_PAIN, SFX_POISONSHROOM_DEATH, sfx_None,
@@ -5748,7 +5750,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZSUITOFARMOR
   {
-    8064, 60, 8, 0, 0, 16, 72, MAXINT, 0,
+    8064, 60, 8, 0, 0, 16, 72, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, sfx_None, SFX_SUITOFARMOR_BREAK, sfx_None,
@@ -5770,7 +5772,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZBELL
   {
-    8065, 5, 8, 0, 0, 56, 120, MAXINT, 0,
+    8065, 5, 8, 0, 0, 56, 120, INF_MASS, 0,
     FLAGS_breakable|MF_NOGRAVITY|MF_SPAWNCEILING,
     0,
     sfx_None, sfx_None, sfx_None, SFX_BELLRING, sfx_None,
@@ -5803,7 +5805,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_ZXMAS_TREE
   {
-    8068, 20, 8, 0, 0, 11, 130, MAXINT, 0,
+    8068, 20, 8, 0, 0, 11, 130, INF_MASS, 0,
     FLAGS_breakable,
     0,
     sfx_None, sfx_None, sfx_None, SFX_TREE_EXPLODE, sfx_None,
@@ -7056,7 +7058,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_SERPENT
   {
-    121, 90, 8, 96, 12, 32, 70, MAXINT, 0,
+    121, 90, 8, 96, 12, 32, 70, INF_MASS, 0,
     MF_SOLID|MF_COUNTKILL|MF_NOBLOOD,
     MF2_DONTDRAW|MF2_CANTLEAVEFLOORPIC|MF2_NONSHOOTABLE|MF2_MCROSS | MF2_NONBLASTABLE,
     SFX_SERPENT_SIGHT, SFX_SERPENT_ATTACK, SFX_SERPENT_PAIN, SFX_SERPENT_DEATH, sfx_None,
@@ -7199,7 +7201,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
   // MT_DRAGON
   {
-    254, 640, 8, 128, 10, 20, 65, MAXINT, 0,
+    254, 640, 8, 128, 10, 20, 65, INF_MASS, 0,
     FLAGS_monster | FLAGS_floater | MF_NOBLOOD,
     MF2_BOSS | MF2_NOTARGET,
     SFX_DRAGON_SIGHT, SFX_DRAGON_ATTACK, SFX_DRAGON_PAIN, SFX_DRAGON_DEATH, SFX_DRAGON_ACTIVE,

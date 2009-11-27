@@ -129,7 +129,7 @@ static void add_char(char c)
 // next_token: end this token, go onto the next
 void next_token()
 {
-  if (tok[0] || tt == to_string)
+  if (tok[0] || tt == TO_string)
     {
       num_tokens++;
       tok = tokens[num_tokens-2].v + strlen(tokens[num_tokens-2].v) + 1;
@@ -157,8 +157,8 @@ void next_token()
     }
 
   // was the previous token a function?
-  if (num_tokens > 1 && *rover == '(' && tokens[num_tokens-2].type == to_name)
-    tokens[num_tokens-2].type = to_function;
+  if (num_tokens > 1 && *rover == '(' && tokens[num_tokens-2].type == TO_name)
+    tokens[num_tokens-2].type = TO_function;
 
   if (*rover == '{' || *rover == '}') // braces
     {
@@ -181,15 +181,15 @@ void next_token()
     }
   else if (*rover == '\"') // string literal
     {
-      tt = to_string;
-      if (tokens[num_tokens-2].type == to_string)
+      tt = TO_string;
+      if (tokens[num_tokens-2].type == TO_string)
         num_tokens--;   // join strings
       rover++;
     }
   else
     {
-      tt = isop(*rover) ? to_oper :
-        isnum(*rover) ? to_number : to_name;
+      tt = isop(*rover) ? TO_oper :
+        isnum(*rover) ? TO_number : TO_name;
     }
 }
 
@@ -200,17 +200,17 @@ void next_token()
 
 // individual tokens are stored inside the tokens[] array
 
-//   to_name: a piece of text which starts with an alphabet letter.
+//   TO_name: a piece of text which starts with an alphabet letter.
 //         probably a variable name. Some are converted into
 //         function types later on in find_brackets
-//   to_number: a number. like '12' or '1337'
-//   to_oper: an operator such as '&&' or '+'. All FraggleScript
+//   TO_number: a number. like '12' or '1337'
+//   TO_oper: an operator such as '&&' or '+'. All FraggleScript
 //             operators are either one character, or two character
 //             (if 2 character, 2 of the same char or ending in '=')
-//   to_string: a text string that was enclosed in quote "" marks in
+//   TO_string: a text string that was enclosed in quote "" marks in
 //           the original text
-//   to_unset: shouldn't ever end up being set really.
-//   to_function: a function name (found in second stage parsing)
+//   TO_unset: shouldn't ever end up being set really.
+//   TO_function: a function name (found in second stage parsing)
 
 char *get_tokens(char *s)
 {
@@ -218,7 +218,7 @@ char *get_tokens(char *s)
 
   num_tokens = 1;
   tok[0] = 0;
-  tt = to_name;
+  tt = TO_name;
   
   current_section = NULL;   // default to no section found
   
@@ -234,14 +234,14 @@ char *get_tokens(char *s)
             // a { or } section brace has been found
             break;        // stop parsing now
           }
-        else if (tt != to_string)
+        else if (tt != TO_string)
 	  if (*rover == ';')
 	    break;     // check for end of command ';'
         
         switch (tt)
           {
-          case to_unset:
-          case to_string:
+          case TO_unset:
+          case TO_string:
             while(*rover != '\"')     // dedicated loop for speed
               {
                 if(*rover == '\\')       // escape sequences
@@ -257,7 +257,7 @@ char *get_tokens(char *s)
             next_token();       // end of this token
             continue;
             
-          case to_oper:
+          case TO_oper:
             // all 2-character operators either end in '=' or
             // are 2 of the same character
             // do not allow 2-characters for brackets '(' ')'
@@ -276,7 +276,7 @@ char *get_tokens(char *s)
             add_char(*rover);
             break;
             
-          case to_number:
+          case TO_number:
             // add while number chars are read
 
             while(isnum(*rover))       // dedicated loop
@@ -284,7 +284,7 @@ char *get_tokens(char *s)
             next_token();
             continue;
 
-          case to_name:
+          case TO_name:
             // add the chars
 
             while(!isop(*rover))        // dedicated loop
@@ -315,12 +315,12 @@ void print_tokens()     // DEBUG
       CONS_Printf("\n'%s' \t\t --", tokens[i].v);
       switch(tokens[i].type)
         {
-        case to_string:   CONS_Printf("string");        break;
-        case to_oper:     CONS_Printf("operator");      break;
-        case to_name:     CONS_Printf("name");          break;
-        case to_number:   CONS_Printf("number");        break;
-        case to_unset :   CONS_Printf("duh");           break;
-        case to_function: CONS_Printf("function name"); break;
+        case TO_string:   CONS_Printf("string");        break;
+        case TO_oper:     CONS_Printf("operator");      break;
+        case TO_name:     CONS_Printf("name");          break;
+        case TO_number:   CONS_Printf("number");        break;
+        case TO_unset :   CONS_Printf("duh");           break;
+        case TO_function: CONS_Printf("function name"); break;
         }
     }
   CONS_Printf("\n");
@@ -435,7 +435,7 @@ void run_statement()
   
   // if() and while() will be mistaken for functions
   // during token processing
-  if(tokens[0].type == to_function)
+  if(tokens[0].type == TO_function)
     {
       if(!strcmp(tokens[0].v, "if"))
         {
@@ -474,7 +474,7 @@ void run_statement()
           return;
         }
     }
-  else if(tokens[0].type == to_name)
+  else if(tokens[0].type == TO_name)
     {
       // NB: goto is a function so is not here
 
@@ -497,7 +497,7 @@ int find_operator(int start, int stop, const char *value)
   for(i=start; i<=stop; i++)
     {
       // only interested in operators
-      if(tokens[i].type != to_oper) continue;
+      if(tokens[i].type != TO_oper) continue;
       
       // use bracketlevel to check the number of brackets
       // which we are inside
@@ -522,7 +522,7 @@ int find_operator_backwards(int start, int stop, const char *value)
     {
       // operators only
 
-      if(tokens[i].type != to_oper) continue;
+      if(tokens[i].type != TO_oper) continue;
       
       // use bracketlevel to check the number of brackets
       // which we are inside
@@ -557,12 +557,12 @@ static svalue_t simple_evaluate(int n)
   
   switch(tokens[n].type)
     {
-    case to_string:
+    case TO_string:
       returnvar.type = svt_string;
       returnvar.value.s = tokens[n].v;
       return returnvar;
 
-    case to_number:
+    case TO_number:
       if(strchr(tokens[n].v, '.'))
         {
           returnvar.type = svt_fixed;
@@ -575,7 +575,7 @@ static svalue_t simple_evaluate(int n)
         }
       return returnvar;
 
-    case to_name:
+    case TO_name:
       var = find_variable(tokens[n].v);
       if(!var)
         {
@@ -615,7 +615,7 @@ static void pointless_brackets(int *start, int *stop)
       
       for (i = *start; i<*stop; i++)
         {
-          if (tokens[i].type != to_oper) continue; // ops only
+          if (tokens[i].type != TO_oper) continue; // ops only
           bracket_level += (tokens[i].v[0] == '(');
           bracket_level -= (tokens[i].v[0] == ')');
           if (bracket_level == 0) return; // stop if braces stop before end
@@ -647,7 +647,7 @@ svalue_t evaluate_expression(int start, int stop)
   if(killscript) return nullvar;  // killing the script
   
   // possible pointless brackets
-  if (tokens[start].type == to_oper && tokens[stop].type == to_oper)
+  if (tokens[start].type == TO_oper && tokens[stop].type == TO_oper)
     pointless_brackets(&start, &stop);
   
   if(start == stop)       // only 1 thing to evaluate
@@ -675,7 +675,7 @@ svalue_t evaluate_expression(int start, int stop)
         }
     }
   
-  if(tokens[start].type == to_function)
+  if(tokens[start].type == TO_function)
     return evaluate_function(start, stop);
   
   // error ?

@@ -1732,7 +1732,6 @@ bool Map::Setup(tic_t start, bool spawnthings)
 
   int minisegs = 0;
   int botnodes2 = 0;
-  int psegs = 0;
   for (int i=0; i<numsegs; i++)
     {
       seg_t *seg = &segs[i];

@@ -359,7 +359,7 @@ svalue_t evaluate_function(int start, int stop)
   int argc;
   svalue_t argv[MAXARGS];
 
-  if (tokens[start].type != to_function || tokens[stop].type != to_oper || tokens[stop].v[0] != ')')
+  if (tokens[start].type != TO_function || tokens[stop].type != TO_oper || tokens[stop].v[0] != ')')
     script_error("misplaced closing bracket\n");
   // all the functions are stored in the global script
   else if (!(func = global_script.variableforname(tokens[start].v)))

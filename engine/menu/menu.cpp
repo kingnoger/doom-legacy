@@ -2023,7 +2023,7 @@ static menuitem_t VideoOptions_MI[]=
 {
   menuitem_t(IT_LINK, NULL, "Video modes..."  , &VidModeDef, 0),
   menuitem_t(IT_CVAR, NULL, "Fullscreen"      , &cv_fullscreen, 0),
-  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Brightness" , &cv_usegamma, 0),
+  menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Brightness" , &cv_video_gamma, 0),
   menuitem_t(IT_CV_SLIDER | IT_STRING, NULL, "Screen size", &cv_viewsize, 0),
   menuitem_t(IT_CVAR, NULL, "Scale status bar", &cv_scalestatusbar, 0),
   menuitem_t(IT_CVAR, NULL, "Translucency"    , &cv_translucency  , 0),
@@ -2725,7 +2725,7 @@ bool Menu::Responder(event_t *ev)
           return true;
 
         case KEY_F11:           // Toggle gamma correction
-          cv_usegamma.AddValue(1);
+          cv_video_gamma.AddValue(1);
 	  break;
 
         case KEY_ESCAPE:        // Open the main menu

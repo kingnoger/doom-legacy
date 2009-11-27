@@ -300,7 +300,7 @@ static void create_variable(int start, int stop)
 {
   if(killscript) return;
   
-  if(tokens[start].type != to_name)
+  if(tokens[start].type != TO_name)
     {
       script_error("invalid name for variable: '%s'\n",
 		   tokens[start+1].v);
