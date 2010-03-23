@@ -1,0 +1,10 @@
+smite-meister's log for Legacy 2
+
+Started: 2010-03-23
+
+
+*** vsprintf fixes (same as Legacy 1 rev 608)
+rev 616
+Replaced a number of unsafe uses of vsprintf with vsnprintf, fixing
+several console-related crashing bugs.
+Added this log.

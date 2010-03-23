@@ -455,14 +455,15 @@ void M_ScreenShot()
 // Variable arguments handler for printing (sort of inline sprintf)
 char *va(const char *format, ...)
 {
-  va_list ap;
-  static char temp[1024];
-
+#define BUF_SIZE 1024
+  va_list      ap;
+  static char  buffer[BUF_SIZE];
+ 
   va_start(ap, format);
-  vsprintf(temp, format, ap);
+  vsnprintf(buffer, BUF_SIZE, format, ap);
   va_end(ap);
 
-  return temp;
+  return buffer;
 }
 
 

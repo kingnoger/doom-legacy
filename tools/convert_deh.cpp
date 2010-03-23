@@ -422,15 +422,15 @@ dehacked_t::dehacked_t()
 
 void dehacked_t::error(const char *first, ...)
 {
-  va_list argptr;
+#define BUF_SIZE 1024
+  char buffer[BUF_SIZE];
+  va_list ap;
+ 
+  va_start(ap, first);
+  vsnprintf(buffer, BUF_SIZE, first, ap);
+  va_end(ap);
 
-  char buf[1000];
-
-  va_start(argptr, first);
-  vsprintf(buf, first, argptr);
-  va_end(argptr);
-
-  printf("DEH: %s", buf);
+  CONS_Printf("DEH: %s", buf);
   num_errors++;
 }
 

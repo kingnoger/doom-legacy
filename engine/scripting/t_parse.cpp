@@ -694,11 +694,6 @@ svalue_t evaluate_expression(int start, int stop)
 
 void script_error(const char *s, ...)
 {
-  va_list args;
-  char tempstr[2048];
-  
-  va_start(args, s);
-  
   if(killscript) return;  //already killing script
   
   if(current_script->scriptnum == -1)
@@ -717,11 +712,19 @@ void script_error(const char *s, ...)
         if(*temp == '\n') linenum++;    // count EOLs
       CONS_Printf(", %i", linenum);
     }
-  
+
+  CONS_Printf(": ");
+ 
+#define BUF_SIZE 1024
+  char        txt[BUF_SIZE];
+  va_list     ap;
+
   // print the error
-  vsprintf(tempstr, s, args);
-  CONS_Printf(": %s", tempstr);
-  
+  va_start(ap, s);
+  vsnprintf(txt, BUF_SIZE, s, ap);
+  va_end(ap);
+  CONS_Printf(txt);
+ 
   // make a noise
   S_StartLocalAmbSound(sfx_pldeth);
   
