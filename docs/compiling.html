@@ -27,25 +27,47 @@ precompiled packages, with the exception of OpenTNL.
 </p>
 
 <table>
-<tr><th>Library</th><th>Version</th><th>Ubuntu/Debian package</th><th>Description</th></tr>
-<tr><td><a href="http://www.libsdl.org/download-1.2.php">SDL</a></td> <td>1.2.10+</td> <td>libsdl1.2-dev</td>
- <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td></tr>
-<tr><td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td>
-<td>1.2.7+</td> <td>libsdl-mixer1.2-dev</td>
- <td>A multichannel mixer library based on SDL.</td></tr>
-<tr><td>OpenGL</td> <td>1.3+</td> <td>(several)</td>
- <td>The standard cross-platform graphics library, usually comes with
- the OS. GLSL shaders require OpenGL 2.0+.</td></tr>
-<tr><td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td> <td>zlib1g-dev</td>
- <td>A free compression library.</td></tr>
-<tr><td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td>
-<td>1.2.5+</td> <td>libpng12-dev</td>
- <td>The official PNG reference library.</td></tr>
-<tr><td><a href="http://www.ijg.org/">libjpeg</a></td> <td>6b</td> <td>libjpeg62-dev</td>
- <td>The unofficial JPEG reference library.</td></tr>
-<tr><td><a href="http://sourceforge.net/projects/opentnl/">OpenTNL</a></td> <td>HEAD revision</td> <td>-</td>
- <td>A free game networking library based on the Torque Network Library.<br/>
- The OpenTNL distribution contains <b>libtomcrypt</b>, which provides strong encryption.</td></tr>
+<tr>
+  <th>Library</th><th>Version</th><th>Ubuntu/Debian package</th><th>Description</th>
+</tr>
+<tr>
+  <td><a href="http://www.libsdl.org/download-1.2.php">SDL</a></td> <td>1.2.10+</td>
+  <td><a href="http://packages.ubuntu.com/libsdl1.2-dev">libsdl1.2-dev</a></td>
+  <td>Simple DirectMedia Layer. A multiplatform multimedia library.</td>
+</tr>
+<tr>
+  <td><a href="http://www.libsdl.org/projects/SDL_mixer/">SDL_mixer</a></td>
+  <td>1.2.7+</td>
+  <td><a href="http://packages.ubuntu.com/libsdl-mixer1.2-dev">libsdl-mixer1.2-dev</a></td>
+  <td>A multichannel mixer library based on SDL.</td>
+</tr>
+<tr>
+  <td>OpenGL</td> <td>1.3+</td> <td>(several)</td>
+  <td>The standard cross-platform graphics library, usually comes with
+    the OS. GLSL shaders require OpenGL 2.0+.</td>
+</tr>
+<tr>
+  <td><a href="http://www.zlib.org/">zlib</a></td> <td>1.1.4+</td>
+  <td><a href="http://packages.ubuntu.com/zlib1g-dev">zlib1g-dev</a></td>
+  <td>A free compression library.</td>
+</tr>
+<tr>
+  <td><a href="http://www.libpng.org/pub/png/libpng.html">libpng</a></td>
+  <td>1.2.5+</td>
+  <td><a href="http://packages.ubuntu.com/libpng12-dev">libpng12-dev</a></td>
+  <td>The official PNG reference library.</td>
+</tr>
+<tr>
+  <td><a href="http://www.ijg.org/">libjpeg</a></td> <td>6b</td>
+  <td><a href="http://packages.ubuntu.com/libjpeg62-dev">libjpeg62-dev</a></td>
+  <td>The unofficial JPEG reference library.</td>
+</tr>
+<tr>
+  <td><a href="http://sourceforge.net/projects/opentnl/">OpenTNL</a></td> <td>HEAD revision</td> <td>-</td>
+  <td>A free game networking library based on the Torque Network Library.<br/>
+    The OpenTNL distribution contains <b>libtomcrypt</b>, which
+    provides strong encryption.</td>
+</tr>
 </table>
 
 <p>
@@ -53,14 +75,15 @@ You will require the following programs during the build process:
 </p>
 
 <ul>
-<li>GCC 4, the Gnu Compiler Collection which, among other things, is
+<li><a href="http://gcc.gnu.org/">GCC</a> 4, the Gnu Compiler Collection which, among other things, is
 a free C/C++ compiler.<br/>
 Linux systems most likely already have it installed.<br/>
 Windows users should install <a href="http://www.mingw.org/">MinGW</a>, a
 GCC port, and <a href="http://www.mingw.org/node/18">MSYS</a>, a
 collection of POSIX utilities for Win32.</li>
 
-<li><a href="http://flex.sourceforge.net/">GNU flex</a>, a scanner generator.</li>
+<li><a href="http://flex.sourceforge.net/">GNU flex</a>, a scanner
+  generator. (Ubuntu package <a href="http://packages.ubuntu.com/flex">flex</a>)</li>
 
 <li>(optional) <a href="http://www.doxygen.org/">Doxygen</a>, an automatic
 source documentation system.</li>
@@ -70,8 +93,8 @@ source documentation system.</li>
 Finally, download the
 <a href="http://sourceforge.net/projects/doomlegacy/">Doom Legacy source</a>.
 You can either get the source package or, for the latest code
-snapshot, checkout the <b>legacy/trunk/</b> directory from the Subversion
-repository:
+snapshot, checkout the <b>legacy/trunk/</b> directory from the
+<a href="http://subversion.apache.org/">Subversion</a> repository:
 <div class="code">svn co https://doomlegacy.svn.sourceforge.net/svnroot/doomlegacy/legacy/trunk some_local_dir</div>
 From now on, your local copy of this directory will be referred to as <b>TRUNK</b>.
 </p>

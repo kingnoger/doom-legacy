@@ -421,7 +421,7 @@ void dehacked_t::error(const char *first, ...)
   vsnprintf(buffer, BUF_SIZE, first, ap);
   va_end(ap);
 
-  CONS_Printf("DEH: %s", buf);
+  CONS_Printf("DEH: %s", buffer);
   num_errors++;
 }
 
