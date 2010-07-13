@@ -1,4 +1,4 @@
-// Emacs style mode select   -*- C++ -*- 
+// Emacs style mode select   -*- C++ -*-
 //-----------------------------------------------------------------------------
 //
 // $Id$
@@ -49,7 +49,7 @@
 # define strcasecmp              strcmpi
 #endif
 
-#if defined(LINUX)
+#if defined(__linux__)
 # define O_BINARY 0
 #endif
 

@@ -124,5 +124,26 @@ updated legacy.wad.<br/>
 <li>Say '<b>make docs</b>' to generate the Doxygen documentation.</li>
 </ol>
 
+<h3>Compiling with CMake (experimental)</h3>
+
+<p>There is a new CMake-based build system. It is only recommended for the adventurous.<p>
+
+<p>You should always keep separate source directories for the regular and CMake builds.
+Trying to use both in the same directory <b>will break stuff</b> eventually.</p>
+
+<p>You'll get <a href="http://www.cmake.org">CMake</a> from your Linux distribution.</p>
+
+<p>The build steps are roughly as follows.</p>
+
+<ol>
+<li>Go to your source root.</li>
+<li><b>mkdir builddir; cd builddir</b></li>
+<li>Find out where your TNL headers and libraries are<./li>
+<li><b>CXXFLAGS=-I/path/to/tnl/headers LDFLAGS=-L/path/to/libtnl cmake -DCMAKE_BUILD_TYPE=debug ..</b></li>
+<li>If it doesn't find libtnl or tomcrypt, you can set the paths manually with <b>ccmake</b> or <b>cmake-gui</b>
+once you activate advanced mode.</li>
+<li>Then just type <b>make</b>.</li>
+</ol>
+
 </body>
 </html>

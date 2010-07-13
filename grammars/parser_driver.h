@@ -22,7 +22,7 @@
 
 #ifndef driver_h
 #define driver_h 1
-
+#include <assert.h>
 #include "doomdef.h"
 #include "r_data.h"
 #include "hardware/oglshaders.h"
