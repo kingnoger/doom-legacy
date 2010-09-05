@@ -3,7 +3,7 @@
 //
 // $Id$
 //
-// Copyright (C) 2004-2009 by DooM Legacy Team.
+// Copyright (C) 2004-2010 by DooM Legacy Team.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -18,19 +18,55 @@
 //-----------------------------------------------------------------------------
 
 /// \file
-/// \brief Simple tool for WAD manipulation
+/// \brief Simple CLI tool for WAD manipulation
 
 #include <string>
 #include <vector>
+#include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdint.h>
 
-#include "m_swap.h"
 #include "md5.h"
 
+// WAD files are always little-endian.
+static inline int16_t SWAP_INT16( uint16_t x)
+{
+    return (int16_t)
+     (  (( x & (uint16_t)0x00ffU) << 8)
+      | (( x & (uint16_t)0xff00U) >> 8)
+     );
+}
+
+static inline int32_t SWAP_INT32( uint32_t x)
+{
+    return (int32_t)
+     (  (( x & (uint32_t)0x000000ffUL) << 24)
+      | (( x & (uint32_t)0x0000ff00UL) <<  8)
+      | (( x & (uint32_t)0x00ff0000UL) >>  8)
+      | (( x & (uint32_t)0xff000000UL) >> 24)
+     );
+}
+
+#ifdef __BIG_ENDIAN__
+# define LE_SWAP16(x)  SWAP_INT16(x)
+# define LE_SWAP32(x)  SWAP_INT32(x)
+# define BE_SWAP16(x)  (x)
+# define BE_SWAP32(x)  (x)
+#else // little-endian machine
+# define LE_SWAP16(x)  (x)
+# define LE_SWAP32(x)  (x)
+# define BE_SWAP16(x)  SWAP_INT16(x)
+# define BE_SWAP32(x)  SWAP_INT32(x)
+#endif
+
+
+
 using namespace std;
+
+#define VERSION "0.5.0"
 
 
 // wad header
@@ -76,7 +112,7 @@ static bool TestPadding(char *name, int len)
       }
 
   if (warn)
-    printf("Warning: Lumpname %s not padded with zeros!\n", name);
+    printf("Warning: Lumpname %s not padded with NULs!\n", name);
 
   return warn;
 }
@@ -143,6 +179,8 @@ void Wad::ListItems(bool lumps)
   if (!lumps)
     return;
 
+  printf("    #  lumpname     size (B)\n"
+	 "----------------------------\n");
   char name8[9];
   name8[8] = '\0';
 
@@ -150,7 +188,7 @@ void Wad::ListItems(bool lumps)
   for (int i = 0; i < numitems; i++, p++)
     {
       strncpy(name8, p->name, 8);
-      printf(" %4d  %-8s: %10d bytes\n", i, name8, p->size);
+      printf(" %4d  %-8s %12d\n", i, name8, p->size);
     }
 }
 
@@ -195,8 +233,8 @@ bool Wad::Open(const char *fname)
     }
 
   // endianness swapping
-  numitems = LONG(h.numentries);
-  diroffset = LONG(h.diroffset);
+  numitems = LE_SWAP32(h.numentries);
+  diroffset = LE_SWAP32(h.diroffset);
 
   // read wad file directory
   fseek(stream, diroffset, SEEK_SET);
@@ -206,8 +244,8 @@ bool Wad::Open(const char *fname)
   // endianness conversion for directory
   for (int i = 0; i < numitems; i++, p++)
     {
-      p->offset = LONG(p->offset);
-      p->size   = LONG(p->size);
+      p->offset = LE_SWAP32(p->offset);
+      p->size   = LE_SWAP32(p->size);
       TestPadding(p->name, 8);
     }
 
@@ -322,7 +360,7 @@ int CreateWad(const char *wadname, const char *inv_name)
   // file layout: header, lumps, directory
   wadheader_t h;
   h.imagic = *reinterpret_cast<const int *>("PWAD");
-  h.numentries = LONG(len);
+  h.numentries = LE_SWAP32(len);
   h.diroffset = 0; // temporary, will be fixed later
 
   // write header
@@ -355,13 +393,13 @@ int CreateWad(const char *wadname, const char *inv_name)
       free(buf);
    }
 
-  h.diroffset = LONG(ftell(outfile)); // actual directory offset
+  h.diroffset = LE_SWAP32(ftell(outfile)); // actual directory offset
 
   // write the directory
   for (i=0; i<len; i++)
     {
-      dir[i].offset = LONG(dir[i].offset);
-      dir[i].size   = LONG(dir[i].size);
+      dir[i].offset = LE_SWAP32(dir[i].offset);
+      dir[i].size   = LE_SWAP32(dir[i].size);
       fwrite(&dir[i], sizeof(waddir_t), 1, outfile);
     }
 
@@ -465,7 +503,8 @@ int main(int argc, char *argv[])
   if (argc < 3 || argv[1][0] != '-')
     {
       printf("\nWADtool: Simple commandline tool for manipulating WAD files.\n"
-	     "Copyright 2004-2009 Doom Legacy Team.\n\n"
+	     "Version " VERSION "\n"
+	     "Copyright 2004-2010 Doom Legacy Team.\n\n"
 	     "Usage:\n"
 	     "  wadtool -l <wadfile>\t\t\tLists the contents of the WAD.\n"
 	     "  wadtool -c <wadfile> <inventoryfile>\tConstructs a new WAD using the given inventory file.\n"
