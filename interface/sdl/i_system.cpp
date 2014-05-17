@@ -140,23 +140,13 @@ static int xlatekey(SDLKey sym)
 //! Translates a SDL joystick button to a doom key_input_e number.
 static int TranslateJoybutton(Uint8 which, Uint8 button)
 {
-  int base;
-
-  if(which >= MAXJOYSTICKS) 
+  if (which >= MAXJOYSTICKS) 
     which = MAXJOYSTICKS-1;
 
-  if(button >= JOYBUTTONS)
+  if (button >= JOYBUTTONS)
     button = JOYBUTTONS-1;
 
-  switch(which)
-    {
-    case 0:  base = KEY_JOY0BUT0; break;
-    case 1:  base = KEY_JOY1BUT0; break;
-    case 2:  base = KEY_JOY2BUT0; break;
-    default: base = KEY_JOY3BUT0; break;
-    }
-
-  return base + button;
+  return KEY_JOY0BUT0 + JOYBUTTONS*which + button;
 }
 
 

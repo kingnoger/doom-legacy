@@ -1,72 +1,70 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
-
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<meta name="description" content="New, even better Doom Legacy" />
-<meta name="keywords" lang="en" content="doom, legacy, fps, heretic, hexen" />
-<link rel="stylesheet" href="legacy.css" type="text/css" />
-<title>Doom Legacy console</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link rel="stylesheet" href="legacy.css" type="text/css"/>
+  <meta name="keywords" content="Doom Legacy, console reference"/>
+  <meta name="description" content="Doom Legacy console reference"/>
+  <title>Doom Legacy Console Reference</title>
 </head>
-
 <!-- $Id$ -->
+
 <body>
+<h1>Doom Legacy 2.0 Console Reference</h1>
 
-<h1>Doom Legacy console</h1>
 
+<div class="floatbox">
+<h2>Contents</h2>
+<ol>
+<li><a href="#basics">Console basics</a>
+<ol>
+<li><a href="#usage">Console usage</a></li>
+<li><a href="#input">Console input</a></li>
+<li><a href="#cmd_var">Commands and variables</a></li>
+<li><a href="#config">Configuration files</a></li>
+<li><a href="#autoexec">Autoexec.cfg</a></li>
+<li><a href="#scripts">Script files</a></li>
+</ol>
+</li>
+<li><a href="#reference">Console commands and variables</a>
+<ol>
+<li><a href="#basic_cmd">Basic commands</a></li>
+<li><a href="#con_setup">Console setup</a></li>
+<li><a href="#player_setup">Player setup</a></li>
+<li><a href="#player_controls">Player controls</a></li>
+<li><a href="#game_options">Game options</a></li>
+<li><a href="#game_cmds">Game commands</a></li>
+<li><a href="#net_options">Net options</a></li>
+<li><a href="#video_options">Video options</a></li>
+<li><a href="#sound_options">Sound options</a></li>
+</ol>
+</li>
+</ol>
+</div>
+
+<div class="column">
 <p>
 Make sure you read this! You will discover a lot of goodies available
-in Legacy! Be a Doom 'power-user'!<br/>
-Skip to section 2, and browse through the list of commands if you're
+in Legacy! Be a Doom power user!<br/>
+Skip to <a href="#reference">section 2</a> and browse through the list of commands if you're
 in a hurry!
 </p>
 
-<h2>Contents</h2>
 
-<ol>
-<li><a href="#1">Console basics</a>
-<ol>
-<li><a href="#1-1">Console usage</a></li>
-<li><a href="#1-2">Console input</a></li>
-<li><a href="#1-3">Commands and variables</a></li>
-<li><a href="#1-4">Configuration files</a></li>
-<li><a href="#1-5">Autoexec.cfg</a></li>
-<li><a href="#1-6">Script files</a></li>
-</ol>
-</li>
-<li><a href="#2">Console commands and variables</a>
-<ol>
-<li><a href="#2-1">Basic commands</a></li>
-<li><a href="#2-2">Console setup</a></li>
-<li><a href="#2-3">Player setup</a></li>
-<li><a href="#2-4">Player controls</a></li>
-<li><a href="#2-5">Game options</a></li>
-<li><a href="#2-6">Game commands</a></li>
-<li><a href="#2-7">Net options</a></li>
-<li><a href="#2-8">Video options</a></li>
-<li><a href="#2-9">Sound options</a></li>
-</ol>
-</li>
-</ol>
+<h2 id="basics">Console basics</h2>
 
-<hr/>
+<h3 id="usage">Console usage</h3>
 
-<h2><a name="1">Console basics</a></h2>
-
-<h3><a name="1-1">Console usage</a></h3>
-
-<p>With Doom Legacy's console, you will be able to change a lot of
-parameters within the game, and customise the game to your preferences.
+<p>With Doom Legacy's console, you will be able to change a lot of game
+parameters from within the game, and customise it to your preferences.
 The console is simply a command prompt, where you can enter commands
 and change the values of game variables.
-Since the first game console we know of was from Id Software's game Quake,
-we have been inspired by this console, and have tried to use the same
-functionality for the Quake-Doom fans.
+Since the first game console we know of was from id Software's game Quake,
+we have been inspired by it and have tried to implement the same
+functionality for the benefit of Quake/Doom fans.
 </p>
 
-<p>To open the console, press the <b>console key</b>. It is located just
+<p>To open the console, press the <b>console key</b>. It is usually located just
 below ESC. You can set the console key at the Setup Controls
 menu.
 To exit the console, either press again the console key, or press
@@ -89,17 +87,18 @@ the duration of display of the messages with the console variable
 </p>
 
 
-<h3><a name="1-2">Console input</a></h3>
+<h3 id="input">Console input</h3>
 
 <p>While the console is on, it accepts typed-in commands.
-Press <b>ENTER</b> to execute the command.
+<b>BACKSPACE</b> erases the last input character, and <b>ENTER</b> executes the command.
 For convenience, you have a history of the last 32 commands entered.
 Press <b>UP ARROW</b> to go back in the commands history, <b>DOWN ARROW</b> to
 go forward.
 </p>
 
-<p>Another very useful key is the <b>TAB</b> key: it completes a command
-or variable name that has not been fully entered.
+<p>
+Another very useful key is <b>TAB</b>: it completes a partially
+entered command or variable name.
 This is a very good way to see the existing commands: just
 enter any letter, then press <b>TAB</b> several times to see what commands
 are available.
@@ -107,9 +106,9 @@ are available.
 
 <div class="example">
 The variables to customize the console itself usually start
-with 'con_', thus typing 'con' and pressing the 'TAB' key several times
-will display the following console variables : 'con_height', 'con_speed',
-'con_hudtime', 'con_backpic'...
+with "con_", thus typing "con" and pressing the <b>TAB</b> key several times
+will display the following console variables: con_height, con_speed,
+con_hudtime, con_backpic...
 </div>
 
 <p>You can also press <b>SHIFT-TAB</b>, which will complete the command line,
@@ -117,11 +116,11 @@ but in reverse order.
 </p>
 
 
-<h3><a name="1-3">Commands and variables</a></h3>
+<h3 id="cmd_var">Commands and variables</h3>
 
 <p>Basically, a <b>command</b> does not have a value, and is not saved to the
 configuration file. A <b>variable</b> always has an associated value, for
-example the variable 'name' holds your name as a player.
+example the variable <span class="keyword">name</span> holds your name as a player.
 </p>
 
 <p>Entering a command without any parameters will usually tell you
@@ -129,7 +128,7 @@ the command syntax.
 </p>
 
 <div class="example">
-map<br/>
+&gt; map<br/>
 Usage: map &lt;number|name&gt; [&lt;entrypoint&gt;]: warp players to a map.
 </div>
 
@@ -138,7 +137,7 @@ value of the variable.
 </p>
 
 <div class="example">
-name<br/>
+&gt; name<br/>
 "name" is "gi joe"
 </div>
 
@@ -149,15 +148,15 @@ For example, to change your name to 'dj fab', type
 </p>
 
 <div class="example">
-name "dj fab"
+&gt; name "dj fab"
 </div>
 
-<p>Boolean variables (true/false, yes/no) use '0' to denote false.
+<p>Boolean variables (true/false, yes/no) use 0 to denote false.
 Any nonzero value means true.
 </p>
 
 
-<h3><a name="1-4">Configuration files</a></h3>
+<h3 id="config">Configuration files</h3>
 
 <p>Most variables are automatically saved to the default configuration
 file <b>config.cfg</b>. Like in the original Doom, the <a href="legacy.html#config">-config</a>
@@ -170,12 +169,12 @@ when the game exits.
 </p>
 
 
-<h3><a name="1-5">Autoexec.cfg</a></h3>
+<h3 id="autoexec">Autoexec.cfg</h3>
 
-<p>The <b>autoexec.cfg</b> file is a text 'script' file which is automatically
-executed at the game startup, if it is found.
+<p>The <b>autoexec.cfg</b> file is a text 'script' file which, if
+found, is automatically executed at the game startup.
 You can edit autoexec.cfg to set the values of those variables
-that are not automatically saved to 'config.cfg'. You can also add
+that are not automatically saved to config.cfg. You can also add
 commands that will be executed one after another, just like a script.
 </p>
 
@@ -184,37 +183,36 @@ Each line of the autoexec.cfg file is like a line that you would have
 typed at the console. Here are some examples:
 </p>
 
-<p>This sample 'autoexec.cfg' will warp you to map 01 as soon as the
+<p>This sample 'autoexec.cfg' will warp you to map01 as soon as the
 game is loaded:
 </p>
 
-<div class="example"><pre>
-// start always with map1, without waiting at the menu
-map map01
+<div class="example">
+// always start with map01, without waiting at the menu<br/>
+map map01<br/>
 echo "welcome to map 01"   //useless comment
-</pre></div>
+</div>
 
 <p>Another example, here we set the variables that are not saved to the
-config.cfg, because they are not considered 'standard' parameters:
+config.cfg, because they are not considered standard parameters:
 </p>
 
-<div class="example"><pre>
-// set my preferred weird game mode
-bloodtime 5   // blood lasts 5 seconds
-fastmonsters 1
-teamdamage 1
-map map07
+<div class="example">
+// set my preferred weird game mode<br/>
+bloodtime 5   // blood lasts 5 seconds<br/>
+fastmonsters 1<br/>
+teamdamage 1<br/>
 echo "bigjim's weird mode active"
-</pre></div>
+</div>
 
 <p>In the last example, each time you start the game, it will set the
 variables like <a href="#bloodtime">bloodtime</a> that are not
 normally saved to config.cfg.
-Just look at config.cfg to know which variables are saved.
+Just look at config.cfg to find out which variables are saved.
 </p>
 
 
-<h3><a name="1-6">Script files</a></h3>
+<h3 id="scripts">Script files</h3>
 
 <p>config.cfg and autoexec.cfg are script files. It means they
 contain commands and variables that are executed in sequence.
@@ -222,29 +220,29 @@ You can create any number of script files, and execute them from the console
 using the <a href="#exec">exec</a> command.
 </p>
 
-<p>For example, to start a script named 'blood.cfg' just enter</p>
+<p>For example, to start a script named blood.cfg just enter</p>
 
 <div class="example">
-exec blood.cfg
+&gt; exec blood.cfg
 </div>
 
 
 
 <hr/>
-<h2><a name="2">Console commands and variables</a></h2>
+<h2 id="reference">Console commands and variables</h2>
 
 <p>This chapter describes all console commands and variables in Doom
 Legacy.
-Many console variables are also available through the menu.
+Many console variables can also be modified through the menu.
 You will need to use the console only if you want to customise the
 game more to your needs.
 </p>
 
 
-<h3><a name="2-1">Basic commands</a></h3>
+<h3 id="basic_cmd">Basic commands</h3>
 
 <p>Here are the basic commands for script execution. They have the same
-usage and functionality as in the game Quake.
+usage and functionality as in Quake.
 You can use a <b>semicolon</b> to separate several commands in the same line.
 </p>
 
@@ -253,29 +251,38 @@ You can use a <b>semicolon</b> to separate several commands in the same line.
 
 <tr><td>alias &lt;aliasname&gt; &lt;command&gt;</td>
 <td>
-When you type 'aliasname', it will be like if you had
-entered 'command'. Let's have an example:
+<p>
+Define an alias.
+When you type &lt;aliasname&gt;, it will be like if you had
+entered &lt;command&gt;. Let's have an example:
+</p>
 <div class="example">
-alias silence "soundvolume 0; musicvolume 0"
+&gt; alias silence "soundvolume 0; musicvolume 0"
 </div>
-When you will type 'silence', it will execute the
+<p>
+When you will type "silence", it will execute the
 corresponding command. In this example, we have given two
 commands as one, inside " ", and using the semicolon as a separator
 for commands.
+</p>
 </td></tr>
 
-<tr><td>echo &lt;"text"&gt;</td>
+<tr><td>echo &lt;text&gt;</td>
 <td>Just echoes (prints) the text to console.</td></tr>
 
-<tr><td><a name="exec">exec</a> &lt;filename&gt;</td>
+<tr><td id="exec">exec &lt;filename&gt;</td>
 <td>
+<p>
 Execute a script file. A script file is just a text file
 containing a sequence of commands or variables. Script files
-usually have a '.cfg' extension. Example:
+usually have a .cfg extension. Example:
+</p>
 <div class="example">
-exec autoexec.cfg
+&gt; exec autoexec.cfg
 </div>
+<p>
 will execute all the commands in autoexec.cfg
+</p>
 </td></tr>
 
 <tr><td>help [&lt;variable&gt;]</td>
@@ -285,52 +292,54 @@ If given a variable name, shows detailed info on that variable.
 </td></tr>
 
 <tr><td>toggle &lt;variable&gt; [&lt;value&gt;]</td>
-<td>Without the 'value' parameter this toggles a variable, i.e. changes
-it to the next possible value.<br/>
-With the 'value' parameter it adds 'value' to the variable.
-<p>This command is very useful for use with <a
-href="#bind">bind</a>. Example:
+<td>
+<p>
+Without the &lt;value&gt; parameter this toggles a variable,
+i.e. changes it to the next possible value.
+With the &lt;value&gt; parameter it adds &lt;value&gt; to the variable.
+This command is very useful for use with <a href="#bind">bind</a>. Example:
 </p>
 <div class="example">
 bind "&gt;" "toggle gr_fogdensity"<br/>
 bind "&lt;" "toggle gr_fogdensity -1"
 </div>
+<p>
 so you can modify fogdensity without going into the console or menu!
+</p>
 </td></tr>
 
 <tr><td>wait [&lt;ticks&gt;]</td>
-<td>Wait a given amount of time before the next command is executed.
-The unit is 1/35 s. Example: this will wait 5 seconds, then display 'ok!'
+<td>
+<p>
+Wait a given amount of time before the next command is executed.
+The unit is 1/35 seconds. Example: this will wait 5 seconds, then
+display "ok!".
+</p>
 <div class="example">
 wait 175; echo "ok!"
 </div>
 </td></tr>
 
-
-<tr><td><a name="bind">bind</a> &lt;keyname&gt; &lt;"command"&gt;</td>
-<td>Bind commands to a key. Each time you press the key,
+<tr><td id="bind">bind &lt;keyname&gt; &lt;command&gt;</td>
+<td>
+<p>
+Bind commands to a key. Each time you press the key,
 the commands will be executed. Example:
+</p>
 <div class="example">
 &gt; bind s screenshot
 </div>
-Now each time you push the 's' key the game will save a screenshot.
+<p>
+Now each time you press the s key the game will save a screenshot.
+</p>
 </td></tr>
 
 <tr><td>cls</td>
 <td>Clear the console text buffer.</td></tr>
-
-
-<tr><td>keymap [&lt;language&gt;]</td>
-<td>
-Change the keyboard map. Currently we support English (qwerty) and
-French (azerty) keyboards. If you omit the language, the game will
-default to qwerty.
-</td></tr>
-
 </table>
 
 
-<h3><a name="2-2">Console setup</a></h3>
+<h3 id="con_setup">Console setup</h3>
 
 <p>These variables control the look and feel of the console.
 </p>
@@ -340,8 +349,9 @@ default to qwerty.
 
 <tr><td>con_backpic</td><td>bool</td>
 <td>
-1: use an opaque console background picture (in lump CONSBACK), like in Quake.<br/>
-0: use a translucent LCD-like console background.
+0: use a translucent LCD-like console background.<br/>
+1: use an opaque
+<a href="editing.html#CONSBACK">console background picture</a>, like in Quake.
 </td></tr>
 
 <tr><td>con_height</td><td>int</td>
@@ -353,31 +363,38 @@ screen height for the console.
 
 <tr><td>con_speed</td><td>int</td>
 <td>
-The speed (in pixels/tick) at which the console comes down or moves out of
+The speed (in pixels/tic) at which the console comes down or moves out of
 the screen when you press the console toggle key.
 </td></tr>
 
-<tr><td><a name="con_hudtime">con_hudtime</a></td><td>int</td>
+<tr><td id="con_hudtime">con_hudtime</td><td>int</td>
 <td>
 The number of seconds messages stay on the top
 of the screen. They are 5 message lines that scroll as soon
 as new messages arrive. E.g. con_hudtime 5, which is the
 default, will make the messages stay for 5 seconds before
 disappearing. Set this to 0, and you will never see any
-messages out of the console (HUD means heads-up display).
+messages outside the console (HUD means heads-up display).
 </td></tr>
 
+<tr><td>showmessages &lt;0-2&gt;</td><td>int</td>
+<td>
+0: never show any messages on the screen.<br/>
+1: always show the messages (default).<br/>
+There is one more setting, 2, that can only be entered at
+the console, it will show all messages except most of the
+"picked up ..." style messages. Useful if you are tired of
+the "picked up ammo", "picked up health bonus" etc. messages.
+</td></tr>
 </table>
 
 
 
-
-
-<h3><a name="2-3">Player setup</a></h3>
+<h3 id="player_setup">Player setup</h3>
 
 <p>These variables control your player avatar's appearance and your game
 preferences. The splitscreenplayer has similar variables, but with the
-number 2 appended to the variable name, e.g. 'color2 red' turns the
+number 2 appended to the variable name, e.g. "color2 red" turns the
 splitscreenplayer's avatar red.
 </p>
 
@@ -386,8 +403,8 @@ splitscreenplayer's avatar red.
 
 <tr><td>splitscreen</td><td>bool</td>
 <td>
-Enable/Disable the splitscreen. If necessary, this spawns a secondary
-local player, called the 'splitscreenplayer'.
+Enable/disable the splitscreen. If necessary, this spawns a secondary
+local player, called the splitscreenplayer.
 </td></tr>
 
 <tr><td>name</td><td>string</td>
@@ -395,7 +412,7 @@ local player, called the 'splitscreenplayer'.
 Enter your name as a player, for network games. Your name will
 be seen when you send a message (chat key), and is displayed
 in the deathmatch rankings. Use "" if the name contains spaces,
-E.g.: name "dj fabbe"
+e.g. <span class="example">name "dj fabbe"</span>
 </td></tr>
 
 <tr><td>color &lt;0-10&gt;</td><td>int</td>
@@ -405,21 +422,20 @@ Choose your avatar's color.
 
 <tr><td>skin</td><td>string</td>
 <td>
-Change your skin, provided some skins are loaded (adding skins wads
-after the -file on the command line). The default marine skin
-name is 'marine'.
+Change your skin, provided some skins are loaded (use
+the commandline option <a href="legacy.html#file">-file</a>
+to add skins wads. The default marine skin
+name is "marine".
 </td></tr>
-
-
 
 <tr><td>autoaim</td><td>bool</td>
 <td>
 The original Doom used autoaiming in the vertical direction, and a
 small aim adjustment in the horizontal.
-Now that you can shoot up and down with the freelook, you can
+Now that you can freely aim up and down with the freelook, you can
 play like a pro and set autoaim off.<br/>
 
-NETWORK NOTE: in a multiplayer game, the SERVER can force
+NETWORK NOTE: in a multiplayer game, the server can force
 the autoaim off for all players with the command
 <a href="#allowautoaim">allowautoaim</a>.
 </td></tr>
@@ -427,74 +443,62 @@ the autoaim off for all players with the command
 <tr><td>originalweaponswitch</td><td>bool</td>
 <td>
 Choose whether to use the original weapon change method (1), or
-the new Preferred Weapons Order (0), see
+the new preferred weapons order (0), see
 <a href="#weaponpref">weaponpref</a> for more.<br/>
 
-With the original weapon switch, whenever you walk on a weapon,
-it will switch to that weapon, even if it is not as powerful
-as the one you are carrying. That can be sometimes very
+With the original weapon switch, whenever you pick up a new weapon
+it becomes the active one, even if it is not as powerful
+as the one you are currently using. That can be sometimes very
 annoying, especially in fast deathmatches.
 </td></tr>
 
 
-<tr><td><a name="weaponpref">weaponpref</a></td><td>string</td>
+<tr><td id="weaponpref">weaponpref</td><td>string</td>
 <td>
-The Preferred Weapons Order.<br/>
-This works only if you have set 'originalweaponswitch' to '0'.
+The preferred weapons order.<br/>
+This works only if you have set originalweaponswitch to 0.
 
 <p>You give a priority to each of the weapons, with a number digit
-from '0' to '9'. Several weapons can have the same priority.
-When you pickup a weapon that you don't already have, you
+from 0 to 9. Several weapons can have the same priority.
+When you pick up a weapon that you don't already have, you
 will switch to that weapon IF AND ONLY IF that weapon's priority
 is greater that the one you are carrying. If you already had the
 weapon, you will pickup the ammo as usual, without changing
 weapon.
-The numbers are priority values, for each of the weapons, in
-the following order:
+The command is given a string of priority values, one for each weapon, in the following order:
 </p>
 
-<p>Fist, Chainsaw, Gun, Shotgun, Super Shotgun, Chaingun, Rocket launcher, Plasma, BFG.
+<p>Fist, Chainsaw, Pistol, Shotgun, Super Shotgun, Chaingun, Rocket
+  Launcher, Plasma Rifle, BFG.
 </p>
 
 <p>Thus 'weaponpref "021485763"' means that the super shotgun has
 the highest priority (8), while the fist is lowest priority (0).
-After the double shotgun, in decreasing priority you have the
+After the super shotgun, in decreasing priority you have the
 rocket launcher (7), plasma gun (6), chaingun (5), shotgun (4),
-BFG (3), chainsaw (2), gun  (1).
+BFG (3), chainsaw (2) and pistol (1).
 </p>
 
 <p>Let's have another interesting example: 'weaponpref "333333333"'
 </p>
 
 <p>Since all weapons have the same priority in this last example,
-you will in fact NEVER change weapon automatically, because
+you will NEVER change weapon automatically, because
 no weapon has a priority higher than any other one. You might
-consider this as the 'manual' weapon change.
+consider this the manual weapon change.
 </p>
 </td></tr>
 
 <tr><td>crosshair &lt;0-3&gt;</td><td>int</td>
 <td>
-Choose whether to use a crosshair (1-3), or not (0). The values
-are 1,2,3 for white cross, green angle, and red point.
+Choose whether to use a crosshair. The options
+are no crosshair (0), white cross (1), green angle (2), and red point (3).
 </td></tr>
-
-<tr><td>showmessages &lt;0-2&gt;</td><td>int</td>
-<td>
-'0' means never show any messages on the screen, '1' means
-always show the messages, which is the default.
-
-There is one more setting, '2' that can only be entered at
-the console, it will show all messages except most of the
-'picked up ...' style messages. Useful if you are tired of
-the 'picked up ammo', 'picked up health bonus', etc. messages.
-</td></tr>
-
 </table>
 
 
 
-<h3><a name="2-4">Player controls</a></h3>
+<h3 id="player_controls">Player controls</h3>
 
 <p>These variables control the way the game handles the players' input.
 The splitscreenplayer has similar variables, but with the
@@ -506,20 +510,20 @@ number 2 appended to the variable name.
 
 <tr><td>autorun</td><td>bool</td>
 <td>
-Set this to 1 to invert the 'run' key. You will always be running,
-EXCEPT when you push the 'run' key.
+Set this to 1 to invert the <b>run</b> key. You will always be running,
+EXCEPT when you push the run key.
 </td></tr>
 
 <tr><td>automlook</td><td>bool</td>
 <td>
-<p>You can use the 'freelook' (ability to look up and down) in two
+<p>You can use the "freelook" (ability to look up and down) in two
 modes: permanent or temporary.
 </p>
 
-<p>Setting this variable to '1' will set the freelook permanent.
+<p>Setting this variable to 1 will make the freelook permanent.
 </p>
 
-<p>When 'automlook' is '0', you will need to hold the 'freelook'
+<p>When automlook is 0, you will need to hold the freelook
 key down while moving the mouse up and down. When releasing the key,
 the view will always re-center. This is useful if you keep
 firing rockets at your feet.
@@ -529,35 +533,33 @@ firing rockets at your feet.
 
 <tr><td>use_mouse</td><td>bool</td>
 <td>
-Setting 'use_mouse' to '0' will disable the mouse. The next time
+Setting use_mouse to 0 will disable the mouse. The next time
 you start the game, the mouse won't be detected.
 
-Set 'use_mouse' to '1' to search for a mouse, and activate it.
+Set use_mouse to 1 to search for a mouse, and activate it.
 </td></tr>
 
 <tr><td>invertmouse</td><td>bool</td>
 <td>
-Set invertmouse to '1' to invert the mouse y (up and down) axis.
+Set invertmouse to 1 to invert the mouse y (up and down) axis.
 This is for freelook only, you will look up, when moving the mouse
 down (backward), and look down when moving mouse forward.
 </td></tr>
 
 <tr><td>mousemove</td><td>bool</td>
 <td>
-Enable/disable mouse Y-axis for forward/backward movement.
+Enable/disable mouse y-axis for forward/backward movement.
 </td></tr>
-
 
 <tr><td>mousesensx</td><td>int</td>
 <td>
-Sets the mouse sensitivity in the X direction.
+Sets the mouse sensitivity in the x direction.
 </td></tr>
 
 <tr><td>mousesensy</td><td>int</td>
 <td>
-Sets the mouse sensitivity in the Y direction.
+Sets the mouse sensitivity in the y direction.
 </td></tr>
-
 </table>
 
 
@@ -592,7 +594,6 @@ Enable/disable joystick support.
 <td>
 Enable/disable freelook with the joystick.
 </td></tr>
-
 </table>
 
 <p>
@@ -605,27 +606,27 @@ The game controls can be defined using the setcontrol command.
 <tr><td>setcontrol &lt;control&gt; &lt;key1&gt; [&lt;key2&gt;]</td>
 <td>
 <p>Binds a key/joystick button/mouse button to a
-game control (forward, fire, use etc.).
+game control (<span class="keyword">forward</span>, <span class="keyword">fire</span>, <span class="keyword">use</span> etc.).
 The second keyname is optional. You can set it, and have
-two keys attached to one game control. eg: have 'ARROW UP'
-and 'MOUSE2' for 'forward'.
+two keys attached to one game control, e.g. have both <b>UP ARROW</b>
+and <b>MOUSE2</b> mean <span class="keyword">forward</span>.
 </p>
 
-<p>When a key does not have a name, it uses a name of the
+<p>If a key does not have a useful name, it uses a name of the
 form 'KEYxxx' where xxx is the key code.
 To learn the names of the keys, look for them at the Setup Controls menu.
 </p>
 
-<p>The control names are "forward","backward","strafe",
-"straferight","strafeleft","speed","turnleft","turnright",
-"fire","use","lookup","lookdown","centerview","mouseaiming",
-"weapon1","weapon2", ... "weapon8","talkkey","scores",
-"jump","console".
+<p>The controls are <span class="keyword">forward, backward, strafe, 
+straferight, strafeleft, speed, turnleft, turnright, 
+fire, use, lookup, lookdown, centerview, mouseaiming, 
+weapon1, weapon2, ..., weapon8, talkkey, scores, 
+jump, console</span>.
 </p>
 
 Example:
 <div class="example">
-setcontrol forward "keypad 8" "up arrow"
+&gt; setcontrol forward "keypad 8" "up arrow"
 </div>
 </td></tr>
 
@@ -637,7 +638,7 @@ setcontrol forward "keypad 8" "up arrow"
 
 
 
-<h3><a name="2-5">Game options</a></h3>
+<h3 id="game_options">Game options</h3>
 
 <p>Using these variables you can change may aspects of the game
 itself. For obvious reasons, in a netgame only the server can change them.
@@ -659,17 +660,16 @@ Set the game type
 <tr><td>teamplay &lt;0|1|2&gt;</td><td>int</td>
 <td>
 You can change the deathmatch mode while in a multiplayer game.
-
-0 : no teams, usual deathmatch
-
-1 : teamplay, using color to identify teams, players of the
-    same color will be in the same team, the team name will
-    be like 'red team' or 'yellow team'
-
-2 : teamskin, using skins to identify teams, players who use
-    the same skin will be in the same team, the team name will
-    show as 'leprechaun team' or 'terminator team', according
-    to the name of the skin
+<br/>
+0: no teams, usual free-for-all deathmatch.<br/>
+1: teamplay, use color to identify teams (players of the
+same color will be in the same team), the team names will
+be like "red team" or "yellow team".
+<br/>
+2: teamskin, using skins to identify teams (players who use
+the same skin will be in the same team), the team names will
+show as "leprechaun team" or "terminator team", according
+to the name of the skin.
 </td></tr>
 
 <tr><td>teamdamage</td><td>bool</td>
@@ -682,7 +682,7 @@ not. Real players always have teamdamage on.
 <tr><td>hiddenplayers</td><td>bool</td>
 <td>
 Are the other players visible in the automap? Also determines if you
-can switch to their POV using the spy mode. Usually disabled in deathmatch.
+can switch to their POV using the spy mode. Usually enabled in deathmatch.
 </td></tr>
 
 <tr><td>exitmode</td><td>int</td>
@@ -710,12 +710,10 @@ to intermission. Use 0 to disable.
 </td></tr>
 
 
-
-
 <tr><td>gravity</td><td>float</td>
 <td>
 Sets the acceleration of gravity in the game.
-The default gravity is '1'.
+The default gravity is 1.
 </td></tr>
 
 <tr><td>nomonsters</td><td>bool</td>
@@ -734,18 +732,18 @@ Choose if monster are "fast" like with the original -fastparm
 Setting solidcorpse to 1 makes the dead corpses
 (monsters/marines) solid. The corpses thus stack one on top
 of another, and you walk over them. Sometimes you can even
-reach ledges where you couldn't go by climbing on corpses!
+reach ledges where you couldn't get before by climbing on corpses!
 </td></tr>
 
 
 <tr><td>allowjump</td><td>bool</td>
 <td>
-Choose whether jump is allowed or not. For those of you who
-come from the planet 'NoJump' or have a limited sensory system
-and couldn't survive a jump in the 3rd axis of our world,
-you can disable the jump in single player too.<br/>
-NOTE: Jumping is considered cheating in maps not designed for it,
-especially in speedrunning.
+Choose whether jump is allowed or not. Those of you who
+come from the planet NoJump or have a limited sensory system
+and couldn't survive a jump in the 3rd axis of our world
+can disable the jump in single player too.<br/>
+NOTE: Jumping is considered cheating in maps not designed with it in
+mind, especially in speedrunning.
 </td></tr>
 
 <tr><td>allowrocketjump</td><td>bool</td>
@@ -753,7 +751,7 @@ especially in speedrunning.
 Enable/disable emulation of the Quake1 bug known as "Rocket Jump".
 </td></tr>
 
-<tr><td><a name="allowautoaim">allowautoaim</a></td><td>bool</td>
+<tr><td id="allowautoaim">allowautoaim</td><td>bool</td>
 <td>
 Enable/disable autoaiming for all players... make sure everyone is ok
 before getting your friends angry.
@@ -761,7 +759,7 @@ before getting your friends angry.
 
 <tr><td>allowfreelook</td><td>bool</td>
 <td>
-Enable/disable usage of look up/look down for all players in the game.
+Enable/disable looking up and down for all players in the game.
 </td></tr>
 
 
@@ -769,8 +767,8 @@ Enable/disable usage of look up/look down for all players in the game.
 <tr><td>respawnitem</td><td>bool</td>
 <td>
 Choose whether items respawn or not.
-'respawnitem 0' is like old deathmatch, it is set 'true'
-automatically when in Deathmatch 2
+respawnitem 0 is like the old deathmatch.
+deathmatch 2 automatically sets it to 1.
 
 <p>NOTE: it is considered cheating to allow respawning of items
  when in single player mode ! :)
@@ -791,7 +789,7 @@ you pick up the item, and the moment it reappears.
 <tr><td>respawnmonsters</td><td>bool</td>
 <td>
 Choose if monsters can respawn.
-'respawnmonsters 1' is like the -respawn command-line option of
+respawnmonsters 1 is like the -respawn command-line option of
 the original Doom.
 </td></tr>
 
@@ -802,14 +800,11 @@ Choose the time of respawn for the monsters, in seconds.
 <p>The default is 12, from the original Doom.
 </p>
 </td></tr>
-
 </table>
 
 
 
-
-
-<h3><a name="2-6">Game commands</a></h3>
+<h3 id="game_cmds">Game commands</h3>
 
 <p>
 Here we describe the commands that can be used during the
@@ -820,7 +815,7 @@ the game.
 <table class="def">
 <tr><th>command</th><th>definition</th></tr>
 
-<tr><td>save &lt;slot_number&gt; &lt;"description"&gt;</td>
+<tr><td>save &lt;slot_number&gt; &lt;description&gt;</td>
 <td>
 Save the game in the given slot, with chosen description.
 </td></tr>
@@ -842,7 +837,7 @@ Restart the current level.
 
 <tr><td>pause</td>
 <td>
-Pauses/unpauses the game (or requests pause from the server).
+Pauses/unpauses the game (or requests a pause from the server).
 </td></tr>
 
 <tr><td>quit</td>
@@ -853,7 +848,7 @@ Quits the game without further confirmation.
 
 <tr><td>version</td>
 <td>
-Shows the game version and date of compilation.
+Shows the game version and build date.
 </td></tr>
 
 
@@ -866,7 +861,7 @@ you exit Legacy.
 <tr><td>loadconfig &lt;filename&gt;</td>
 <td>
 Load a config file like at the begining of legacy.
-For the pro : this is a simple exec command with ".cfg" default.
+For the pro: this is a simple exec command with ".cfg" default.
 </td></tr>
 
 <tr><td>changeconfig &lt;filename&gt;</td>
@@ -914,7 +909,7 @@ player.
 Sends a message to all players.
 </td></tr>
 
-<tr><td>sayto &lt;"playername"|playernum&gt; &lt;message&gt;</td>
+<tr><td>sayto &lt;playername|playernum&gt; &lt;message&gt;</td>
 <td>
 Sends a message to a specified player.
 </td></tr>
@@ -924,10 +919,10 @@ Sends a message to a specified player.
 Sends a message to your own team.
 </td></tr>
 
-<tr><td>chatmacro &lt;0-9&gt; &lt;"message"&gt;</td>
+<tr><td>chatmacro &lt;0-9&gt; &lt;message&gt;</td>
 <td>
 This very useful command allows to change the chat messages at
-any time during the game. They are saved to the configfile too!
+any time during the game. They are saved in the configfile too!
 
 You can now quickly setup some circumstance messages at the
 start of a game.
@@ -952,13 +947,13 @@ Disconnects from the server.
 </td></tr>
 
 
-<tr><td>kick &lt;"playername" | playernum&gt;</td>
+<tr><td>kick &lt;playername | playernum&gt;</td>
 <td>
 One of the rare pleasures of being a server: Kick somebody out
 of your game!
 </td></tr>
 
-<tr><td>kill me | &lt;"playername" | playernum&gt; | monsters</td>
+<tr><td>kill me | &lt;playername | playernum&gt; | monsters</td>
 <td>
 Kills just about anything.
 </td></tr>
@@ -976,40 +971,37 @@ t_dumpscript t_runscript t_running addbot</td>
 </td></tr>
 
 
-
-
 <tr><td>noclip</td>
 <td>
 Enables/disables clipping for the console player.
-Like the cheat code 'idclip'.
+Like the cheat code <b>idclip</b>.
+</td></tr>
+
+
+<tr><td>fly</td>
+<td>
+Enables/disables fly mode for the console player.
+In the fly mode the player can fly using the <b>jump</b> control.
 </td></tr>
 
 
 <tr><td>god</td>
 <td>
-God mode. Just like the cheat 'iddqd'.
+God mode. Just like the cheat <b>iddqd</b>.
 </td></tr>
 
 
 
-<tr><td>gimme [health] [ammo] [weapons] [armor] [keys] [map] [almostanything]...</td>
+<tr><td>gimme health | ammo | weapons | armor | keys | map | almostanything...</td>
 <td>
-The cheat 'á la carte'.
+The cheat à la carte.
 </td></tr>
-
-
-
-<tr><td></td>
-<td>
-</td></tr>
-
-
 </table>
 
 
 
 
-<h3><a name="2-7">Net options</a></h3>
+<h3 id="net_options">Net options</h3>
 
 <table class="def">
 <tr><th>variable</th><th>type</th><th>definition</th></tr>
@@ -1045,24 +1037,15 @@ worry about it.
 </td></tr>
 
 
-
-<tr><td></td><td>int</td>
-<td>
-
-</td></tr>
-
 <tr><td>netstat</td><td>bool</td>
 <td>
 </td></tr>
-
-
-
 </table>
 
 
 
 
-<h3><a name="2-8">Video options</a></h3>
+<h3 id="video_options">Video options</h3>
 
 <p>
 These variables control many visual aspects of the game.
@@ -1083,12 +1066,12 @@ Screen color depth in bits.
 
 <tr><td>scr_width</td><td>int</td>
 <td>
-Screen width.
+Screen width in pixels.
 </td></tr>
 
 <tr><td>scr_height</td><td>int</td>
 <td>
-Screen height.
+Screen height in pixels.
 </td></tr>
 
 <tr><td>usegamma &lt;0-4&gt;</td><td>int</td>
@@ -1135,7 +1118,7 @@ Sets the speed of the chasecam.
 
 
 
-<tr><td><a name="bloodtime">bloodtime</a></td><td>int</td>
+<tr><td id="bloodtime">bloodtime</td><td>int</td>
 <td>
 Choose how many seconds blood will stay on the floor.
 In the original Doom the blood stayed no more than 1 second.
@@ -1151,11 +1134,11 @@ Enable/disable translucent sprites.
 
 <tr><td>screenlink &lt;0|1|2&gt;</td><td>int</td>
 <td>
-Change the screen link between:
-  0 - none
-  1 - the normal melting
-  2 - the new color melt (it was in the original code, we just
- enabled it)
+Change the screen link between
+  0: none,
+  1: the normal melting, and
+  2: the new color melt (it was in the original code, we just
+ enabled it).
 </td></tr>
 
 <tr><td>playersprites</td><td>bool</td>
@@ -1176,16 +1159,19 @@ Should the status bar graphics be scaled?
 
 <tr><td>hud_overlay</td><td>string</td>
 <td>
+<p>
 Choose what information to show in the HUD when in full screen mode.
 Each letter represent a piece of information that will be shown.
-
-'f' : show frags (only in deathmatch)
-'h' : show health
-'m' : show armor
-'a' : show current weapon ammo
-'k' : show keys
-'e' : show monsters kill
-'s' : show secret found count
+</p>
+<p>
+f: show frags (only in deathmatch)<br/>
+h: show health<br/>
+m: show armor<br/>
+a: show current weapon ammo<br/>
+k: show keys<br/>
+e: show monsters kill<br/>
+s: show secret found count
+</p>
 </td></tr>
 
 
@@ -1197,62 +1183,84 @@ When true, the game shows the current framerate (frames/s) in the game window.
 <tr><td>fuzzymode</td><td>bool</td>
 <td>
 </td></tr>
-
-<tr><td></td><td>int</td>
-<td>
-</td></tr>
-
-
 </table>
 
 
-<pre>
+<p>
+These options only apply in the OpenGL mode.
+</p>
 
-OpenGL/Glide
-===================
+<table class="def">
+<tr><th>variable</th><th>type</th><th>definition</th></tr>
 
-note: Those variables are only available in the Linux and Win32 version.
- All those variable's names start with the gr_ prefix.
- Not all those variables are effective in Glide mode.
+<tr><td>gr_coronas</td><td>bool</td>
+<td>
+Enable/disable coronas around light sources.
+</td></tr>
 
+<tr><td>
+gr_coronasize
+</td><td>float</td>
+<td>
+  Sets the corona size. In reality coronas are
+  caused by the dispersion of light in the eye.
+  You can adjust the size to get a more realistic effect or just to see
+  bigger coronas :).
+</td></tr>
 
-gr_coronas &lt;On|Off&gt;
-   Enable or disable coronas around lights and rocket.
+<tr><td>
+gr_dynamiclighting
+</td><td>bool</td>
+<td>
+  Dynamic lighting renders on walls and planes a diffuse reflection of
+  nearby light sources, such as missiles or BFG balls. Be aware it can
+  be slow on low end PC.
+  See also gr_mblighting.
+</td></tr>
 
-gr_coronasize &lt;positive float value&gt;
-   Adjust light coronas size on the screen, coronas is in the reality 
-   caused by despertion of light in the eye the size of a coronas depand 
-   on your screen size and your distance of your eye to screen. So you 
-   can adjust it the get the more realistic effect or just to see more 
-   bigger coronas :).
+<tr><td>
+gr_mblighting
+</td><td>bool</td>
+<td>
+Same as dynamic lighting, except it shows the light emitted
+by missiles thrown by monsters.
+</td></tr>
 
-gr_dynamiclighting &lt;On|Off&gt;
-   Dynamic lighting is way to render (on walls and planes) lights emit by
-   missiles or BFG balls. Be aware it can be slow on low end PC.
-   See also gr_mblighting.
+<tr><td>
+gr_fog
+</td><td>bool</td>
+<td>
+Enable/disable the fog, default is on.
+</td></tr>
 
+<tr><td>
+gr_fogcolor
+</td><td>string</td>
+<td>
+Change the RGB (in hexadecimal format, "rrggbb") color of the fog. The
+default is 000000 (black, looks like the original
+Doom fog). For a grey fog, set the value to 707070 (for example).
+</td></tr>
 
-gr_fog &lt;On|Off&gt;
-Enable or disable the fog, default is On.
-
-
-gr_fogcolor &lt;rrggbb&gt;
-Change the RGB (in hexadecimal format) value of the fog. The
-|default is set to 000000 (black, looks like the original
-doom fog). For a grey fog, set the value to 707070 (for example).
-
-
-gr_fogdensity &lt;1-?&gt;
+<tr><td>
+gr_fogdensity
+</td><td>float</td>
+<td>
 Change the fog density. The default value is 500. I suggest you to
 try different values to see the changes.
+</td></tr>
 
-
-gr_fov &lt;1-179&gt;
-FOV means Field Of View. If you set a value above 90 and gr_mlook
-(see below) is "Off", then DooM Legacy set automatically gr_mlook
+<tr><td>
+gr_fov
+</td><td>float</td>
+<td>
+<p>
+Field of view, in degrees. If you set a value above 90 and gr_mlook
+(see below) is "Off", then Legacy will automatically set gr_mlook
 to "On". This is because FOV, with a value higher than 90 degrees,
 needs this mode to work properly. You can use it for zooming:
-
+</p>
+<div class="example">
 Mandeep/FlynnT tips for zooming (see other commands/variables)
   alias psprites_on "playersprites 1"
   alias psprites_off "playersprites 0"
@@ -1269,51 +1277,58 @@ Mandeep/FlynnT tips for zooming (see other commands/variables)
    psprites_on; wait 1; gr_fov 90"
   alias set_zoom_in "bind n zoom_in"
   bind n zoom_in
-
+</div>
+<p>
 I suggest you to put this in the autoexec.cfg file. It allows you
-to use the 'n' key for zooming in and out.
+to use the n key for zooming in and out.
+</p>
+</td></tr>
 
+<tr><td>
+gr_gammared | gr_gammagreen | gr_gammablue
+</td><td>int</td>
+<td>
+Set the intensities of red, green and
+blue on the scale 0-255.
+You can use them to make Legacy uniformly brighter or darker if you
+set all these variables to the same smaller or higher value.
+</td></tr>
 
-gr_gammaxxx (where xxx = red|green|blue) &lt;0-255&gt;
-Those variables are used for changing the intensity of red, green or
-blue. You can use them to make DooM Legacy brighter or darker if you
-change all those variables with the same smaller or higher value.
-
-
-gr_mblighting &lt;On|Off&gt;
-It's the same as dynamic lighting, except it shows the lights emit
-by balls throw by monsters.
-
-
-gr_mlook &lt;Off|On|Full&gt;
+<tr><td>
+gr_mlook
+</td><td>int</td>
+<td>
 gr_mlook command is there for fixing the "mlook" bug (when you look
-up and down). The default value is On.
+up and down). The default value is 1.
 
-- The "Off" (or 0) should only use if you don't use full mlook.
-- The "On" (or 1) is fast and fix most of the mlook bug, but walls
-  behind you can be hidden if you look at nearly 90° (up or down).
-  It shouldn't be a big issue for most of you and it's the
-  recommended mode for low end pc.
-- The "Full" (or 2) is exactly the same as "On" but it fix all the
-  bugs and is a little slower for angle &gt; 45 degree.
+The "Off" (0) should only use if you don't use full mlook.
+The "On" (1) is fast and fix most of the mlook bug, but walls
+behind you can be hidden if you look at nearly 90° (up or down).
+It shouldn't be a big issue for most of you and it's the
+recommended mode for low end pc.
+The "Full" (2) is exactly the same as "On" but it fix all the
+bugs and is a little slower for angle &gt; 45 degree.
 
 The gr_mlook command has been "optimized" recently. That's why, when
 you're aiming at an angle of 0, it acts like if gr_mlook was Off,
 even if gr_mlook is set to On or Full, and thus it's faster. There
 is something similar with angle less than 45: if you use gr_mlook
 Full, it act like gr_mlook On.
+</td></tr>
 
-
-gr_staticlighting &lt;On|Off&gt;
+<tr><td>
+gr_staticlighting
+</td><td>bool</td>
+<td>
 This is an experimental variable for now since it's not yet
 optimized. I don't recommend you to use it, except if you have
 the cream of the cream PC. It's ok for some maps, though.
+</td></tr>
+</table>
 
-</pre>
 
 
-
-<h3><a name="2-9">Sound options</a></h3>
+<h3 id="sound_options">Sound options</h3>
 
 <p>
 Variables controlling sound and music.
@@ -1360,6 +1375,6 @@ needed?
 </td></tr>
 </table>
 
-
+</div>
 </body>
 </html>

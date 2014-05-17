@@ -59,9 +59,9 @@ void PrepareGameData();
 #endif
 
 // Version number: major.minor.revision
-const int  LEGACY_VERSION = 199;  // major*100 + minor
+const int  LEGACY_VERSION = 200;  // major*100 + minor
 const int  LEGACY_REVISION = 0; // for bugfix releases, should not affect compatibility
-const char LEGACY_VERSIONSTRING[] = "alpha5 (rev " SVN_REV ")";
+const char LEGACY_VERSIONSTRING[] = "alpha0 (rev " SVN_REV ")";
 char LEGACY_VERSION_BANNER[80];
 
 

@@ -941,15 +941,15 @@ void Command_BindJoyaxis_f()
 
   // Check the validity of the binding.
   if(j.joynum < 0 || j.joynum >= (int)joysticks.size()) {
-    CONS_Printf("Attemting to bind non-existant joystick %d.\n", j.joynum);
+    CONS_Printf("Attempting to bind non-existent joystick %d.\n", j.joynum);
     return;
   }
   if(j.axisnum < 0 || j.axisnum >= SDL_JoystickNumAxes(joysticks[j.joynum])) {
-    CONS_Printf("Attemting to bind non-existant axis %d.\n", j.axisnum);
+    CONS_Printf("Attempting to bind non-existent axis %d.\n", j.axisnum);
     return;
   }
   if(j.action < 0 || j.action >= num_joyactions) {
-    CONS_Printf("Attemting to bind non-existant action %d.\n", int(j.action));
+    CONS_Printf("Attempting to bind non-existent action %d.\n", int(j.action));
     return;
   }
 

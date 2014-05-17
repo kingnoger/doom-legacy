@@ -1,4 +1,4 @@
-project(cuneiform C CXX)
+project(doomlegacy C CXX)
 cmake_minimum_required(VERSION 2.8.0)
 
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS TRUE)

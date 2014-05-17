@@ -14,3 +14,8 @@ Added this log.
 rev 704
 Now the ENDOOM lump has current information in it.
 Also, updated compiling docs.
+
+
+
+TODO
+- when deleting global vars (caches, namely) after exit() has been called, texture_cache and material_cache have some unwanted interplay (default texture)
