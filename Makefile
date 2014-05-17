@@ -1,5 +1,5 @@
 # Gnu Make makefile for Doom Legacy
-# Copyright (C) 2002-2007 by DooM Legacy Team.
+# Copyright (C) 2002-2014 by Doom Legacy Team.
 #
 # $Id$
 #
@@ -45,11 +45,11 @@ ifdef LINUX
  platform  = -DLINUX
  interface = -DSDL $(shell sdl-config --cflags)
 # linker
- LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -L. -ltnl -ltomcrypt  # -lSDL_ttf
+ LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -ldl -L. -ltnl -ltomcrypt  # -lSDL_ttf
  OPENGLLIBS = -lGL -lGLU
  LDFLAGS = -Wall
 # executable
- exename = Legacy
+ exename = doomlegacy2
 
 else # assume WIN32 is defined
 
@@ -64,7 +64,7 @@ else # assume WIN32 is defined
  OPENGLLIBS = -lopengl32 -lglu32
  LDFLAGS = -Wall -mwindows
 # executable
- exename = Legacy.exe
+ exename = doomlegacy2.exe
 
 endif
 # ----------- platform specific part ends
@@ -260,9 +260,11 @@ objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
 	$(net_objects) $(sdl_objects) $(grammar_objects)
 
 
+SUBDIRS = engine util audio video net grammars tools
+
 
 # explicit rules
-.PHONY	: all mkdirobjs clean depend dep docs wad tools engine util audio video net sdl grammars versionstring tnl
+.PHONY	: all mkdirobjs clean depend docs wad versionstring tnl sdl $(SUBDIRS)
 
 
 all	: mkdirobjs $(exename)
@@ -273,25 +275,18 @@ mkdirobjs:
 clean	:
 	$(RM) $(objects)
 
-depend:
-	touch engine/engine.dep
-	$(MAKE) -C engine depend
-	touch video/video.dep
-	$(MAKE) -C video depend
-	touch audio/audio.dep
-	$(MAKE) -C audio depend
-	touch util/util.dep
-	$(MAKE) -C util depend
-	touch net/net.dep
-	$(MAKE) -C net depend
-	touch grammars/grammars.dep
-	$(MAKE) -C grammars depend
-	touch interface/sdl/sdl.dep
-	$(MAKE) -C interface/sdl depend
-	touch tools/tools.dep
-	$(MAKE) -C tools depend
+$(SUBDIRS):
+	$(MAKE) -C $@
 
-dep	: depend
+depend:
+	$(MAKE) -C engine depend
+	$(MAKE) -C video depend
+	$(MAKE) -C audio depend
+	$(MAKE) -C util depend
+	$(MAKE) -C net depend
+	$(MAKE) -C grammars depend
+	$(MAKE) -C interface/sdl depend
+	$(MAKE) -C tools depend
 
 docs	: Doxyfile
 	doxygen
@@ -299,29 +294,8 @@ docs	: Doxyfile
 wad	: tools
 	$(MAKE) -C wad
 
-tools	:
-	$(MAKE) -C tools
-
-engine	:
-	$(MAKE) -C engine
-
-util	:
-	$(MAKE) -C util
-
-audio	:
-	$(MAKE) -C audio
-
-video	:
-	$(MAKE) -C video
-
-net	:
-	$(MAKE) -C net
-
 sdl	:
 	$(MAKE) -C interface/sdl
-
-grammars	:
-	$(MAKE) -C grammars
 
 versionstring:
 	$(CC) -c $(CFLAGS) -DSVN_REV=\"`svn info | grep Revision | sed -e 's/Revision: //'`\" engine/d_main.cpp -o objs/d_main.o

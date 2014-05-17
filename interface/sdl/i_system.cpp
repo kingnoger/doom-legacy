@@ -30,6 +30,7 @@
 #ifdef LINUX
 # ifndef FREEBSD
 #  include <sys/vfs.h>
+#  include <sys/stat.h>
 # else
 #  include <sys/param.h>
 #  include <sys/mount.h>

@@ -12,8 +12,14 @@ objdir := ../$(objdir)
 
 all	: $(grammar_objects)
 
-depend	:
-	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > grammars.dep
+.PHONY : depend
+
+depend : grammars.dep
+
+grammars.dep :: *.cpp
+
+%.dep :
+	$(CC) -MM $(CFLAGS) $^ > $(@F)
 
 lemon	: lemon.c
 	gcc $< -o $@
@@ -41,4 +47,4 @@ $(objdir)/%.parser.o: %.parser.c parser_driver.h %.parser.h
 $(objdir)/%.o: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
-include grammars.dep
+-include grammars.dep

@@ -12,8 +12,14 @@ objdir := ../$(objdir)
 
 all	: $(video_objects)
 
-depend	:
-	$(CC) -MM $(CFLAGS) *.cpp hardware/*.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > video.dep
+.PHONY : depend
+
+depend : video.dep
+
+video.dep :: *.cpp hardware/*.cpp
+
+%.dep :
+	$(CC) -MM $(CFLAGS) $^ > $(@F)
 
 
 # implied rules
@@ -25,4 +31,4 @@ $(objdir)/%.o	: hardware/%.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 
-include video.dep
+-include video.dep

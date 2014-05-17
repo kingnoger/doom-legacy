@@ -12,9 +12,14 @@ objdir := ../$(objdir)
 
 all	: $(net_objects)
 
+.PHONY : depend
 
-depend	:
-	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > net.dep
+depend : net.dep
+
+net.dep :: *.cpp
+
+%.dep :
+	$(CC) -MM $(CFLAGS) $^ > $(@F)
 
 
 # implied rules
@@ -23,4 +28,4 @@ $(objdir)/%.o	: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
 
-include net.dep
+-include net.dep

@@ -12,8 +12,14 @@ objdir := ../$(objdir)
 
 all	: $(audio_objects)
 
-depend	:
-	$(CC) -MM $(CFLAGS) *.cpp | sed -e 's/^\([^ ]\)/$$(objdir)\/\1/' > audio.dep
+.PHONY : depend
+
+depend : audio.dep
+
+audio.dep :: *.cpp
+
+%.dep :
+	$(CC) -MM $(CFLAGS) $^ > $(@F)
 
 
 # implied rules
@@ -21,8 +27,5 @@ depend	:
 $(objdir)/%.o	: %.cpp
 	$(CC) -c $(CFLAGS) $< -o $@
 
-$(objdir)/%.o	: hardware/%.cpp
-	$(CC) -c $(CFLAGS) $< -o $@
 
-
-include audio.dep
+-include audio.dep
