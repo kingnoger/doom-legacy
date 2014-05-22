@@ -587,8 +587,6 @@ void line_t::SetDims()
 
 void Map::LoadLineDefs(int lump)
 {
-  vertex_t *v1, *v2;
-
   if (hexen_format)
     numlines = fc.LumpLength(lump)/sizeof(hex_maplinedef_t);
   else
@@ -642,8 +640,8 @@ void Map::LoadLineDefs(int lump)
 	      break;
 	    }
 
-          v1 = ld->v1 = &vertexes[SHORT(hld->v1)];
-          v2 = ld->v2 = &vertexes[SHORT(hld->v2)];
+          ld->v1 = &vertexes[SHORT(hld->v1)];
+          ld->v2 = &vertexes[SHORT(hld->v2)];
 
 	  /*
           if (SHORT(hld->v1) > numvertexes)
@@ -666,8 +664,8 @@ void Map::LoadLineDefs(int lump)
 	  // Doom => Hexen conversion using the conversion table.
 	  ConvertLineDef(ld);
 
-          v1 = ld->v1 = &vertexes[SHORT(mld->v1)];
-          v2 = ld->v2 = &vertexes[SHORT(mld->v2)];
+          ld->v1 = &vertexes[SHORT(mld->v1)];
+          ld->v2 = &vertexes[SHORT(mld->v2)];
 
 	  temp[0] = SHORT(mld->sidenum[0]);
 	  temp[1] = SHORT(mld->sidenum[1]);

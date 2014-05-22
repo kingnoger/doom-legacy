@@ -240,10 +240,7 @@ void A_FSwordFlames(DActor *actor)
 
 void A_MWandAttack(PlayerPawn *player, pspdef_t *psp)
 {
-  Actor *mo;
-
-  mo = player->SpawnPlayerMissile(MT_MWAND_MISSILE);
-
+  player->SpawnPlayerMissile(MT_MWAND_MISSILE);
   S_StartSound(player, SFX_MAGE_WAND_FIRE);
 }
 

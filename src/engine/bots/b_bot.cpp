@@ -101,7 +101,6 @@ void Command_AddBot_f()
   // Client-side bots are supposed to be in principle indistinguishable from human players to the server.
   // TODO syntax: "addbot [bottype] [name] [team] [parameters]..."
 
-  int i;
   int n = COM.Argc();
   
   // parse common parameters
@@ -119,7 +118,7 @@ void Command_AddBot_f()
     team = atoi(COM.Argv(3));
 
 #if 0
-
+  int i;
   if (!game.server) // clients
     {
       for (i=0; i<NUM_LOCALBOTS; i++)

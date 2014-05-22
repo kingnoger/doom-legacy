@@ -117,7 +117,6 @@ void Map::PointerCleanup()
 void Map::Ticker()
 {
   //CONS_Printf("Tic begins..");
-  int i = 0;
 
   if (game.server)
     {
@@ -125,7 +124,7 @@ void Map::Ticker()
 
       // after a player is respawned, its input should be built before it is used in RunThinkers.
       if (!respawnqueue.empty())
-	i = RespawnPlayers();
+	RespawnPlayers();
 
       //CONS_Printf("think..");
       //RunThinkers();

@@ -293,8 +293,6 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
 {
   int i, n = p->inventory.size();
   int count;
-  int normalSlot;
-  int superSlot;
   int normalCount = 0;
   int superCount = 0;
 
@@ -302,12 +300,10 @@ void P_AutoUseHealth(PlayerPawn *p, int saveHealth)
     {
       if (p->inventory[i].type == arti_health)
         {
-	  normalSlot = i;
 	  normalCount = p->inventory[i].count;
         }
       else if (p->inventory[i].type == arti_superhealth)
         {
-	  superSlot = i;
 	  superCount = p->inventory[i].count;
         }
     }

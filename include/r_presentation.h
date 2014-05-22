@@ -58,7 +58,7 @@ public:
     Raise     ///< raisestate, being raised from death by an arch-vile
   };
 
-  char  color;       ///< Skin colormap.
+  byte  color;       ///< Skin colormap.
   animseq_e animseq; ///< Current animation sequence.
   int   flags;       ///< Effects. Translucency, fullbright etc.
   int   lastupdate;  ///< Time of last update in tics.

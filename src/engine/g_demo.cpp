@@ -358,7 +358,6 @@ void G_DeferedPlayDemo (char* name)
 //
 void GameInfo::PlayDemo(char *defdemoname)
 {
-#warning FIXME debug aid
 #if 0
 
   //  skill_t skill;

@@ -699,7 +699,7 @@ void Map::QueueBody(Actor *p)
   bodyqueue.push_back(p);
 
   // flush an old corpse if needed
-  while (bodyqueue.size() > cv_bodyqueue_size.value)
+  while ((int)bodyqueue.size() > cv_bodyqueue_size.value)
     {
       bodyqueue.front()->Remove();
       bodyqueue.pop_front();

@@ -471,9 +471,9 @@ void D_SetPaths()
       // little hack to allow a different config file for opengl
       // may be a problem if opengl cannot really be started
       if (M_CheckParm("-opengl"))
-	sprintf(configfile, "%s/gl"CONFIGFILENAME, legacyhome.c_str());
+	sprintf(configfile, "%s/gl" CONFIGFILENAME, legacyhome.c_str());
       else
-	sprintf(configfile, "%s/"CONFIGFILENAME, legacyhome.c_str());
+	sprintf(configfile, "%s/" CONFIGFILENAME, legacyhome.c_str());
     }
 
   // savegame name templates

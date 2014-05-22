@@ -606,7 +606,6 @@ void AM_maxOutWindowScale()
 // Handle events (user inputs) in automap mode
 bool AutoMap::Responder(event_t *ev)
 {
-  static int cheatstate=0;
   static char buffer[20];
 
   bool rc = false;
@@ -685,7 +684,6 @@ bool AutoMap::Responder(event_t *ev)
           CONS_Printf(AMSTR_MARKSCLEARED);
           break;
         default:
-          cheatstate=0;
           rc = false;
         }
     }

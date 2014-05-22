@@ -475,7 +475,7 @@ int Map::EV_BuildStairs(unsigned tag, int type, fixed_t speed, fixed_t stepsize,
       fixed_t height = sec->floorheight + stepsize;      
       // create new floor thinker for first step
       rtn++;
-      floor_t *floor = new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
+      new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
 
       Material *texture = sec->floorpic;
       int osecnum = secnum;           //jff 3/4/98 preserve loop index
@@ -516,7 +516,7 @@ int Map::EV_BuildStairs(unsigned tag, int type, fixed_t speed, fixed_t stepsize,
 	      secnum = newsecnum;
 
 	      // create and initialize a thinker for the next step
-	      floor = new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
+	      new floor_t(this, floor_t::AbsHeight, sec, speed, crush, height);
 
 	      ok = true;
 	      break;

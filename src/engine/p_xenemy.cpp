@@ -385,9 +385,9 @@ void A_MinotaurRoam(DActor *actor)
     {
       // Turn
       if (P_Random() & 1)
-	actor->movedir = (++actor->movedir)%8;
+	actor->movedir = (actor->movedir+1) % 8;
       else
-	actor->movedir = (actor->movedir+7)%8;
+	actor->movedir = (actor->movedir+7) % 8;
       FaceMovementDirection(actor);
     }
 }
@@ -1141,13 +1141,11 @@ void A_SerpentMeleeAttack(DActor *actor)
 	
 void A_SerpentMissileAttack(DActor *actor)
 {
-  DActor *mo;
-
   if(!actor->target)
     {
       return;
     }
-  mo = actor->SpawnMissile(actor->target, MT_SERPENTFX);
+  actor->SpawnMissile(actor->target, MT_SERPENTFX);
 }
 
 //============================================================================
@@ -2521,8 +2519,7 @@ void A_IceGuyAttack(DActor *actor)
 
 void A_IceGuyMissilePuff(DActor *actor)
 {
-  DActor *mo;
-  mo = actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+2, MT_ICEFX_PUFF);
+  actor->mp->SpawnDActor(actor->pos.x, actor->pos.y, actor->pos.z+2, MT_ICEFX_PUFF);
 }
 
 //============================================================================
@@ -3862,7 +3859,6 @@ DActor *P_SpawnKoraxMissile(fixed_t x, fixed_t y, fixed_t z,
 // Arm 1 projectile
 void KoraxFire1(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3870,14 +3866,13 @@ void KoraxFire1(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_SHORT * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_SHORT * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM1_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 
 // Arm 2 projectile
 void KoraxFire2(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3885,13 +3880,12 @@ void KoraxFire2(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM2_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 // Arm 3 projectile
 void KoraxFire3(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3899,13 +3893,12 @@ void KoraxFire3(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM3_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 // Arm 4 projectile
 void KoraxFire4(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3913,13 +3906,12 @@ void KoraxFire4(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_SHORT * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_SHORT * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM4_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 // Arm 5 projectile
 void KoraxFire5(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3927,13 +3919,12 @@ void KoraxFire5(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM5_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 // Arm 6 projectile
 void KoraxFire6(DActor *actor, mobjtype_t type)
 {
-  DActor *mo;
   angle_t ang;
   fixed_t x,y,z;
 
@@ -3941,7 +3932,7 @@ void KoraxFire6(DActor *actor, mobjtype_t type)
   x = actor->pos.x + KORAX_ARM_EXTENSION_LONG * finecosine[ang];
   y = actor->pos.y + KORAX_ARM_EXTENSION_LONG * finesine[ang];
   z = actor->pos.z - actor->floorclip + KORAX_ARM6_HEIGHT;
-  mo = P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
+  P_SpawnKoraxMissile(x,y,z,actor, actor->target, type);
 }
 
 
