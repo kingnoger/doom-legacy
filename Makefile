@@ -1,83 +1,66 @@
 # Gnu Make makefile for Doom Legacy
 # Copyright (C) 2002-2014 by Doom Legacy Team.
 #
-# $Id$
-#
-# This primary Makefile calls auxiliary Makefiles in subdirectories.
 # Use 'make OPT=1' to make optimized version, else you'll get debug info.
 
-# Platform autodetect.
+# C++ compiler
+# FIXME why will CC = gcc not work?
+CC = g++
+CXX = g++
+# CC := clang --analyze # and comment out the linker last line for sanity
 
+# linker
+LD = $(CXX)
+
+
+SRCDIR := src
+BUILDDIR := build
+
+# Find every *.cpp file in the src tree. We don't want this since there is unused stuff there.
+#SOURCES := $(shell find $(SRCDIR) -type f -name *.cpp)
+# Only use listed source files.
+SOURCES := $(shell cat $(SRCDIR)/src_files.txt)
+
+# Corresponding object files.
+OBJECTS := $(patsubst $(SRCDIR)/%, $(BUILDDIR)/%, $(SOURCES:.cpp=.o))
+
+PARSER_OBJS := $(BUILDDIR)/ntexture.parser.o \
+  $(BUILDDIR)/ntexture.lexer.o \
+  $(BUILDDIR)/decorate.parser.o \
+  $(BUILDDIR)/decorate.lexer.o
+
+
+# Platform autodetect
 UNAME = $(shell uname)
-
 ifeq ($(UNAME),Linux)
-export LINUX=1
+  export LINUX=1
 else
-export WIN=1
+  export WIN=1
 endif
+
+
+###  C flags
+
+# Basic flags (language version, warnings, dependency file generation)
+CF = -std=c++11 -Wall -MP -MMD
 
 # Debugging and optimization
 ifdef OPT
-CF = -O
+  CF += -O
 else
-CF = -g -O0
+  CF += -g -O0
 endif
 
 # Dynamic or static linkage? I like static.
 ifdef DYNAMIC
-linkage = -DDYNAMIC_LINKAGE
-else
-linkage = 
+  CF += -DDYNAMIC_LINKAGE
 endif
 
-# Freeform defines
+# Freeform commandline defines
 ifdef DEF
 CF += -D$(DEF)
 endif
 
-
-# ----------- platform specific part begins
-ifdef LINUX
-
-# file removal utility
- RM = rm
-# compiler
- platform  = -DLINUX
- interface = -DSDL $(shell sdl-config --cflags)
-# linker
- LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -ldl -L. -ltnl -ltomcrypt  # -lSDL_ttf
- OPENGLLIBS = -lGL -lGLU
- LDFLAGS = -Wall
-# executable
- exename = doomlegacy2
-
-else # assume WIN32 is defined
-
-# file removal utility
- RM = rm
-# compiler
- platform  = -D__WIN32__
- interface = -DSDL -DNO_MIXER $(shell sdl-config --cflags)
- CF += -mwindows
-# linker
- LIBS	= -lmingw32 $(shell sdl-config --libs) SDL_mixer.lib -lpng -jpeg -lz -L. -ltnl -ltomcrypt -lwsock32
- OPENGLLIBS = -lopengl32 -lglu32
- LDFLAGS = -Wall -mwindows
-# executable
- exename = doomlegacy2.exe
-
-endif
-# ----------- platform specific part ends
-
-export RM
-export LDFLAGS
-
-# C++ compiler (usually g++)
-export CC = gcc
-export CXX = g++
-
-# Defines.
-#
 # Automatic defines: Automatically defined by the compiler in the corresponding environment.
 # __WIN32__, __WIN32, _WIN32, WIN32 : defined in Win32 environment
 # __DJGPP__ : defined by DJGPP
@@ -96,209 +79,127 @@ export CXX = g++
 # NO_MIXER   : do not include SDL_mixer in the build
 
 
-export CF += -std=c++0x -Wall $(platform) $(interface) $(linkage)
+###  Platform specific part.
+ifdef LINUX
 
-INCLUDES = -Iinclude
-CFLAGS = $(CF) $(INCLUDES)
-
+# compiler
+ platform  = -DLINUX
+ interface = -DSDL $(shell sdl-config --cflags)
 # linker
-export LD = $(CXX)
+ LIBS	= $(shell sdl-config --libs) -lSDL_mixer -lpng -ljpeg -lz -ldl -Llib -ltnl -ltomcrypt  # -lSDL_ttf
+ OPENGLLIBS = -lGL -lGLU
+ LDFLAGS = -Wall
+# executable
+ exename = doomlegacy2
 
-export objdir = objs
+else # assume WIN32 is defined
 
+# compiler
+ platform  = -D__WIN32__
+ interface = -DSDL -DNO_MIXER $(shell sdl-config --cflags)
+ CF += -mwindows
+# linker
+ LIBS	= -lmingw32 $(shell sdl-config --libs) SDL_mixer.lib -lpng -jpeg -lz -L. -ltnl -ltomcrypt -lwsock32
+ OPENGLLIBS = -lopengl32 -lglu32
+ LDFLAGS = -Wall -mwindows
+# executable
+ exename = doomlegacy2.exe
+endif
 
-export engine_objects = \
-	$(objdir)/g_game.o \
-	$(objdir)/g_state.o \
-	$(objdir)/g_demo.o \
-	$(objdir)/g_input.o \
-	$(objdir)/g_type.o \
-	$(objdir)/g_level.o \
-	$(objdir)/g_mapinfo.o \
-	$(objdir)/g_map.o \
-	$(objdir)/g_player.o \
-	$(objdir)/g_team.o \
-	$(objdir)/g_think.o \
-	$(objdir)/g_actor.o \
-	$(objdir)/g_pawn.o \
-	$(objdir)/g_decorate.o \
-	$(objdir)/p_tick.o \
-	$(objdir)/p_setup.o \
-	$(objdir)/p_saveg.o \
-	$(objdir)/p_effects.o \
-	$(objdir)/p_spec.o \
-	$(objdir)/p_events.o \
-	$(objdir)/p_floor.o \
-	$(objdir)/p_plats.o \
-	$(objdir)/p_ceilng.o \
-	$(objdir)/p_doors.o \
-	$(objdir)/p_genlin.o \
-	$(objdir)/p_things.o \
-	$(objdir)/p_lights.o \
-	$(objdir)/p_switch.o \
-	$(objdir)/p_polyobj.o \
-	$(objdir)/a_action.o \
-	$(objdir)/p_pspr.o \
-	$(objdir)/p_hpspr.o \
-	$(objdir)/p_xpspr.o \
-	$(objdir)/p_enemy.o \
-	$(objdir)/p_henemy.o \
-	$(objdir)/p_xenemy.o \
-	$(objdir)/ai_mobjinfo.o \
-	$(objdir)/ai_states.o \
-	$(objdir)/acs.o \
-	$(objdir)/t_oper.o \
-	$(objdir)/t_parse.o \
-	$(objdir)/t_prepro.o \
-	$(objdir)/t_spec.o \
-	$(objdir)/t_vari.o \
-	$(objdir)/t_script.o \
-	$(objdir)/t_func.o \
-	$(objdir)/p_map.o \
-	$(objdir)/p_maputl.o \
-	$(objdir)/p_sight.o \
-	$(objdir)/p_telept.o \
-	$(objdir)/p_camera.o \
-	$(objdir)/p_user.o \
-	$(objdir)/p_inter.o \
-	$(objdir)/am_map.o \
-	$(objdir)/menu.o \
-	$(objdir)/f_finale.o \
-	$(objdir)/wi_stuff.o \
-	$(objdir)/st_lib.o \
-	$(objdir)/st_stuff.o \
-	$(objdir)/hu_stuff.o \
-	$(objdir)/m_cheat.o \
-	$(objdir)/p_fab.o \
-	$(objdir)/p_hacks.o \
-	$(objdir)/d_items.o \
-	$(objdir)/d_main.o \
-	$(objdir)/dstrings.o \
-	$(objdir)/acbot.o \
-	$(objdir)/b_bot.o \
-	$(objdir)/b_path.o
+TARGET := bin/$(exename)
 
-export util_objects = \
-	$(objdir)/command.o \
-	$(objdir)/console.o \
-	$(objdir)/dehacked.o \
-	$(objdir)/mnemonics.o \
-	$(objdir)/m_argv.o \
-	$(objdir)/m_archive.o \
-	$(objdir)/m_bbox.o \
-	$(objdir)/m_dll.o \
-	$(objdir)/m_fixed.o \
-	$(objdir)/m_misc.o \
-	$(objdir)/m_random.o \
-	$(objdir)/m_swap.o \
-	$(objdir)/md5.o \
-	$(objdir)/parser.o \
-	$(objdir)/tables.o \
-	$(objdir)/vfile.o \
-	$(objdir)/wad.o \
-	$(objdir)/w_wad.o \
-	$(objdir)/z_cache.o \
-	$(objdir)/z_zone.o
+CFLAGS := $(CF) $(platform) $(interface) -Iinclude
 
-export audio_objects = \
-	$(objdir)/qmus2mid.o \
-	$(objdir)/s_sound.o \
-	$(objdir)/s_sndseq.o \
-	$(objdir)/sounds.o
-
-export video_objects = \
-	$(objdir)/md3.o \
-	$(objdir)/png.o \
-	$(objdir)/jpeg.o \
-	$(objdir)/screen.o \
-	$(objdir)/v_video.o \
-	$(objdir)/r_font.o \
-	$(objdir)/r_render.o \
-	$(objdir)/r_bsp.o \
-	$(objdir)/r_data.o \
-	$(objdir)/r_draw.o \
-	$(objdir)/r_draw8.o \
-	$(objdir)/r_draw16.o \
-	$(objdir)/r_main.o \
-	$(objdir)/r_plane.o \
-	$(objdir)/r_segs.o \
-	$(objdir)/r_sky.o \
-	$(objdir)/r_splats.o \
-	$(objdir)/r_sprite.o \
-	$(objdir)/r_things.o \
-	$(objdir)/r_anim.o \
-	$(objdir)/oglrenderer.o \
-	$(objdir)/oglshaders.o \
-	$(objdir)/oglhelpers.o
-
-export net_objects = \
-	$(objdir)/n_interface.o \
-	$(objdir)/n_connection.o \
-	$(objdir)/sv_main.o \
-	$(objdir)/sv_cmds.o \
-	$(objdir)/cl_main.o
-
-export sdl_objects = \
-	$(objdir)/endtxt.o \
-	$(objdir)/i_cdmus.o \
-	$(objdir)/i_main.o \
-	$(objdir)/i_net.o \
-	$(objdir)/i_sound.o \
-	$(objdir)/i_system.o \
-	$(objdir)/i_video.o
+ifndef DYNAMIC
+  LIBS += $(OPENGLLIBS)
+endif
 
 
-export grammar_objects = \
-	$(objdir)/ntexture.parser.o \
-	$(objdir)/ntexture.lexer.o \
-	$(objdir)/decorate.parser.o \
-	$(objdir)/decorate.lexer.o \
-	$(objdir)/parser_driver.o
+
+###  Rules.
+
+.PHONY	: clean docs wad versionstring tnl
+
+# link the executable
+$(TARGET): $(OBJECTS) $(PARSER_OBJS)
+	@echo " Linking..."
+	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
 
 
-objects = $(engine_objects) $(util_objects) $(audio_objects) $(video_objects) \
-	$(net_objects) $(sdl_objects) $(grammar_objects)
+# most object files
+$(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 
-SUBDIRS = engine util audio video net grammars tools
+### Lexers and parsers.
+
+# Lemon parser executable
+LEMON := $(BUILDDIR)/lemon
+
+# Lemon parser
+$(LEMON): lemon/lemon.c
+	@echo " Building Lemon..."; 
+	$(CC) $< -o $@
+	cp lemon/lempar.c $(BUILDDIR)
+
+$(BUILDDIR)/%.lexer.o: $(BUILDDIR)/%.lexer.c $(BUILDDIR)/%.parser.h include/parser_driver.h
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+# TODO combine these
+$(BUILDDIR)/ntexture.lexer.c: $(SRCDIR)/grammars/ntexture.lexer.flex
+	flex -PNTEXTURE_ -t $<  > $@ 
+
+$(BUILDDIR)/decorate.lexer.c: $(SRCDIR)/grammars/decorate.lexer.flex
+	flex -PDECORATE_ -t $<  > $@ 
+
+$(BUILDDIR)/%.parser.o: $(BUILDDIR)/%.parser.c $(BUILDDIR)/%.parser.h include/parser_driver.h
+	$(CXX) $(CFLAGS) -c $< -o $@
+
+$(BUILDDIR)/%.parser.h: $(BUILDDIR)/%.parser.c 
+
+$(BUILDDIR)/%.parser.c: $(SRCDIR)/grammars/%.parser.y $(LEMON)
+	cp $< $(BUILDDIR)
+	$(LEMON) $(BUILDDIR)/$(notdir $<)
+	ls build
+# TODO why does %.parser.c vanish when it's built?
 
 
-# explicit rules
-.PHONY	: all mkdirobjs clean depend docs wad versionstring tnl sdl $(SUBDIRS)
+### Phony targets
 
+clean:
+	@echo " Cleaning..."; 
+	$(RM) -r $(BUILDDIR) $(TARGET)
 
-all	: mkdirobjs $(exename)
-
-mkdirobjs:
-	mkdir -p objs
-
-clean	:
-	$(RM) $(objects)
-
-$(SUBDIRS):
-	$(MAKE) -C $@
-
-depend:
-	$(MAKE) -C engine depend
-	$(MAKE) -C video depend
-	$(MAKE) -C audio depend
-	$(MAKE) -C util depend
-	$(MAKE) -C net depend
-	$(MAKE) -C grammars depend
-	$(MAKE) -C interface/sdl depend
-	$(MAKE) -C tools depend
 
 docs	: Doxyfile
 	doxygen
 
-wad	: tools
-	$(MAKE) -C wad
 
-sdl	:
-	$(MAKE) -C interface/sdl
+# wad building directory
+WD = $(BUILDDIR)/wad
 
-versionstring:
-	$(CC) -c $(CFLAGS) -DSVN_REV=\"`svn info | grep Revision | sed -e 's/Revision: //'`\" engine/d_main.cpp -o objs/d_main.o
+wad	: bin/wadtool.exe
+ifdef WAD
+# FIXME fix wadtool to behave like this!
+	@echo "Building a new legacy.wad using an old version $(WAD)..."
+	@mkdir -p $(WD)
+	bin/wadtool -x $(WAD) --dir $(WD)
+	cp resources/*.txt $(WD)
+	cp resources/*.png $(WD)
+	cp resources/*.h $(WD)
+	cp resources/*.lmp $(WD)
+	bin/d2h.exe $(WD)/doom2hexen.txt XDOOM.lmp
+	bin/d2h.exe $(WD)/heretic2hexen.txt XHERETIC.lmp
+	bin/wadtool -c bin/legacy.wad --dir $(WD) resources/legacy.wad.inventory
+	@echo "Finished building legacy.wad."
+else
+	@echo "Usage: make wad WAD=/path/to/existing/legacy.wad"
+endif
+
+
+#$(BUILDDIR)/engine/d_main.o:
+#	$(CC) -c $(CFLAGS) -DSVN_REV=\"`git describe`\" engine/d_main.cpp -o objs/d_main.o
 
 
 
@@ -306,25 +207,14 @@ versionstring:
 ifdef TNL
 tnl	:
 	@echo "Building TNL using source tree at $(TNL)..."
-	ln -sf $(TNL)/tnl include
+	ln -s $(TNL)/tnl include
 	patch -d $(TNL) -p0 < libtnl_patch.diff
 	make -C $(TNL)/libtomcrypt
 	make -C $(TNL)/tnl
-	mv $(TNL)/tnl/libtnl.a .
-	mv $(TNL)/libtomcrypt/libtomcrypt.a .
+	mv $(TNL)/tnl/libtnl.a lib
+	mv $(TNL)/libtomcrypt/libtomcrypt.a lib
 	@echo "Finished building TNL."
 else
 tnl	:
 	@echo "Usage: make tnl TNL=path_to_tnl_source"
-endif
-
-
-ifdef DYNAMIC
-# main program
-$(exename) : engine util audio video net sdl grammars versionstring
-	$(LD) $(LDFLAGS) $(objects) $(LIBS) -o $@
-else
-# all in one
-$(exename) : engine util audio video net sdl grammars versionstring
-	$(LD) $(LDFLAGS) $(objects) $(LIBS) $(OPENGLLIBS) -o $@
 endif
