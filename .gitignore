@@ -2,3 +2,5 @@
 *.diff
 bin
 build
+docs/html
+include/tnl

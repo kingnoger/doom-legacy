@@ -113,7 +113,8 @@ ifndef DYNAMIC
 endif
 
 
-.PHONY	: clean docs tools wad versionstring tnl
+.PHONY	: clean docs tools wad tnl
+
 
 ###  Main executable
 
@@ -128,6 +129,10 @@ $(TARGET): $(OBJECTS) $(PARSER_OBJS)
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+# d_main.cpp with Git revision string
+$(BUILDDIR)/engine/d_main.o: $(SRCDIR)/engine/d_main.cpp
+	$(CC) $(CFLAGS) -DSVN_REV=\"`git describe --tags`\" -c $< -o $@
 
 
 ### Lexers and parsers
@@ -212,13 +217,7 @@ else
 	@echo "Usage: make wad WAD=/path/to/existing/legacy.wad"
 endif
 
-
-#$(BUILDDIR)/engine/d_main.o:
-#	$(CC) -c $(CFLAGS) -DSVN_REV=\"`git describe`\" engine/d_main.cpp -o objs/d_main.o
-
-
-
-# TNL
+# OpenTNL
 ifdef TNL
 tnl	:
 	@echo "Building TNL using source tree at $(TNL)..."
