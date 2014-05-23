@@ -106,8 +106,6 @@ else # assume WIN32 is defined
  exename = doomlegacy2.exe
 endif
 
-TARGET := bin/$(exename)
-
 CFLAGS := $(CF) $(platform) $(interface) -Iinclude
 
 ifndef DYNAMIC
@@ -115,16 +113,16 @@ ifndef DYNAMIC
 endif
 
 
+.PHONY	: clean docs tools wad versionstring tnl
 
-###  Rules.
+###  Main executable
 
-.PHONY	: clean docs wad versionstring tnl
+TARGET := bin/$(exename)
 
 # link the executable
 $(TARGET): $(OBJECTS) $(PARSER_OBJS)
 	@echo " Linking..."
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@
-
 
 # most object files
 $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
@@ -132,7 +130,7 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 
-### Lexers and parsers.
+### Lexers and parsers
 
 # Lemon parser executable
 LEMON := $(BUILDDIR)/lemon
@@ -165,33 +163,50 @@ $(BUILDDIR)/%.parser.c: $(SRCDIR)/grammars/%.parser.y $(LEMON)
 # TODO why does %.parser.c vanish when it's built?
 
 
+
+### Tools
+
+bin/doom2hexen.exe: $(BUILDDIR)/tools/doom2hexen.o
+	$(LD) $(LDFLAGS) $^ -o $@
+
+bin/wadtool.exe: $(BUILDDIR)/tools/wadtool.o $(BUILDDIR)/util/md5.o
+	$(LD) $(LDFLAGS) $^ -o $@
+
+bin/convert_deh.exe: $(BUILDDIR)/tools/convert_deh.o $(BUILDDIR)/util/mnemonics.o
+	$(LD) $(LDFLAGS) $^ -o $@
+
+# tool objects 
+$(BUILDDIR)/tools/%.o: tools/%.cpp
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
 ### Phony targets
 
 clean:
 	@echo " Cleaning..."; 
 	$(RM) -r $(BUILDDIR) $(TARGET)
 
-
-docs	: Doxyfile
+docs:	Doxyfile
 	doxygen
 
+tools:	bin/doom2hexen.exe bin/wadtool.exe bin/convert_deh.exe
 
 # wad building directory
 WD = $(BUILDDIR)/wad
 
-wad	: bin/wadtool.exe
+wad	: bin/wadtool.exe bin/doom2hexen.exe
 ifdef WAD
-# FIXME fix wadtool to behave like this!
 	@echo "Building a new legacy.wad using an old version $(WAD)..."
 	@mkdir -p $(WD)
-	bin/wadtool -x $(WAD) --dir $(WD)
+	bin/wadtool.exe -x $(WAD) -d $(WD)
 	cp resources/*.txt $(WD)
 	cp resources/*.png $(WD)
 	cp resources/*.h $(WD)
 	cp resources/*.lmp $(WD)
-	bin/d2h.exe $(WD)/doom2hexen.txt XDOOM.lmp
-	bin/d2h.exe $(WD)/heretic2hexen.txt XHERETIC.lmp
-	bin/wadtool -c bin/legacy.wad --dir $(WD) resources/legacy.wad.inventory
+	bin/doom2hexen.exe $(WD)/doom2hexen.txt $(WD)/XDOOM.lmp
+	bin/doom2hexen.exe $(WD)/heretic2hexen.txt $(WD)/XHERETIC.lmp
+	bin/wadtool.exe -c bin/legacy.wad -d $(WD) resources/legacy.wad.inventory
 	@echo "Finished building legacy.wad."
 else
 	@echo "Usage: make wad WAD=/path/to/existing/legacy.wad"
